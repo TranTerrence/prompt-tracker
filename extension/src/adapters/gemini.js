@@ -1,4 +1,4 @@
-// Adaptateur Gemini — uniquement les sélecteurs propres au site.
+// Adaptateur Gemini : uniquement les sélecteurs propres au site.
 // Quand Google change son UI, seul ce fichier est à mettre à jour.
 // Gemini utilise un éditeur Quill (div.ql-editor contenteditable) : la
 // mécanique d'injection/vérification de la factory s'applique telle quelle.

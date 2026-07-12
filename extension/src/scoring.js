@@ -2,7 +2,7 @@
 // banque de questions socratiques et compilation du prompt final.
 // Bilingue FR/EN : heuristiques et banques couvrent les deux langues ; la langue
 // est passée par l'appelant (state.lang / paramètre lang), défaut français.
-// Module pur (aucune dépendance chrome) — testable en node.
+// Module pur (aucune dépendance chrome) : testable en node.
 
 const CoachScoring = (() => {
   const CATEGORIES = [
@@ -77,13 +77,13 @@ const CoachScoring = (() => {
 
   const SUGGESTIONS = {
     fr: {
-      short: "Quel résultat précis attends-tu ? Ajoute le contexte, le public visé et le format souhaité — ta réponse n'en sera que meilleure.",
+      short: "Quel résultat précis attends-tu ? Ajoute le contexte, le public visé et le format souhaité : ta réponse n'en sera que meilleure.",
       delegation: "Qu'as-tu déjà essayé ou pensé ? Décris ta piste : l'IA la renforcera au lieu de penser à ta place.",
       sources: "Avant de réutiliser la réponse, demande-lui ses sources et ses limites. Une IA affirme avec le même aplomb quand elle se trompe.",
       dig: "Tu enchaînes les nouveaux sujets : creuse plutôt. Demande une critique ou une amélioration de la dernière réponse.",
     },
     en: {
-      short: "What exact outcome do you expect? Add the context, audience and desired format — your answer will only get better.",
+      short: "What exact outcome do you expect? Add the context, audience and desired format : your answer will only get better.",
       delegation: "What have you already tried or thought? Describe your lead: the AI will strengthen it instead of thinking for you.",
       sources: "Before reusing the answer, ask for its sources and limitations. An AI asserts with the same confidence when it's wrong.",
       dig: "You keep jumping to new topics: dig instead. Ask for a critique or an improvement of the last answer.",
@@ -98,54 +98,54 @@ const CoachScoring = (() => {
       intention: {
         label: "Ce que je veux obtenir",
         questions: [
-          { key: "clarte", q: "Quel résultat précis attends-tu ? (livrable, format, longueur)" },
-          { key: "intention-2", q: "À quoi verras-tu que la réponse est réussie ?" },
-          { key: "intention-3", q: "Que feras-tu concrètement de la réponse une fois obtenue ?" },
-          { key: "intention-4", q: "Quelle est la vraie question derrière ta question ?" },
+          { key: "clarte", q: "Concrètement, qu'attends-tu comme résultat ? Un texte, un plan, une explication, du code ?" },
+          { key: "intention-2", q: "À quoi reconnaîtras-tu une bonne réponse ?" },
+          { key: "intention-3", q: "Que feras-tu de la réponse juste après l'avoir reçue ?" },
+          { key: "intention-4", q: "Quelle est la vraie question derrière ta demande ?" },
         ],
       },
       connaissance: {
         label: "Ce que je sais déjà ou ai tenté",
         questions: [
-          { key: "delegation", q: "Qu'as-tu déjà essayé ou pensé toi-même ? Décris ta piste : l'IA la renforcera au lieu de penser à ta place." },
-          { key: "connaissance-2", q: "Que sais-tu déjà sur ce sujet, même approximativement ?" },
-          { key: "connaissance-3", q: "Quelle partie pourrais-tu faire sans l'IA ?" },
-          { key: "connaissance-4", q: "Où as-tu déjà cherché avant de demander ici ?" },
+          { key: "delegation", q: "Qu'as-tu déjà tenté ou réfléchi de ton côté, même rapidement ?" },
+          { key: "connaissance-2", q: "Qu'en sais-tu déjà, même vaguement ?" },
+          { key: "connaissance-3", q: "Quelle partie peux-tu faire toi-même, là, sans aide ?" },
+          { key: "connaissance-4", q: "Où as-tu déjà cherché avant de poser la question ici ?" },
         ],
       },
       hypothese: {
         label: "Mon hypothèse",
         questions: [
-          { key: "hypothese-1", q: "Quelle est TA réponse provisoire, même imparfaite ?" },
-          { key: "hypothese-2", q: "Qu'est-ce qui te fait penser que c'est la bonne piste ?" },
-          { key: "hypothese-3", q: "Quelle serait la réponse opposée à la tienne — et qu'est-ce qui la rendrait crédible ?" },
+          { key: "hypothese-1", q: "Si tu devais répondre toi-même, tu dirais quoi ?" },
+          { key: "hypothese-2", q: "Qu'est-ce qui te fait croire que c'est la bonne piste ?" },
+          { key: "hypothese-3", q: "Et si c'était l'inverse ? Qu'est-ce qui rendrait la réponse opposée crédible ?" },
         ],
       },
       contexte: {
         label: "Mon contexte",
         questions: [
-          { key: "contexte", q: "Quel est le contexte ? (qui es-tu, pour qui, avec quelles contraintes)" },
+          { key: "contexte", q: "Pour qui ou pour quoi est-ce ? Donne le contexte en une phrase." },
           { key: "contexte-2", q: "Quelles contraintes la réponse doit-elle absolument respecter ?" },
-          { key: "contexte-3", q: "Qui utilisera le résultat, et qu'est-ce qui compte pour cette personne ?" },
+          { key: "contexte-3", q: "Qui va lire ou utiliser le résultat, et qu'est-ce qui compte pour cette personne ?" },
         ],
       },
       critique: {
         label: "Comment je vérifierai",
         questions: [
-          { key: "critique", q: "Comment vérifieras-tu la réponse ? Pense à demander sources, limites ou alternatives." },
-          { key: "critique-2", q: "Quel serait le pire effet d'une réponse fausse ici ?" },
-          { key: "critique-3", q: "Sur quoi l'IA risque-t-elle le plus de se tromper dans ce sujet ?" },
+          { key: "critique", q: "Comment vérifieras-tu que la réponse est juste ?" },
+          { key: "critique-2", q: "Que se passerait-il si la réponse était fausse et que tu ne t'en rendais pas compte ?" },
+          { key: "critique-3", q: "Sur quel point l'IA a-t-elle le plus de chances de se tromper ici ?" },
         ],
       },
       approfondissement: {
         label: "Ma réflexion",
         questions: [
-          { key: "iteration", q: "En quoi ta demande a-t-elle évolué depuis le début de cette réflexion ?" },
-          { key: "appro-2", q: "Qu'est-ce qui te ferait changer d'avis sur ce que tu viens de dire ?" },
-          { key: "appro-3", q: "Si tu devais expliquer ton besoin à un enfant de 10 ans, tu dirais quoi ?" },
+          { key: "iteration", q: "Ta demande a-t-elle bougé depuis le début de cette réflexion ? En quoi ?" },
+          { key: "appro-2", q: "Qu'est-ce qui te ferait changer d'avis ?" },
+          { key: "appro-3", q: "Explique ton besoin comme à un enfant de 10 ans." },
           { key: "appro-4", q: "Qu'est-ce qui te manque vraiment pour avancer seul ?" },
-          { key: "appro-5", q: "Quelle question devrais-tu te poser que tu évites ?" },
-          { key: "appro-6", q: "Quel serait ton plan en trois étapes si l'IA n'existait pas ?" },
+          { key: "appro-5", q: "Quelle question évites-tu de te poser ?" },
+          { key: "appro-6", q: "Sans IA, quel serait ton plan en trois étapes ?" },
         ],
       },
     },
@@ -153,54 +153,54 @@ const CoachScoring = (() => {
       intention: {
         label: "What I want to get",
         questions: [
-          { key: "clarte", q: "What exact outcome do you expect? (deliverable, format, length)" },
-          { key: "intention-2", q: "How will you know the answer is a success?" },
-          { key: "intention-3", q: "What will you concretely do with the answer once you have it?" },
-          { key: "intention-4", q: "What is the real question behind your question?" },
+          { key: "clarte", q: "Concretely, what do you expect as a result? A text, a plan, an explanation, some code?" },
+          { key: "intention-2", q: "How will you recognize a good answer?" },
+          { key: "intention-3", q: "What will you do with the answer right after receiving it?" },
+          { key: "intention-4", q: "What is the real question behind your request?" },
         ],
       },
       connaissance: {
         label: "What I already know or tried",
         questions: [
-          { key: "delegation", q: "What have you already tried or thought yourself? Describe your lead: the AI will strengthen it instead of thinking for you." },
-          { key: "connaissance-2", q: "What do you already know about this topic, even roughly?" },
-          { key: "connaissance-3", q: "Which part could you do without the AI?" },
+          { key: "delegation", q: "What have you already tried or thought about on your own, even briefly?" },
+          { key: "connaissance-2", q: "What do you already know about this, even vaguely?" },
+          { key: "connaissance-3", q: "Which part can you do yourself, right now, without help?" },
           { key: "connaissance-4", q: "Where did you already look before asking here?" },
         ],
       },
       hypothese: {
         label: "My hypothesis",
         questions: [
-          { key: "hypothese-1", q: "What is YOUR provisional answer, even an imperfect one?" },
-          { key: "hypothese-2", q: "What makes you think it's the right lead?" },
-          { key: "hypothese-3", q: "What would the opposite answer be — and what would make it credible?" },
+          { key: "hypothese-1", q: "If you had to answer yourself, what would you say?" },
+          { key: "hypothese-2", q: "What makes you believe it's the right lead?" },
+          { key: "hypothese-3", q: "And if it were the opposite? What would make the opposite answer credible?" },
         ],
       },
       contexte: {
         label: "My context",
         questions: [
-          { key: "contexte", q: "What is the context? (who you are, for whom, with what constraints)" },
+          { key: "contexte", q: "Who or what is this for? Give the context in one sentence." },
           { key: "contexte-2", q: "Which constraints must the answer absolutely respect?" },
-          { key: "contexte-3", q: "Who will use the result, and what matters to that person?" },
+          { key: "contexte-3", q: "Who will read or use the result, and what matters to that person?" },
         ],
       },
       critique: {
         label: "How I will verify",
         questions: [
-          { key: "critique", q: "How will you verify the answer? Think about asking for sources, limitations or alternatives." },
-          { key: "critique-2", q: "What would be the worst effect of a wrong answer here?" },
-          { key: "critique-3", q: "Where is the AI most likely to be wrong on this topic?" },
+          { key: "critique", q: "How will you check that the answer is right?" },
+          { key: "critique-2", q: "What would happen if the answer were wrong and you didn't notice?" },
+          { key: "critique-3", q: "On which point is the AI most likely to be wrong here?" },
         ],
       },
       approfondissement: {
         label: "My reflection",
         questions: [
-          { key: "iteration", q: "How has your request evolved since the start of this reflection?" },
-          { key: "appro-2", q: "What would make you change your mind about what you just said?" },
-          { key: "appro-3", q: "If you had to explain your need to a 10-year-old, what would you say?" },
+          { key: "iteration", q: "Has your request shifted since the start of this reflection? How?" },
+          { key: "appro-2", q: "What would make you change your mind?" },
+          { key: "appro-3", q: "Explain your need as you would to a 10-year-old." },
           { key: "appro-4", q: "What do you really lack to move forward on your own?" },
-          { key: "appro-5", q: "What question should you be asking yourself that you're avoiding?" },
-          { key: "appro-6", q: "What would your three-step plan be if AI didn't exist?" },
+          { key: "appro-5", q: "Which question are you avoiding asking yourself?" },
+          { key: "appro-6", q: "Without AI, what would your three-step plan be?" },
         ],
       },
     },

@@ -1,19 +1,19 @@
-# Prompt Tracker — Chrome Web Store listing (EN)
+# Prompt Tracker : Chrome Web Store listing (EN)
 
 ## Summary (max 132 chars)
 The guardrail for your prompting: a thoughtful pause before your AI prompts, on ChatGPT, Claude and Gemini. 100% local.
 
 ## Description
-Like the apps that help you unglue from your phone, **Prompt Tracker** adds a little friction — and a lot of thinking — before your AI prompts.
+Like the apps that help you unglue from your phone, **Prompt Tracker** adds a little friction, and a lot of thinking, before your AI prompts.
 
 🪞 **The Socratic mirror**
-When your request is too vague ("do my homework"), sending is held BEFORE it reaches the AI. A dialogue opens: one question at a time — what have you tried? what's your hypothesis? how will you verify? Iterate as long as you like, then YOU always decide: send your version enriched with your reasoning, or your original request as is.
+When your request is too vague ("do my homework"), sending is held BEFORE it reaches the AI. A dialogue opens, one question at a time: what have you tried? what's your hypothesis? how will you verify? Iterate as long as you like, then YOU always decide: send your version enriched with your reasoning, or your original request as is.
 
 📈 **Your progress, measured**
 Every prompt is scored locally on 4 dimensions (clarity, context, iteration, critical thinking). The popup shows your average score, 7-day trend and usage categories. One-click CSV export.
 
 🔒 **100% local by default**
-Your prompts are analyzed in your browser. Nothing is sent anywhere — no account required. Schools, training providers and companies can deploy their white-label space (brand, threshold, custom questions): only indicators are synced there, never the text by default.
+Your prompts are analyzed in your browser. Nothing is sent anywhere, no account required. Schools, training providers and companies can deploy their white-label space (brand, threshold, custom questions): only indicators are synced there, never the text by default.
 
 Who is it for?
 • Students: learn WITH AI without it thinking for you

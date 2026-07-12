@@ -29,7 +29,7 @@ const CoachTheme = (() => {
     },
   };
 
-  const DEFAULT_ACCENT = "#3E5C50"; // vert sauge — remplacé par la marque de l'org
+  const DEFAULT_ACCENT = "#3E5C50"; // vert sauge : remplacé par la marque de l'org
 
   // Typographie côté pages hôtes : piles système raffinées, aucun chargement
   // de fonte dans ChatGPT/Claude/Gemini (fiabilité + perfs). Les fontes

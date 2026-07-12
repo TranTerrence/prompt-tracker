@@ -1,4 +1,4 @@
-// Adaptateur ChatGPT — uniquement les sélecteurs propres au site.
+// Adaptateur ChatGPT : uniquement les sélecteurs propres au site.
 // Quand OpenAI change son UI, seul ce fichier est à mettre à jour.
 
 const CoachAdapter = createCoachAdapter({

@@ -1,4 +1,4 @@
-# Spec POC — Coach IA / Miroir Socratique (extension Chrome)
+# Spec POC : Coach IA / Miroir Socratique (extension Chrome)
 
 ## Promesse utilisateur
 « Ton copilote pour mieux prompter et garder ton esprit critique. » L'utilisateur installe volontairement l'extension ; elle observe ses prompts sur ChatGPT, lui montre sa progression et lui glisse des questions socratiques **sans jamais bloquer** son envoi.
@@ -6,7 +6,7 @@
 ## Périmètre du POC (1 semaine)
 - **Site couvert** : ChatGPT uniquement (chatgpt.com). Claude et Gemini en V2.
 - **Sans backend** : tout est stocké localement (`chrome.storage.local`), export CSV manuel depuis le popup.
-- **Capture configurable** : mode `metadata` par défaut (catégorie, scores, longueur — jamais le texte), mode `full` en opt-in explicite dans les réglages.
+- **Capture configurable** : mode `metadata` par défaut (catégorie, scores, longueur : jamais le texte), mode `full` en opt-in explicite dans les réglages.
 
 ## Parcours utilisateur
 1. L'utilisateur tape un prompt dans ChatGPT et l'envoie normalement (rien n'est intercepté ni retardé).

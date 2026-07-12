@@ -108,8 +108,8 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={() => writePref(next)}
-      title={`Thème : ${LABELS[pref]} — cliquer pour passer en ${LABELS[next]}`}
-      aria-label={`Thème : ${LABELS[pref]} — passer en ${LABELS[next]}`}
+      title={`Thème : ${LABELS[pref]} : cliquer pour passer en ${LABELS[next]}`}
+      aria-label={`Thème : ${LABELS[pref]} : passer en ${LABELS[next]}`}
       className="flex h-8 w-8 items-center justify-center rounded-lg border border-card-border text-muted transition-colors hover:bg-soft hover:text-foreground"
     >
       {pref === "light" ? <SunIcon /> : pref === "dark" ? <MoonIcon /> : <SystemIcon />}

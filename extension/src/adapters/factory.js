@@ -1,6 +1,6 @@
 // Fabrique d'adaptateurs de site. Toute la mécanique générique vit ici :
 // interception en phase capture, injection vérifiée, envoi conditionné.
-// Chaque site (ChatGPT, Claude, …) ne déclare que ses sélecteurs — quand une
+// Chaque site (ChatGPT, Claude, …) ne déclare que ses sélecteurs : quand une
 // UI change, seul le fichier de config du site est à retoucher.
 
 function createCoachAdapter(config) {
@@ -144,7 +144,7 @@ function createCoachAdapter(config) {
       return;
     }
 
-    // Interception : l'envoi est stoppé ici, en phase capture — rien ne part.
+    // Interception : l'envoi est stoppé ici, en phase capture : rien ne part.
     e.preventDefault();
     e.stopImmediatePropagation();
     if (!dedupe(text) && hooks.onIntercept) hooks.onIntercept(text, { source });

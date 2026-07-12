@@ -1,4 +1,4 @@
-// Client Supabase minimaliste (REST + Auth) sans dépendance — utilisable depuis
+// Client Supabase minimaliste (REST + Auth) sans dépendance : utilisable depuis
 // le popup (balise script) et le service worker (importScripts).
 // La clé publishable est publique par conception ; la sécurité repose sur RLS.
 
@@ -151,7 +151,7 @@ const CoachApi = (() => {
   }
 
   // Prochaine question socratique générée par LLM à partir de tout le dialogue
-  // (Edge Function). Timeout court : l'itération n'attend jamais le réseau —
+  // (Edge Function). Timeout court : l'itération n'attend jamais le réseau :
   // repli sur la banque locale géré par l'appelant.
   async function llmNextQuestion(prompt, dialogue = [], timeoutMs = 2000) {
     const session = await ensureSession();

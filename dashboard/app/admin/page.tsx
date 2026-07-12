@@ -123,7 +123,7 @@ export default async function AdminPage({
           label="Progression (7 derniers jours)"
           value={
             progression === null
-              ? "—"
+              ? ":"
               : `${progression >= 0 ? "+" : ""}${fmt(progression)}`
           }
           sub={`vs 7 jours précédents (${fmt(prev7)} → ${fmt(last7)})`}
@@ -133,14 +133,14 @@ export default async function AdminPage({
           label="Issues des interceptions"
           value={
             outcomeTotal === 0
-              ? "—"
+              ? ":"
               : `${outcomes.improved} / ${outcomes.sent_anyway} / ${outcomes.cancelled}`
           }
           sub="améliorés / envoyés quand même / annulés"
         />
         <Kpi
           label="Gain moyen après amélioration"
-          value={avgGain === null ? "—" : `+${fmt(avgGain)}`}
+          value={avgGain === null ? ":" : `+${fmt(avgGain)}`}
           sub="score après − score avant (prompts améliorés)"
         />
         <Kpi

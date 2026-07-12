@@ -198,15 +198,15 @@ export default async function MePage() {
                   className="border-t border-card-border transition-colors hover:bg-soft/50"
                 >
                   <td className="px-5 py-3 tabular-nums">{fmtDate(e.ts)}</td>
-                  <td className="px-5 py-3 text-muted">{e.site ?? "—"}</td>
+                  <td className="px-5 py-3 text-muted">{e.site ?? ":"}</td>
                   <td className="px-5 py-3">
-                    {e.outcome ? OUTCOME_LABELS[e.outcome] ?? e.outcome : "—"}
+                    {e.outcome ? OUTCOME_LABELS[e.outcome] ?? e.outcome : ":"}
                   </td>
-                  <td className="px-5 py-3 text-muted tabular-nums">{e.rounds ?? "—"}</td>
+                  <td className="px-5 py-3 text-muted tabular-nums">{e.rounds ?? ":"}</td>
                   <td className="px-5 py-3 tabular-nums">
-                    {typeof e.score_before === "number" ? e.score_before : "—"}
+                    {typeof e.score_before === "number" ? e.score_before : ":"}
                     {" → "}
-                    {typeof e.score_after === "number" ? e.score_after : "—"}
+                    {typeof e.score_after === "number" ? e.score_after : ":"}
                   </td>
                 </tr>
               ))}

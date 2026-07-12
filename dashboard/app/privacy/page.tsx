@@ -3,7 +3,7 @@ import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
-  title: "Politique de confidentialité — Prompt Tracker",
+  title: "Politique de confidentialité : Prompt Tracker",
   description:
     "Politique de confidentialité de Prompt Tracker : analyse locale des prompts, synchronisation limitée aux métadonnées, hébergement en Union européenne.",
 };
@@ -79,7 +79,7 @@ export default function PrivacyPage() {
             <p className="leading-relaxed text-muted">
               Sans compte, l&apos;extension fonctionne entièrement en local :
               vos prompts sont analysés directement dans votre navigateur.
-              Aucune donnée — ni texte, ni métadonnée — n&apos;est envoyée vers
+              Aucune donnée : ni texte, ni métadonnée : n&apos;est envoyée vers
               un serveur. Rien ne quitte votre machine tant que vous ne
               connectez pas un compte d&apos;organisation.
             </p>
@@ -166,8 +166,8 @@ export default function PrivacyPage() {
           <Section title="1. Local by default">
             <p className="leading-relaxed text-muted">
               Without an account, the extension runs entirely locally: your
-              prompts are analyzed directly in your browser. No data — neither
-              text nor metadata — is sent to any server. Nothing leaves your
+              prompts are analyzed directly in your browser. No data : neither
+              text nor metadata : is sent to any server. Nothing leaves your
               machine unless you sign in with an organization account.
             </p>
           </Section>
@@ -228,7 +228,7 @@ export default function PrivacyPage() {
 
       <footer className="border-t border-card-border">
         <div className="mx-auto max-w-3xl px-6 py-6 text-center text-xs text-muted">
-          Prompt Tracker — Le garde-fou de votre prompting
+          Prompt Tracker : Le garde-fou de votre prompting
         </div>
       </footer>
     </div>

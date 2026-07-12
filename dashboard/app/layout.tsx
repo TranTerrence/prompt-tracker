@@ -16,7 +16,7 @@ const plexSans = IBM_Plex_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Prompt Tracker — Tableau de bord",
+  title: "Prompt Tracker : Tableau de bord",
   description:
     "Tableau de bord de Prompt Tracker : suivez la qualité des prompts de votre équipe.",
 };

@@ -17,11 +17,11 @@ export function averageScore(events: Pick<PromptEvent, "scores">[]) {
 }
 
 export function fmt(n: number | null, digits = 1): string {
-  return n === null ? "—" : n.toFixed(digits).replace(".", ",");
+  return n === null ? ":" : n.toFixed(digits).replace(".", ",");
 }
 
 export function fmtPct(n: number | null): string {
-  return n === null ? "—" : `${(n * 100).toFixed(0)} %`;
+  return n === null ? ":" : `${(n * 100).toFixed(0)} %`;
 }
 
 export function fmtDate(ts: string): string {

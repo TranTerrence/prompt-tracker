@@ -1,6 +1,6 @@
 // Orchestrateur : score chaque prompt AVANT l'envoi. Sous le seuil, l'envoi est
 // retenu (aucun crédit consommé) et la modale socratique s'affiche ; l'utilisateur
-// choisit « améliorer » ou « envoyer quand même » — les deux choix sont tracés.
+// choisit « améliorer » ou « envoyer quand même » : les deux choix sont tracés.
 // Au-dessus du seuil, le prompt part normalement, sans latence ajoutée.
 
 (() => {
@@ -105,14 +105,14 @@
     },
 
     // Prompt retenu : rien n'est parti vers ChatGPT. Dialogue socratique
-    // itératif — une question à la fois, sans fin, jusqu'à ce que l'utilisateur
+    // itératif : une question à la fois, sans fin, jusqu'à ce que l'utilisateur
     // décide lui-même d'envoyer.
     onIntercept(text) {
       const scores = CoachScoring.score(text, recentPromptTexts);
       const templates = (orgConfig && orgConfig.templates) || {};
 
       // Question suivante : LLM sur mesure si l'org l'active (repli silencieux
-      // sur la banque locale — l'itération n'attend jamais le réseau plus de 2 s).
+      // sur la banque locale : l'itération n'attend jamais le réseau plus de 2 s).
       function ask(dialogueState) {
         const local = () =>
           CoachScoring.nextQuestion(

@@ -1,6 +1,6 @@
 // Surfaces du miroir socratique, en Shadow DOM (styles isolés du site hôte) :
 //   show(message)  : toast non bloquant (suggestions légères).
-//   showModal(...) : dialogue socratique ITÉRATIF — le prompt a été RETENU avant
+//   showModal(...) : dialogue socratique ITÉRATIF : le prompt a été RETENU avant
 //                    l'envoi ; une question à la fois, sans fin, jusqu'à ce que
 //                    l'utilisateur décide lui-même d'envoyer.
 // Design « éditorial calme » : tokens light/dark de CoachTheme, textes CoachI18n.

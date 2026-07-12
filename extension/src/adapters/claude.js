@@ -1,4 +1,4 @@
-// Adaptateur Claude.ai — uniquement les sélecteurs propres au site.
+// Adaptateur Claude.ai : uniquement les sélecteurs propres au site.
 // Quand Anthropic change son UI, seul ce fichier est à mettre à jour.
 // Claude utilise aussi un composeur ProseMirror (contenteditable) : la
 // mécanique d'injection/vérification de la factory s'applique telle quelle.
