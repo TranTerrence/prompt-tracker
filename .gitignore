@@ -1,0 +1,13 @@
+# Dépendances et builds
+node_modules/
+.next/
+dist/
+
+# Environnements (jamais de secrets dans le repo)
+.env
+.env*.local
+
+# Artefacts locaux
+.DS_Store
+.playwright-mcp/
+*.log

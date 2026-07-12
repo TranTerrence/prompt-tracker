@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Prompt Tracker — thème « éditorial calme »                          */
+/* Tokens en variables CSS, pilotés par data-theme sur <html>.         */
+/* L'accent reste white-label : ThemedShell injecte --accent quand     */
+/* l'organisation définit une couleur de marque.                       */
+/* ------------------------------------------------------------------ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #faf7f0;
+  --card: #ffffff;
+  --card-border: #e5ded2;
+  --foreground: #1b1815;
+  --muted: #6e655a;
+  --soft: #f1ebe0;
+  --accent: #3e5c50;
+  --success: #2f6b44;
+  --danger: #9c3b22;
+  --card-shadow: 0 1px 2px rgb(27 24 21 / 0.04),
+    0 10px 28px -18px rgb(27 24 21 / 0.14);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #161311;
+  --card: #211d19;
+  --card-border: #3a342c;
+  --foreground: #f3eee6;
+  --muted: #9a9084;
+  --soft: #2a251f;
+  --accent: #4e7466;
+  --success: #8fc7a0;
+  --danger: #e39a85;
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.25),
+    0 12px 28px -18px rgb(0 0 0 / 0.5);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-soft: var(--soft);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --shadow-card: var(--card-shadow);
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--accent) 60%, transparent);
+    outline-offset: 2px;
+  }
+}

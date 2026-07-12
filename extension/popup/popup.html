@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Prompt Tracker</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <div class="brand-row">
+      <h1 id="brand-title">Prompt Tracker</h1>
+      <div class="theme-switch" role="radiogroup" aria-label="Thème">
+        <button data-theme-choice="light" title="Clair">☀️</button>
+        <button data-theme-choice="dark" title="Sombre">🌙</button>
+        <button data-theme-choice="system" title="Système">◐</button>
+      </div>
+    </div>
+    <p class="tagline" data-i18n="popupTagline"></p>
+    <span id="health" class="health" hidden></span>
+  </header>
+
+  <section id="auth" class="auth">
+    <div id="auth-form">
+      <input type="email" id="auth-email" autocomplete="email" />
+      <input type="password" id="auth-password" autocomplete="current-password" />
+      <div class="auth-buttons">
+        <button id="auth-login"></button>
+        <button id="auth-signup" class="secondary"></button>
+      </div>
+      <p id="auth-error" class="auth-error" hidden></p>
+      <p class="auth-hint" data-i18n="authHint"></p>
+    </div>
+    <div id="auth-connected" hidden>
+      <p><span id="auth-user"></span> · <span id="auth-org" class="muted"></span></p>
+      <p id="sync-status" class="muted"></p>
+      <div class="auth-buttons">
+        <button id="open-dashboard"></button>
+        <button id="auth-logout" class="secondary"></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><span class="value" id="stat-count">0</span><span class="label" data-i18n="popupPrompts"></span></div>
+    <div class="stat"><span class="value" id="stat-score">–</span><span class="label" data-i18n="popupAvgScore"></span></div>
+    <div class="stat"><span class="value" id="stat-trend">–</span><span class="label" data-i18n="popupTrend"></span></div>
+    <div class="stat"><span class="value" id="stat-mirror">–</span><span class="label" data-i18n="popupMirror"></span></div>
+  </section>
+
+  <section>
+    <h2 data-i18n="popupRubrics"></h2>
+    <div id="rubrics"></div>
+  </section>
+
+  <section>
+    <h2 data-i18n="popupCategories"></h2>
+    <ul id="categories" class="categories"></ul>
+  </section>
+
+  <section class="settings">
+    <h2 data-i18n="popupSettings"></h2>
+    <label><input type="checkbox" id="setting-mirror" checked /> <span data-i18n="popupIntercept"></span></label>
+    <label class="slider"><span data-i18n="popupThreshold"></span> <b id="threshold-value">40</b>/100
+      <input type="range" id="setting-threshold" min="0" max="100" step="5" value="40" />
+    </label>
+    <label><input type="checkbox" id="setting-fulltext" /> <span data-i18n="popupFullText"></span></label>
+  </section>
+
+  <footer>
+    <button id="export"></button>
+    <button id="reset" class="danger"></button>
+  </footer>
+
+  <script src="../src/i18n.js"></script>
+  <script src="../src/supabase.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

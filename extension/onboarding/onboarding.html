@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prompt Tracker</title>
+  <link rel="stylesheet" href="onboarding.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <div class="mark">▷|</div>
+      <h1 id="ob-title"></h1>
+      <p class="subtitle" id="ob-subtitle"></p>
+    </header>
+
+    <p class="pitch" id="ob-pitch"></p>
+
+    <section>
+      <h2 id="ob-how"></h2>
+      <ol class="steps">
+        <li id="ob-step1"></li>
+        <li id="ob-step2"></li>
+        <li id="ob-step3"></li>
+      </ol>
+    </section>
+
+    <section class="card privacy">
+      <h2 id="ob-privacy-title"></h2>
+      <p id="ob-privacy"></p>
+    </section>
+
+    <section class="row">
+      <div class="card half">
+        <h2 id="ob-theme-title"></h2>
+        <div class="theme-switch" role="radiogroup">
+          <button data-theme-choice="light"><span>☀️</span> <span id="theme-light"></span></button>
+          <button data-theme-choice="dark"><span>🌙</span> <span id="theme-dark"></span></button>
+          <button data-theme-choice="system"><span>◐</span> <span id="theme-system"></span></button>
+        </div>
+      </div>
+      <div class="card half">
+        <h2 id="ob-threshold-title"></h2>
+        <label class="slider"><b id="threshold-value">40</b>/100
+          <input type="range" id="setting-threshold" min="0" max="100" step="5" value="40" />
+        </label>
+        <p class="hint" id="ob-threshold-hint"></p>
+      </div>
+    </section>
+
+    <footer>
+      <p class="sites" id="ob-sites"></p>
+      <button id="cta"></button>
+      <p class="hint" id="ob-try"></p>
+    </footer>
+  </main>
+
+  <script src="../src/i18n.js"></script>
+  <script src="onboarding.js"></script>
+</body>
+</html>

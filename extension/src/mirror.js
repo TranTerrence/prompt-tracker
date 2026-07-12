@@ -1,0 +1,310 @@
+// Surfaces du miroir socratique, en Shadow DOM (styles isolés du site hôte) :
+//   show(message)  : toast non bloquant (suggestions légères).
+//   showModal(...) : dialogue socratique ITÉRATIF — le prompt a été RETENU avant
+//                    l'envoi ; une question à la fois, sans fin, jusqu'à ce que
+//                    l'utilisateur décide lui-même d'envoyer.
+// Design « éditorial calme » : tokens light/dark de CoachTheme, textes CoachI18n.
+
+const CoachMirror = (() => {
+  let toastHost = null;
+  let modalHost = null;
+  let hideTimer = null;
+
+  const t = (...a) => CoachI18n.t(...a);
+
+  /* ---------- Toast non bloquant ---------- */
+
+  function ensureToast(accent) {
+    if (toastHost && document.contains(toastHost)) return toastHost.shadowRoot;
+    toastHost = document.createElement("div");
+    toastHost.id = "coach-ia-toast";
+    const shadow = toastHost.attachShadow({ mode: "open" });
+    shadow.innerHTML = `
+      <style>
+        :host { all: initial; }
+        .root { ${CoachTheme.vars(accent)} }
+        .panel { position: fixed; bottom: 96px; right: 24px; z-index: 2147483647;
+          max-width: 340px; padding: 16px 18px; border-radius: 14px;
+          background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+          font: 14px/1.5 var(--font-text); box-shadow: var(--shadow);
+          opacity: 0; transform: translateY(8px); transition: opacity .25s, transform .25s; }
+        .panel.visible { opacity: 1; transform: translateY(0); }
+        .title { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px;
+          font: 600 13px/1.3 var(--font-display); color: var(--accent); letter-spacing: .01em; }
+        .close { margin-left: auto; cursor: pointer; border: 0; background: none; color: var(--muted); font-size: 15px; padding: 2px; }
+        .close:hover { color: var(--ink); }
+        .message { color: var(--ink); }
+        .useful { margin-top: 12px; cursor: pointer; border: 1px solid var(--border); background: var(--soft);
+          color: var(--ink); border-radius: 999px; padding: 5px 12px; font: 12px var(--font-text); }
+        .useful:hover { border-color: var(--accent); color: var(--accent); }
+      </style>
+      <div class="root">
+        <div class="panel" role="status">
+          <div class="title"><span class="brand">🪞 ${t("toastTitle")}</span> <button class="close">✕</button></div>
+          <div class="message"></div>
+          <button class="useful">${t("toastUseful")}</button>
+        </div>
+      </div>`;
+    document.documentElement.appendChild(toastHost);
+    shadow.querySelector(".close").addEventListener("click", () => hideToast("dismissed"));
+    shadow.querySelector(".useful").addEventListener("click", () => {
+      if (typeof CoachMirror.onFeedback === "function") CoachMirror.onFeedback("useful");
+      hideToast("useful");
+    });
+    return shadow;
+  }
+
+  function show(message, accent) {
+    const shadow = ensureToast(accent);
+    shadow.querySelector(".message").textContent = message;
+    const panel = shadow.querySelector(".panel");
+    requestAnimationFrame(() => panel.classList.add("visible"));
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => hideToast("timeout"), 15000);
+  }
+
+  function hideToast(reason) {
+    clearTimeout(hideTimer);
+    if (!toastHost) return;
+    toastHost.shadowRoot.querySelector(".panel").classList.remove("visible");
+    if (typeof CoachMirror.onClose === "function") CoachMirror.onClose(reason);
+  }
+
+  /* ---------- Modale : dialogue socratique itératif ---------- */
+
+  // opts: { promptText, scoreBefore, branding: {name, color},
+  //   rescore(text) -> scores, compile(originalPrompt, answers) -> string,
+  //   ask(state) -> Promise<{key, axis, label, question}>,
+  //   onSend(finalText, meta), onSendAnyway(meta), onCancel(meta) }
+  function showModal(opts) {
+    closeModal();
+    const accent = (opts.branding && opts.branding.color) || CoachTheme.DEFAULT_ACCENT;
+    const brand = (opts.branding && opts.branding.name) || t("brandDefault");
+
+    const state = {
+      answers: [], // {key, axis, label, question, answer}
+      asked: [],
+      current: null,
+      previewFrozen: false, // édition manuelle de l'aperçu → on arrête de recompiler
+    };
+
+    modalHost = document.createElement("div");
+    modalHost.id = "coach-ia-modal";
+    const shadow = modalHost.attachShadow({ mode: "open" });
+    shadow.innerHTML = `
+      <style>
+        :host { all: initial; }
+        .root { ${CoachTheme.vars(accent)} }
+        .overlay { position: fixed; inset: 0; z-index: 2147483647; background: var(--overlay);
+          display: flex; align-items: center; justify-content: center; font: 14px/1.55 var(--font-text);
+          -webkit-font-smoothing: antialiased; }
+        .modal { width: min(660px, 94vw); max-height: 90vh; display: flex; flex-direction: column;
+          background: var(--bg); color: var(--ink); border: 1px solid var(--border); border-radius: 18px;
+          box-shadow: var(--shadow); overflow: hidden; }
+        .head { display: flex; align-items: center; padding: 18px 22px 8px; }
+        h1 { font: 600 17px/1.3 var(--font-display); margin: 0; color: var(--ink); letter-spacing: .005em; }
+        h1 .tick { color: var(--accent); }
+        .closex { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px; }
+        .closex:hover { color: var(--ink); }
+        .sub { padding: 0 22px 12px; color: var(--muted); font-size: 12.5px; }
+        .score { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
+
+        .thread { flex: 1; min-height: 60px; max-height: 32vh; overflow-y: auto; padding: 6px 22px; }
+        .bubble { max-width: 86%; margin-bottom: 10px; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; }
+        .bubble.coach { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 5px;
+          font-family: var(--font-display); font-size: 14.5px; }
+        .bubble.user { background: var(--accent); color: #FDFCF9; margin-left: auto; border-bottom-right-radius: 5px; }
+        .bubble.skip { background: none; border: 1px dashed var(--border); color: var(--muted); font-style: italic; }
+        .thinking { color: var(--muted); font-size: 12px; padding: 0 22px 6px; }
+
+        .answer-zone { padding: 8px 22px 12px; border-top: 1px solid var(--border); background: var(--bg); }
+        .answer-row { display: flex; gap: 10px; align-items: flex-end; }
+        textarea { box-sizing: border-box; background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+          border-radius: 12px; padding: 10px 12px; font: 13.5px/1.55 var(--font-text); resize: vertical; }
+        textarea::placeholder { color: var(--muted); }
+        textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+        .answer { flex: 1; min-height: 44px; max-height: 110px; }
+        .reply { padding: 10px 16px; border-radius: 11px; border: 1px solid var(--accent); background: var(--accent);
+          color: #FDFCF9; font: 600 13px var(--font-text); cursor: pointer; }
+        .reply:hover { filter: brightness(1.08); }
+        .skip-link { border: 0; background: none; color: var(--muted); font-size: 11.5px; cursor: pointer;
+          text-decoration: underline; text-underline-offset: 2px; padding: 6px 0 0; }
+        .skip-link:hover { color: var(--ink); }
+
+        .preview-zone { padding: 12px 22px 18px; border-top: 1px solid var(--border); background: var(--soft); }
+        .preview-head { display: flex; align-items: center; gap: 10px; font-size: 10.5px; color: var(--muted);
+          text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+        .recompile { display: none; border: 0; background: none; color: var(--accent); font-size: 11px;
+          cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+        .preview-zone.frozen .recompile { display: inline; }
+        .preview { width: 100%; min-height: 72px; max-height: 150px; }
+        .buttons { display: flex; gap: 10px; margin-top: 12px; }
+        .send { flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--accent); background: var(--accent);
+          color: #FDFCF9; font: 600 13.5px var(--font-text); cursor: pointer; }
+        .send:hover { filter: brightness(1.08); }
+        .anyway { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: none;
+          color: var(--muted); cursor: pointer; font: 12px var(--font-text); }
+        .anyway:hover { color: var(--ink); border-color: var(--muted); }
+      </style>
+      <div class="root">
+        <div class="overlay">
+          <div class="modal" role="dialog" aria-modal="true">
+            <div class="head"><h1><span class="tick">🪞</span> </h1><button class="closex"></button></div>
+            <div class="sub"></div>
+            <div class="thread"></div>
+            <div class="thinking" hidden>…</div>
+            <div class="answer-zone">
+              <div class="answer-row">
+                <textarea class="answer"></textarea>
+                <button class="reply"></button>
+              </div>
+              <button class="skip-link"></button>
+            </div>
+            <div class="preview-zone">
+              <div class="preview-head">
+                <span class="preview-title"></span>
+                <button class="recompile"></button>
+              </div>
+              <textarea class="preview" spellcheck="false"></textarea>
+              <div class="buttons">
+                <button class="send"></button>
+                <button class="anyway"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.documentElement.appendChild(modalHost);
+
+    const el = (sel) => shadow.querySelector(sel);
+    el("h1").append(t("modalTitle", brand));
+    el(".closex").textContent = "✕";
+    el(".closex").title = t("modalCancelTitle");
+    el(".sub").textContent = t("modalSub", opts.scoreBefore);
+    el(".answer").placeholder = t("modalAnswerPlaceholder");
+    el(".reply").textContent = t("modalReply");
+    el(".skip-link").textContent = t("modalSkip");
+    el(".recompile").textContent = t("modalRecompile");
+    el(".send").textContent = t("modalSend");
+    el(".anyway").textContent = t("modalSendAnyway");
+
+    const thread = el(".thread");
+    const answerBox = el(".answer");
+    const preview = el(".preview");
+    const previewTitle = el(".preview-title");
+
+    function setPreviewScore(total) {
+      previewTitle.textContent = "";
+      previewTitle.append(`${t("modalPreviewHead")} `);
+      const s = document.createElement("span");
+      s.className = "score";
+      s.textContent = total;
+      previewTitle.append(s, "/100");
+    }
+
+    function bubble(kind, text) {
+      const b = document.createElement("div");
+      b.className = `bubble ${kind}`;
+      b.textContent = text;
+      thread.appendChild(b);
+      thread.scrollTop = thread.scrollHeight;
+    }
+
+    function updatePreview() {
+      if (state.previewFrozen) return;
+      preview.value = opts.compile(opts.promptText, state.answers);
+      setPreviewScore(opts.rescore(preview.value).total);
+    }
+
+    function meta() {
+      return {
+        rounds: state.asked.length,
+        answersCount: state.answers.filter((a) => a.answer && a.answer.trim()).length,
+      };
+    }
+
+    // Boucle infinie : demander la question suivante (jamais de fin imposée).
+    async function askNext() {
+      el(".thinking").hidden = false;
+      let q;
+      try {
+        q = await opts.ask({ answers: state.answers, asked: state.asked });
+      } finally {
+        el(".thinking").hidden = true;
+      }
+      state.current = q;
+      state.asked.push(q.key);
+      bubble("coach", q.question);
+      answerBox.focus();
+    }
+
+    function submitAnswer(text) {
+      if (!state.current) return;
+      const answer = text.trim();
+      state.answers.push({ ...state.current, answer });
+      bubble(answer ? "user" : "skip", answer || t("modalSkipped"));
+      answerBox.value = "";
+      updatePreview();
+      askNext();
+    }
+
+    el(".reply").addEventListener("click", () => submitAnswer(answerBox.value));
+    el(".skip-link").addEventListener("click", () => submitAnswer(""));
+    answerBox.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        submitAnswer(answerBox.value);
+      }
+    });
+
+    // Édition manuelle de l'aperçu → gel de la recompilation automatique.
+    preview.addEventListener("input", () => {
+      state.previewFrozen = true;
+      el(".preview-zone").classList.add("frozen");
+      setPreviewScore(opts.rescore(preview.value).total);
+    });
+    el(".recompile").addEventListener("click", () => {
+      state.previewFrozen = false;
+      el(".preview-zone").classList.remove("frozen");
+      updatePreview();
+    });
+
+    el(".send").addEventListener("click", () => {
+      const finalText = preview.value.trim();
+      if (!finalText) return;
+      const m = meta();
+      closeModal();
+      opts.onSend(finalText, m);
+    });
+    el(".anyway").addEventListener("click", () => {
+      const m = meta();
+      closeModal();
+      opts.onSendAnyway(m);
+    });
+    el(".closex").addEventListener("click", () => {
+      const m = meta();
+      closeModal();
+      if (opts.onCancel) opts.onCancel(m);
+    });
+    el(".overlay").addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        const m = meta();
+        closeModal();
+        if (opts.onCancel) opts.onCancel(m);
+      }
+      e.stopPropagation(); // la frappe dans la modale ne doit pas fuir vers la page
+    });
+
+    updatePreview();
+    askNext();
+  }
+
+  function closeModal() {
+    if (modalHost) {
+      modalHost.remove();
+      modalHost = null;
+    }
+  }
+
+  return { show, hide: hideToast, showModal, closeModal, onFeedback: null, onClose: null };
+})();

@@ -1,0 +1,185 @@
+// Internationalisation FR/EN des surfaces de l'extension. La langue suit celle
+// du navigateur (chrome.i18n), repli français. Les chaînes vivent ici (un seul
+// catalogue) ; _locales/ ne porte que le nom et la description du manifest.
+
+const CoachI18n = (() => {
+  const MESSAGES = {
+    fr: {
+      brandDefault: "Prompt Tracker",
+      // Badge
+      badgeActive: (name, threshold) =>
+        `${name} actif — tes prompts sous ${threshold}/100 déclencheront un dialogue de réflexion. Clique pour replier.`,
+      badgeWatch: (name) => `${name} actif — interception désactivée, tes prompts sont seulement analysés localement.`,
+      badgeBroken: (name) => `${name} — attention : l'UI du site a peut-être changé, la capture est à vérifier.`,
+      badgeStandby: "(veille)",
+      // Toast
+      toastTitle: "Miroir socratique",
+      toastUseful: "👍 Utile",
+      // Modale
+      modalTitle: (name) => `${name} — réfléchissons ensemble`,
+      modalSub: (score) =>
+        `Prompt retenu avant envoi — score initial ${score}/100. Réponds autant de fois que tu veux : c'est toi qui décides quand envoyer.`,
+      modalAnswerPlaceholder: "Ta réponse… (Entrée pour valider, Shift+Entrée pour un saut de ligne)",
+      modalReply: "Répondre",
+      modalSkip: "Passer cette question",
+      modalSkipped: "(question passée)",
+      modalPreviewHead: "Prompt qui sera envoyé — score",
+      modalRecompile: "recompiler depuis le dialogue",
+      modalSend: "🚀 Envoyer au chat (avec ma réflexion)",
+      modalSendAnyway: "Envoyer ma demande initiale telle quelle",
+      modalCancelTitle: "Annuler (rien ne part, ton texte reste dans la zone de saisie)",
+      // Compilation
+      compileHeader: "Ma réflexion préalable :",
+      // Popup
+      popupTagline: "Le garde-fou de ton prompting",
+      popupPrompts: "prompts",
+      popupAvgScore: "score moyen",
+      popupTrend: "progression 7 j",
+      popupMirror: "miroir utile",
+      popupRubrics: "Rubriques (moyenne /25)",
+      popupCategories: "Catégories d'usage",
+      popupSettings: "Réglages",
+      popupThemeLabel: "Thème",
+      themeLight: "Clair",
+      themeDark: "Sombre",
+      themeSystem: "Système",
+      popupIntercept: "Interception socratique activée",
+      popupThreshold: "Seuil d'interception :",
+      popupFullText: "Conserver le texte des prompts (sinon : indicateurs seuls)",
+      popupExport: "⬇️ Exporter CSV",
+      popupReset: "Effacer les données",
+      popupResetConfirm: "Effacer toutes les données locales ?",
+      popupEmpty: "Aucun prompt capté pour l'instant. Utilise ChatGPT, Claude ou Gemini — je te suis. 🙂",
+      popupHealthBroken: (sites) => `⚠️ Capture peut-être cassée sur : ${sites} (UI modifiée)`,
+      authEmail: "Email",
+      authPassword: "Mot de passe",
+      authLogin: "Se connecter",
+      authSignup: "Créer un compte",
+      authRequired: "Email et mot de passe requis.",
+      authInvalid: "Identifiants invalides.",
+      authConfirm: "Compte créé — confirme ton email puis connecte-toi.",
+      authHint: "Sans compte, tout reste local sur cet ordinateur.",
+      authNoOrg: "aucune organisation rattachée",
+      authConnected: "connecté",
+      authPending: (n) => `${n} événement(s) en attente de synchronisation`,
+      authSynced: "Tout est synchronisé ✓",
+      authDashboard: "📊 Ouvrir le dashboard",
+      authLogout: "Déconnexion",
+      // Onboarding
+      obTitle: "Bienvenue dans Prompt Tracker",
+      obSubtitle: "Le garde-fou de ton prompting — un peu de friction, beaucoup de réflexion.",
+      obPitch:
+        "Comme les applications qui t'aident à décrocher de ton téléphone, Prompt Tracker ajoute une pause réfléchie avant tes prompts IA. Quand ta demande est trop vague, elle est retenue avant l'envoi et un dialogue socratique t'aide à penser par toi-même — puis c'est toujours toi qui décides d'envoyer.",
+      obHow: "Comment ça marche",
+      obStep1: "Écris ton prompt sur ChatGPT, Claude ou Gemini, comme d'habitude.",
+      obStep2: "Sous le seuil de qualité, l'envoi est retenu : questions socratiques, une par une, aussi longtemps que tu veux.",
+      obStep3: "Envoie ta version enrichie de ta réflexion — ou ta demande initiale telle quelle. Toujours ton choix.",
+      obPrivacyTitle: "100 % local par défaut",
+      obPrivacy:
+        "Tes prompts sont analysés dans ton navigateur. Rien n'est envoyé nulle part, sauf si tu rejoins l'espace d'une organisation (école, entreprise) — et même là, seuls des indicateurs sont synchronisés par défaut, jamais le texte.",
+      obThemeTitle: "Ton thème",
+      obThresholdTitle: "Niveau de friction",
+      obThresholdHint: "Les prompts sous ce score déclenchent le dialogue. 40 est un bon départ.",
+      obSites: "Fonctionne sur ChatGPT, Claude et Gemini.",
+      obCta: "C'est parti 🚀",
+      obTry: "Essaye maintenant : ouvre ChatGPT et tape « fais mes devoirs ».",
+    },
+    en: {
+      brandDefault: "Prompt Tracker",
+      badgeActive: (name, threshold) =>
+        `${name} active — prompts under ${threshold}/100 will trigger a reflection dialogue. Click to collapse.`,
+      badgeWatch: (name) => `${name} active — interception off, your prompts are only analyzed locally.`,
+      badgeBroken: (name) => `${name} — warning: the site UI may have changed, capture needs checking.`,
+      badgeStandby: "(standby)",
+      toastTitle: "Socratic mirror",
+      toastUseful: "👍 Helpful",
+      modalTitle: (name) => `${name} — let's think this through`,
+      modalSub: (score) =>
+        `Prompt held before sending — initial score ${score}/100. Answer as many times as you like: you decide when to send.`,
+      modalAnswerPlaceholder: "Your answer… (Enter to submit, Shift+Enter for a new line)",
+      modalReply: "Answer",
+      modalSkip: "Skip this question",
+      modalSkipped: "(question skipped)",
+      modalPreviewHead: "Prompt that will be sent — score",
+      modalRecompile: "recompile from the dialogue",
+      modalSend: "🚀 Send to chat (with my reasoning)",
+      modalSendAnyway: "Send my original request as is",
+      modalCancelTitle: "Cancel (nothing is sent, your text stays in the input box)",
+      compileHeader: "My prior reasoning:",
+      popupTagline: "The guardrail for your prompting",
+      popupPrompts: "prompts",
+      popupAvgScore: "average score",
+      popupTrend: "7-day trend",
+      popupMirror: "mirror helpful",
+      popupRubrics: "Rubrics (average /25)",
+      popupCategories: "Usage categories",
+      popupSettings: "Settings",
+      popupThemeLabel: "Theme",
+      themeLight: "Light",
+      themeDark: "Dark",
+      themeSystem: "System",
+      popupIntercept: "Socratic interception enabled",
+      popupThreshold: "Interception threshold:",
+      popupFullText: "Keep prompt text (otherwise: indicators only)",
+      popupExport: "⬇️ Export CSV",
+      popupReset: "Clear data",
+      popupResetConfirm: "Clear all local data?",
+      popupEmpty: "No prompts captured yet. Use ChatGPT, Claude or Gemini — I've got you. 🙂",
+      popupHealthBroken: (sites) => `⚠️ Capture may be broken on: ${sites} (UI changed)`,
+      authEmail: "Email",
+      authPassword: "Password",
+      authLogin: "Sign in",
+      authSignup: "Create account",
+      authRequired: "Email and password required.",
+      authInvalid: "Invalid credentials.",
+      authConfirm: "Account created — confirm your email, then sign in.",
+      authHint: "Without an account, everything stays local on this computer.",
+      authNoOrg: "no organization attached",
+      authConnected: "signed in",
+      authPending: (n) => `${n} event(s) awaiting sync`,
+      authSynced: "Everything is synced ✓",
+      authDashboard: "📊 Open dashboard",
+      authLogout: "Sign out",
+      obTitle: "Welcome to Prompt Tracker",
+      obSubtitle: "The guardrail for your prompting — a little friction, a lot of thinking.",
+      obPitch:
+        "Like the apps that help you unglue from your phone, Prompt Tracker adds a thoughtful pause before your AI prompts. When your request is too vague, it is held before sending and a Socratic dialogue helps you think for yourself — then you always decide when to send.",
+      obHow: "How it works",
+      obStep1: "Write your prompt on ChatGPT, Claude or Gemini, as usual.",
+      obStep2: "Below the quality threshold, sending is held: Socratic questions, one at a time, for as long as you want.",
+      obStep3: "Send your version enriched with your reasoning — or your original request as is. Always your call.",
+      obPrivacyTitle: "100% local by default",
+      obPrivacy:
+        "Your prompts are analyzed in your browser. Nothing is sent anywhere, unless you join an organization space (school, company) — and even then, only indicators are synced by default, never the text.",
+      obThemeTitle: "Your theme",
+      obThresholdTitle: "Friction level",
+      obThresholdHint: "Prompts under this score trigger the dialogue. 40 is a good start.",
+      obSites: "Works on ChatGPT, Claude and Gemini.",
+      obCta: "Let's go 🚀",
+      obTry: "Try it now: open ChatGPT and type \"do my homework\".",
+    },
+  };
+
+  function detectLang() {
+    try {
+      const ui =
+        (typeof chrome !== "undefined" && chrome.i18n && chrome.i18n.getUILanguage && chrome.i18n.getUILanguage()) ||
+        navigator.language ||
+        "fr";
+      return ui.toLowerCase().startsWith("fr") ? "fr" : "en";
+    } catch {
+      return "fr";
+    }
+  }
+
+  const lang = detectLang();
+
+  function t(key, ...args) {
+    const entry = (MESSAGES[lang] && MESSAGES[lang][key]) || MESSAGES.fr[key];
+    return typeof entry === "function" ? entry(...args) : entry;
+  }
+
+  return { t, lang };
+})();
+
+if (typeof self !== "undefined") self.CoachI18n = CoachI18n;
