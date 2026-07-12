@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { averageScore, computeAdminKpis, fmt, fmtPct } from "@/lib/stats";
+import { averageFirstDraft, computeAdminKpis, fmt, fmtPct } from "@/lib/stats";
 import type { Group, Profile, PromptEvent } from "@/lib/types";
 
 type EventRow = Pick<
@@ -63,7 +63,7 @@ export default async function AdminPage({
   }
 
   // KPIs
-  const { total, avg, last7, prev7, progression, interceptRate, outcomes, avgGain, avgRounds } =
+  const { total, avg, avgFirstDraft, last7, prev7, progression, interceptRate, outcomes, avgGain, avgRounds } =
     computeAdminKpis(events);
   const outcomeTotal = outcomes.improved + outcomes.sent_anyway + outcomes.cancelled;
 
@@ -78,7 +78,7 @@ export default async function AdminPage({
       return {
         profile: p,
         count: evs.length,
-        avg: averageScore(evs),
+        avg: averageFirstDraft(evs),
         improvedRate: evs.length > 0 ? improved / evs.length : null,
       };
     })
@@ -117,10 +117,13 @@ export default async function AdminPage({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Kpi label="Prompts analysés" value={String(total)} />
-        <Kpi label="Score moyen" value={fmt(avg)} sub="sur 100" />
         <Kpi
-          label="Progression (7 derniers jours)"
+          label="Premiers jets"
+          value={fmt(avgFirstDraft)}
+          sub="score avant tout coaching : la mesure de l'apprentissage"
+        />
+        <Kpi
+          label="Progression des premiers jets (7 j)"
           value={
             progression === null
               ? ":"
@@ -128,6 +131,8 @@ export default async function AdminPage({
           }
           sub={`vs 7 jours précédents (${fmt(prev7)} → ${fmt(last7)})`}
         />
+        <Kpi label="Prompts analysés" value={String(total)} />
+        <Kpi label="Score après coaching" value={fmt(avg)} sub="sur 100, prompts envoyés" />
         <Kpi label="Taux d'interception" value={fmtPct(interceptRate)} />
         <Kpi
           label="Issues des interceptions"
@@ -168,7 +173,7 @@ export default async function AdminPage({
               <tr className="text-left text-xs uppercase tracking-wider text-muted">
                 <th className="px-5 py-3 font-medium">Utilisateur</th>
                 <th className="px-5 py-3 font-medium">Prompts</th>
-                <th className="px-5 py-3 font-medium">Score moyen</th>
+                <th className="px-5 py-3 font-medium">Premiers jets</th>
                 <th className="px-5 py-3 font-medium">% améliorés</th>
               </tr>
             </thead>

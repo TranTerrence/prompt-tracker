@@ -70,6 +70,109 @@ const CoachMirror = (() => {
     if (typeof CoachMirror.onClose === "function") CoachMirror.onClose(reason);
   }
 
+  /* ---------- Miroir d'après : réflexion post-réponse ---------- */
+
+  let postHost = null;
+  let postTimer = null;
+
+  // Toast réflexif affiché quand la réponse IA est complète : une question
+  // (explain-back, vérification ou désaccord) et une zone de réponse libre.
+  // Jamais bloquant : il se ferme seul, et « pas cette fois » est à un clic.
+  // opts: { question, branding: {color}, onReply(text), onSkip() }
+  function showPost(opts) {
+    closePost();
+    hideToast("replaced"); // même emplacement : le miroir d'après a priorité
+    const accent = (opts.branding && opts.branding.color) || CoachTheme.DEFAULT_ACCENT;
+    postHost = document.createElement("div");
+    postHost.id = "coach-ia-post";
+    const shadow = postHost.attachShadow({ mode: "open" });
+    shadow.innerHTML = `
+      <style>
+        :host { all: initial; }
+        .root { ${CoachTheme.vars(accent)} }
+        .panel { position: fixed; bottom: 96px; right: 24px; z-index: 2147483647;
+          width: min(360px, 90vw); padding: 16px 18px; border-radius: 14px;
+          background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+          font: 14px/1.5 var(--font-text); box-shadow: var(--shadow);
+          opacity: 0; transform: translateY(8px); transition: opacity .25s, transform .25s; }
+        .panel.visible { opacity: 1; transform: translateY(0); }
+        .title { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px;
+          font: 600 13px/1.3 var(--font-display); color: var(--accent); letter-spacing: .01em; }
+        .close { margin-left: auto; cursor: pointer; border: 0; background: none; color: var(--muted); font-size: 15px; padding: 2px; }
+        .close:hover { color: var(--ink); }
+        .question { font-family: var(--font-display); font-size: 14.5px; margin-bottom: 10px; }
+        textarea { box-sizing: border-box; width: 100%; min-height: 52px; max-height: 120px;
+          background: var(--bg); color: var(--ink); border: 1px solid var(--border); border-radius: 10px;
+          padding: 8px 10px; font: 13px/1.5 var(--font-text); resize: vertical; }
+        textarea::placeholder { color: var(--muted); }
+        textarea:focus { outline: none; border-color: var(--accent); }
+        .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+        .reply { padding: 7px 14px; border-radius: 9px; border: 1px solid var(--accent); background: var(--accent);
+          color: #FDFCF9; font: 600 12.5px var(--font-text); cursor: pointer; }
+        .reply:hover { filter: brightness(1.08); }
+        .skip { border: 0; background: none; color: var(--muted); font-size: 11.5px; cursor: pointer;
+          text-decoration: underline; text-underline-offset: 2px; }
+        .skip:hover { color: var(--ink); }
+        .thanks { color: var(--accent); font-size: 13px; }
+      </style>
+      <div class="root">
+        <div class="panel" role="dialog" aria-label="${t("postTitle")}">
+          <div class="title"><span>🪞 ${t("postTitle")}</span> <button class="close">✕</button></div>
+          <div class="question"></div>
+          <textarea class="answer"></textarea>
+          <div class="row">
+            <button class="reply">${t("postReply")}</button>
+            <button class="skip">${t("postSkip")}</button>
+          </div>
+        </div>
+      </div>`;
+    document.documentElement.appendChild(postHost);
+
+    const panel = shadow.querySelector(".panel");
+    const answer = shadow.querySelector(".answer");
+    shadow.querySelector(".question").textContent = opts.question;
+    answer.placeholder = t("postPlaceholder");
+
+    const skip = () => {
+      closePost();
+      if (opts.onSkip) opts.onSkip();
+    };
+    const reply = () => {
+      const text = answer.value.trim();
+      if (!text) return skip();
+      clearTimeout(postTimer);
+      panel.innerHTML = `<div class="thanks">${t("postThanks")}</div>`;
+      postTimer = setTimeout(closePost, 2500);
+      opts.onReply(text);
+    };
+
+    shadow.querySelector(".close").addEventListener("click", skip);
+    shadow.querySelector(".skip").addEventListener("click", skip);
+    shadow.querySelector(".reply").addEventListener("click", reply);
+    answer.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        reply();
+      }
+      e.stopPropagation();
+    });
+
+    requestAnimationFrame(() => panel.classList.add("visible"));
+    clearTimeout(postTimer);
+    postTimer = setTimeout(() => {
+      // Fermeture silencieuse : l'inaction n'est pas un refus, on ne trace rien.
+      closePost();
+    }, 45000);
+  }
+
+  function closePost() {
+    clearTimeout(postTimer);
+    if (postHost) {
+      postHost.remove();
+      postHost = null;
+    }
+  }
+
   /* ---------- Modale : dialogue socratique itératif ---------- */
 
   // opts: { promptText, scoreBefore, branding: {name, color},
@@ -306,5 +409,5 @@ const CoachMirror = (() => {
     }
   }
 
-  return { show, hide: hideToast, showModal, closeModal, onFeedback: null, onClose: null };
+  return { show, hide: hideToast, showPost, closePost, showModal, closeModal, onFeedback: null, onClose: null };
 })();

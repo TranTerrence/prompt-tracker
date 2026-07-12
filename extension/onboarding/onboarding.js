@@ -13,6 +13,12 @@ const STRINGS = {
   "ob-step3": "obStep3",
   "ob-privacy-title": "obPrivacyTitle",
   "ob-privacy": "obPrivacy",
+  "ob-profile-title": "obProfileTitle",
+  "ob-profile-hint": "obProfileHint",
+  "profile-student": "profileStudent",
+  "profile-consultant": "profileConsultant",
+  "profile-employee": "profileEmployee",
+  "profile-other": "profileOther",
   "ob-theme-title": "obThemeTitle",
   "ob-threshold-title": "obThresholdTitle",
   "ob-threshold-hint": "obThresholdHint",
@@ -42,9 +48,16 @@ function saveSettings(patch) {
   });
 }
 
+function applyProfile(profile) {
+  for (const btn of document.querySelectorAll("[data-profile-choice]")) {
+    btn.classList.toggle("active", btn.dataset.profileChoice === profile);
+  }
+}
+
 chrome.storage.local.get("settings", (data) => {
-  const settings = { theme: "light", threshold: 40, ...(data.settings || {}) };
+  const settings = { theme: "light", threshold: 40, profile: null, ...(data.settings || {}) };
   applyTheme(settings.theme);
+  applyProfile(settings.profile);
   document.getElementById("setting-threshold").value = settings.threshold;
   document.getElementById("threshold-value").textContent = settings.threshold;
 });
@@ -53,6 +66,15 @@ for (const btn of document.querySelectorAll("[data-theme-choice]")) {
   btn.addEventListener("click", () => {
     applyTheme(btn.dataset.themeChoice);
     saveSettings({ theme: btn.dataset.themeChoice });
+  });
+}
+
+// Profil d'usage : ne change pas la mécanique, seulement le vocabulaire des
+// questions (« ton devoir » vs « ton livrable client »).
+for (const btn of document.querySelectorAll("[data-profile-choice]")) {
+  btn.addEventListener("click", () => {
+    applyProfile(btn.dataset.profileChoice);
+    saveSettings({ profile: btn.dataset.profileChoice });
   });
 }
 

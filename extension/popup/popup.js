@@ -117,27 +117,33 @@ function avg(arr) {
   return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 }
 
-function render(events) {
+function render(events, threshold) {
   document.getElementById("stat-count").textContent = events.length;
 
-  const totals = events.map((e) => e.scores.total);
-  document.getElementById("stat-score").textContent = events.length ? `${Math.round(avg(totals))}/100` : "–";
+  // La métrique principale est le PREMIER JET : ce que l'utilisateur écrit
+  // seul, avant tout coaching. C'est la seule mesure honnête de l'apprentissage.
+  const firstDrafts = events.map((e) => CoachScoring.firstDraftScore(e)).filter((s) => s !== null);
+  document.getElementById("stat-score").textContent = firstDrafts.length ? `${Math.round(avg(firstDrafts))}/100` : "–";
 
   const now = Date.now();
   const week = 7 * 24 * 3600 * 1000;
-  const recent = events.filter((e) => now - Date.parse(e.ts) < week);
-  const before = events.filter((e) => now - Date.parse(e.ts) >= week && now - Date.parse(e.ts) < 2 * week);
+  const draft = (e) => CoachScoring.firstDraftScore(e);
+  const recent = events.filter((e) => now - Date.parse(e.ts) < week).map(draft).filter((s) => s !== null);
+  const before = events.filter((e) => now - Date.parse(e.ts) >= week && now - Date.parse(e.ts) < 2 * week).map(draft).filter((s) => s !== null);
   const trendEl = document.getElementById("stat-trend");
   if (recent.length && before.length) {
-    const delta = Math.round(avg(recent.map((e) => e.scores.total)) - avg(before.map((e) => e.scores.total)));
+    const delta = Math.round(avg(recent) - avg(before));
     trendEl.textContent = `${delta >= 0 ? "+" : ""}${delta}`;
   } else {
     trendEl.textContent = "–";
   }
 
-  const shown = events.filter((e) => e.mirrorShown);
-  const useful = shown.filter((e) => e.mirrorFeedback === "useful" || e.outcome === "improved");
-  document.getElementById("stat-mirror").textContent = shown.length ? `${Math.round((useful.length / shown.length) * 100)} %` : "–";
+  // Série de jours où les premiers jets tiennent le seuil : on célèbre
+  // l'autonomie, pas la dépendance au coaching.
+  const streak = CoachScoring.dayStreak(events, threshold);
+  const streakEl = document.getElementById("stat-mirror");
+  streakEl.textContent = streak ? `${streak} 🔥` : "–";
+  streakEl.parentElement.title = t("popupStreakTitle", streak);
 
   const rubricsEl = document.getElementById("rubrics");
   rubricsEl.textContent = "";
@@ -193,14 +199,21 @@ function toCsv(events) {
 
 chrome.storage.local.get(["events", "settings", "health_chatgpt", "health_claude", "health_gemini"], (data) => {
   const events = data.events || [];
-  render(events);
-
   const settings = { captureMode: "metadata", interceptEnabled: true, threshold: 40, theme: "light", ...(data.settings || {}) };
+  render(events, settings.threshold);
+
   applyTheme(settings.theme);
   document.getElementById("setting-mirror").checked = settings.interceptEnabled;
   document.getElementById("setting-fulltext").checked = settings.captureMode === "full";
   document.getElementById("setting-threshold").value = settings.threshold;
   document.getElementById("threshold-value").textContent = settings.threshold;
+
+  // Fading : quand les séries réussies ont relevé la barre, on le dit.
+  const eff = CoachScoring.adaptiveThreshold(events, settings.threshold);
+  const effEl = document.getElementById("eff-threshold");
+  const effText = t("popupEffThreshold", settings.threshold, eff);
+  effEl.textContent = effText;
+  effEl.hidden = !effText;
 
   const broken = [
     ["ChatGPT", data.health_chatgpt],
@@ -247,6 +260,9 @@ document.getElementById("export").addEventListener("click", () => {
 
 document.getElementById("reset").addEventListener("click", () => {
   if (confirm(t("popupResetConfirm"))) {
-    chrome.storage.local.remove(["events", "health_chatgpt", "health_claude", "health_gemini"], () => render([]));
+    chrome.storage.local.remove(
+      ["events", "postEvents", "postConvs", "postCount", "health_chatgpt", "health_claude", "health_gemini"],
+      () => render([], 40)
+    );
   }
 });

@@ -78,6 +78,9 @@ h2 { font: 600 12px/1 "IBM Plex Sans", sans-serif; text-transform: uppercase; le
   font: 14px "IBM Plex Sans", sans-serif; cursor: pointer; text-align: left;
 }
 .theme-switch button.active { border-color: var(--accent); background: var(--soft); font-weight: 600; }
+.profile-switch { flex-direction: row; flex-wrap: wrap; }
+.profile-switch button { flex: 1; min-width: 150px; justify-content: center; text-align: center; }
+.profile-switch + .hint { margin-top: 10px; }
 
 .slider b { color: var(--accent); font-variant-numeric: tabular-nums; font-size: 18px; font-family: "Fraunces", Georgia, serif; }
 input[type="range"] { width: 100%; accent-color: var(--accent); margin-top: 8px; }

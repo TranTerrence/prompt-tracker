@@ -179,5 +179,65 @@ function createCoachAdapter(config) {
     return Boolean(getComposer());
   }
 
-  return { init, healthy, setComposerText, send, submitText, readComposerText, site };
+  /* ---------- Fin de réponse IA (miroir d'après) ---------- */
+
+  // Clé de la conversation courante : le chemin identifie la conversation sur
+  // les trois sites (/c/<id>, /chat/<id>, /app/<id>).
+  function conversationKey() {
+    return `${site}:${location.pathname}`;
+  }
+
+  let responseWatch = null;
+
+  // Détection générique de fin de réponse : après un envoi, le document mute
+  // en continu pendant le streaming ; une phase d'activité soutenue suivie
+  // d'un long silence signifie que la réponse est complète. Aucun sélecteur
+  // par site (robuste aux refontes d'UI), au prix de quelques secondes de
+  // latence. Les mutations de nos propres surfaces (coach-ia) sont ignorées.
+  // Les seuils écartent le faux positif du simple affichage du message envoyé
+  // suivi du temps de réflexion du modèle (peu de mutations, puis silence).
+  function watchResponse({ onComplete, quietMs = 3000, minActivity = 12, minElapsedMs = 4000, maxWaitMs = 120000 }) {
+    cancelResponseWatch();
+    let activity = 0;
+    let quietTimer = null;
+    const startedAt = Date.now();
+
+    const ours = (node) => {
+      for (let n = node; n; n = n.parentNode) {
+        if (n.id && String(n.id).startsWith("coach-ia")) return true;
+      }
+      return false;
+    };
+
+    const finish = () => {
+      cancelResponseWatch();
+      onComplete();
+    };
+
+    const observer = new MutationObserver((mutations) => {
+      if (!mutations.some((m) => !ours(m.target))) return;
+      activity++;
+      if (activity < minActivity || Date.now() - startedAt < minElapsedMs) return;
+      clearTimeout(quietTimer);
+      quietTimer = setTimeout(finish, quietMs);
+    });
+    const deadline = setTimeout(cancelResponseWatch, maxWaitMs);
+    responseWatch = {
+      observer,
+      clear() {
+        clearTimeout(quietTimer);
+        clearTimeout(deadline);
+      },
+    };
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+  }
+
+  function cancelResponseWatch() {
+    if (!responseWatch) return;
+    responseWatch.observer.disconnect();
+    responseWatch.clear();
+    responseWatch = null;
+  }
+
+  return { init, healthy, setComposerText, send, submitText, readComposerText, watchResponse, cancelResponseWatch, conversationKey, site };
 }

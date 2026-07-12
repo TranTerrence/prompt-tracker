@@ -4,13 +4,18 @@
 // Au-dessus du seuil, le prompt part normalement, sans latence ajoutée.
 
 (() => {
-  const DEFAULT_SETTINGS = { captureMode: "metadata", interceptEnabled: true, threshold: 40, theme: "light" };
+  const DEFAULT_SETTINGS = { captureMode: "metadata", interceptEnabled: true, threshold: 40, theme: "light", postMirrorEnabled: true, profile: null };
   let settings = { ...DEFAULT_SETTINGS };
   // Config de l'organisation (branding, templates, seuil...) synchronisée par le
   // popup après login (étape 3). Prioritaire sur les réglages locaux.
   let orgConfig = null;
   let recentPromptTexts = []; // 3 derniers textes, en mémoire seulement
   let pendingToastEventId = null;
+  // Fading : seuil effectif relevé par les séries de premiers jets réussis,
+  // recalculé à chaque événement. La friction suit la compétence démontrée.
+  let effectiveThreshold = null;
+  // Dernier prompt parti (pour choisir la question du miroir d'après).
+  let lastPrompt = null;
 
   let adapterHealthy = null;
 
@@ -19,14 +24,23 @@
     CoachBadge.render({
       branding: orgConfig && orgConfig.branding,
       healthy: adapterHealthy,
-      threshold: effective("threshold"),
+      threshold: currentThreshold(),
       interceptEnabled: effective("interceptEnabled"),
     });
   }
 
-  chrome.storage.local.get(["settings", "orgConfig"], (data) => {
+  function currentThreshold() {
+    return effectiveThreshold !== null ? effectiveThreshold : effective("threshold");
+  }
+
+  function recomputeThreshold(events) {
+    effectiveThreshold = CoachScoring.adaptiveThreshold(events || [], effective("threshold"));
+  }
+
+  chrome.storage.local.get(["settings", "orgConfig", "events"], (data) => {
     settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
     orgConfig = data.orgConfig || null;
+    recomputeThreshold(data.events);
     CoachTheme.set(settings.theme);
     refreshBadge();
   });
@@ -34,6 +48,7 @@
     if (changes.settings) settings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
     if (changes.orgConfig) orgConfig = changes.orgConfig.newValue || null;
     if (changes.settings || changes.orgConfig) {
+      chrome.storage.local.get("events", (data) => recomputeThreshold(data.events));
       CoachTheme.set(settings.theme);
       refreshBadge();
     }
@@ -49,7 +64,65 @@
       const events = data.events || [];
       events.push(event);
       if (events.length > 5000) events.splice(0, events.length - 5000);
+      recomputeThreshold(events);
+      refreshBadge();
       chrome.storage.local.set({ events }, callback);
+    });
+  }
+
+  /* ---------- Miroir d'après ---------- */
+
+  // Trace de la réflexion post-réponse, dans un magasin séparé (les events de
+  // prompts gardent leur schéma) : indicateurs seuls, texte si captureMode full.
+  function appendPostEvent(postKey, answer, answered) {
+    const event = {
+      id: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      ts: new Date().toISOString(),
+      site: CoachAdapter.site,
+      conv: CoachAdapter.conversationKey(),
+      postKey,
+      category: (lastPrompt && lastPrompt.category) || "autre",
+      answered,
+      answerWords: CoachScoring.wordCount(answer || ""),
+    };
+    if (effective("captureMode") === "full" && answer) event.answer = answer;
+    chrome.storage.local.get("postEvents", (data) => {
+      const postEvents = data.postEvents || [];
+      postEvents.push(event);
+      if (postEvents.length > 1000) postEvents.splice(0, postEvents.length - 1000);
+      chrome.storage.local.set({ postEvents });
+    });
+  }
+
+  // Arme la détection de fin de réponse après chaque envoi. À la fin de la
+  // génération : une question réflexive (explain-back, vérification, désaccord),
+  // au maximum UNE par conversation, jamais bloquante (P4, P10).
+  function armPostMirror() {
+    if (!effective("postMirrorEnabled")) return;
+    CoachAdapter.watchResponse({
+      onComplete() {
+        // La clé se lit à la FIN : une conversation neuve reçoit son id d'URL
+        // pendant la génération (chatgpt.com/ devient chatgpt.com/c/<id>).
+        const conv = CoachAdapter.conversationKey();
+        chrome.storage.local.get(["postConvs", "postCount"], (data) => {
+          const convs = data.postConvs || [];
+          if (convs.includes(conv)) return;
+          const count = data.postCount || 0;
+          const q = CoachScoring.postQuestion({
+            category: lastPrompt && lastPrompt.category,
+            scores: lastPrompt && lastPrompt.scores,
+            lang: CoachI18n.lang,
+            count,
+          });
+          chrome.storage.local.set({ postConvs: [...convs.slice(-199), conv], postCount: count + 1 });
+          CoachMirror.showPost({
+            question: q.question,
+            branding: orgConfig && orgConfig.branding,
+            onReply: (text) => appendPostEvent(q.key, text, true),
+            onSkip: () => appendPostEvent(q.key, "", false),
+          });
+        });
+      },
     });
   }
 
@@ -101,7 +174,7 @@
     // Décision synchrone, prise pendant l'événement d'envoi : sous le seuil → retenue.
     shouldIntercept(text) {
       if (!effective("interceptEnabled")) return false;
-      return CoachScoring.score(text, recentPromptTexts).total < effective("threshold");
+      return CoachScoring.score(text, recentPromptTexts).total < currentThreshold();
     },
 
     // Prompt retenu : rien n'est parti vers ChatGPT. Dialogue socratique
@@ -116,7 +189,7 @@
       function ask(dialogueState) {
         const local = () =>
           CoachScoring.nextQuestion(
-            { originalPrompt: text, scores, asked: dialogueState.asked, lang: CoachI18n.lang },
+            { originalPrompt: text, scores, asked: dialogueState.asked, lang: CoachI18n.lang, profile: effective("profile") },
             templates
           );
         if (!effective("llmEnabled")) return Promise.resolve(local());
@@ -144,6 +217,7 @@
         onSend(finalText, m) {
           rememberText(finalText);
           const after = CoachScoring.score(finalText, recentPromptTexts);
+          lastPrompt = { category: CoachScoring.categorize(finalText), scores: after };
           appendEvent(
             buildEvent(finalText, after, {
               intercepted: true,
@@ -154,11 +228,12 @@
               rounds: m.rounds,
               answersCount: m.answersCount,
             }),
-            () => CoachAdapter.submitText(finalText)
+            () => CoachAdapter.submitText(finalText).then(() => armPostMirror())
           );
         },
         onSendAnyway(m) {
           rememberText(text);
+          lastPrompt = { category: CoachScoring.categorize(text), scores };
           appendEvent(
             buildEvent(text, scores, {
               intercepted: true,
@@ -169,7 +244,7 @@
               rounds: m.rounds,
               answersCount: m.answersCount,
             }),
-            () => CoachAdapter.submitText(text)
+            () => CoachAdapter.submitText(text).then(() => armPostMirror())
           );
         },
         onCancel(m) {
@@ -202,7 +277,9 @@
           : null;
         const event = buildEvent(text, scores, { outcome: "sent", mirrorShown: Boolean(suggestion) });
         rememberText(text);
+        lastPrompt = { category: event.category, scores };
         appendEvent(event, () => {
+          armPostMirror();
           if (suggestion) {
             pendingToastEventId = event.id;
             CoachMirror.show(suggestion, orgConfig && orgConfig.branding && orgConfig.branding.color);

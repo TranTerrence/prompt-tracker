@@ -63,6 +63,7 @@
     <label class="slider"><span data-i18n="popupThreshold"></span> <b id="threshold-value">40</b>/100
       <input type="range" id="setting-threshold" min="0" max="100" step="5" value="40" />
     </label>
+    <p class="muted" id="eff-threshold" hidden></p>
     <label><input type="checkbox" id="setting-fulltext" /> <span data-i18n="popupFullText"></span></label>
   </section>
 
@@ -72,6 +73,7 @@
   </footer>
 
   <script src="../src/i18n.js"></script>
+  <script src="../src/scoring.js"></script>
   <script src="../src/supabase.js"></script>
   <script src="popup.js"></script>
 </body>

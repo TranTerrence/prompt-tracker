@@ -16,6 +16,27 @@ export function averageScore(events: Pick<PromptEvent, "scores">[]) {
   );
 }
 
+/**
+ * Score du PREMIER JET : ce que l'utilisateur a écrit seul, avant tout
+ * coaching (score_before sur les prompts interceptés, score direct sinon).
+ * C'est la North Star du produit : mesurer l'apprentissage, pas la
+ * performance assistée.
+ */
+export function firstDraftOf(
+  e: Pick<PromptEvent, "scores" | "score_before">
+): number | null {
+  if (typeof e.score_before === "number") return e.score_before;
+  return scoreOf(e);
+}
+
+export function averageFirstDraft(
+  events: Pick<PromptEvent, "scores" | "score_before">[]
+) {
+  return average(
+    events.map(firstDraftOf).filter((v): v is number => v !== null)
+  );
+}
+
 export function fmt(n: number | null, digits = 1): string {
   return n === null ? ":" : n.toFixed(digits).replace(".", ",");
 }
@@ -35,6 +56,7 @@ export function fmtDate(ts: string): string {
 export type AdminKpis = {
   total: number;
   avg: number | null;
+  avgFirstDraft: number | null;
   last7: number | null;
   prev7: number | null;
   progression: number | null;
@@ -53,14 +75,17 @@ export function computeAdminKpis(
 ): AdminKpis {
   const total = events.length;
   const avg = averageScore(events);
+  const avgFirstDraft = averageFirstDraft(events);
 
+  // La progression se mesure sur les PREMIERS JETS : c'est l'apprentissage
+  // qui compte, pas l'amélioration assistée par le coaching.
   const now = Date.now();
   const d7 = now - 7 * 86400_000;
   const d14 = now - 14 * 86400_000;
-  const last7 = averageScore(
+  const last7 = averageFirstDraft(
     events.filter((e) => new Date(e.ts).getTime() >= d7)
   );
-  const prev7 = averageScore(
+  const prev7 = averageFirstDraft(
     events.filter((e) => {
       const t = new Date(e.ts).getTime();
       return t >= d14 && t < d7;
@@ -95,6 +120,7 @@ export function computeAdminKpis(
   return {
     total,
     avg,
+    avgFirstDraft,
     last7,
     prev7,
     progression,

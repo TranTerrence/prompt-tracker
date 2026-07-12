@@ -1,6 +1,6 @@
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { average, averageScore, fmt, fmtDate, scoreOf, weekKey } from "@/lib/stats";
+import { average, averageScore, averageFirstDraft, firstDraftOf, fmt, fmtDate, scoreOf, weekKey } from "@/lib/stats";
 import {
   OUTCOME_LABELS,
   SOCRATIC_LABELS,
@@ -15,8 +15,15 @@ type EventRow = Pick<
 
 const RUBRIQUES = ["clarte", "contexte", "iteration", "critique"] as const;
 
-/** Petit graphique en ligne SVG : score moyen par semaine. */
-function WeeklyChart({ points }: { points: { week: string; avg: number }[] }) {
+/**
+ * Graphique en ligne SVG : premiers jets (trait plein, la North Star) et
+ * score après coaching (pointillé, secondaire), moyenne par semaine.
+ */
+function WeeklyChart({
+  points,
+}: {
+  points: { week: string; first: number | null; after: number | null }[];
+}) {
   const w = 640;
   const h = 180;
   const pad = { top: 12, right: 12, bottom: 28, left: 36 };
@@ -28,10 +35,28 @@ function WeeklyChart({ points }: { points: { week: string; avg: number }[] }) {
   const x = (i: number) =>
     pad.left + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
   const y = (v: number) => pad.top + (1 - v / 100) * innerH;
-  const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(p.avg)}`).join(" ");
+  const pathOf = (get: (p: (typeof points)[number]) => number | null) => {
+    let d = "";
+    let pen = false;
+    points.forEach((p, i) => {
+      const v = get(p);
+      if (v === null) {
+        pen = false;
+        return;
+      }
+      d += `${pen ? "L" : "M"}${x(i)},${y(v)}`;
+      pen = true;
+    });
+    return d;
+  };
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="Score moyen par semaine">
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      className="w-full"
+      role="img"
+      aria-label="Premiers jets et score après coaching, par semaine"
+    >
       {[0, 25, 50, 75, 100].map((v) => (
         <g key={v}>
           <line
@@ -47,10 +72,28 @@ function WeeklyChart({ points }: { points: { week: string; avg: number }[] }) {
           </text>
         </g>
       ))}
-      <path d={path} fill="none" stroke="var(--accent)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d={pathOf((p) => p.after)}
+        fill="none"
+        stroke="var(--muted)"
+        strokeWidth={1.5}
+        strokeDasharray="4 4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d={pathOf((p) => p.first)}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       {points.map((p, i) => (
         <g key={p.week}>
-          <circle cx={x(i)} cy={y(p.avg)} r={3.5} fill="var(--accent)" stroke="var(--card)" strokeWidth={1.5} />
+          {p.first !== null && (
+            <circle cx={x(i)} cy={y(p.first)} r={3.5} fill="var(--accent)" stroke="var(--card)" strokeWidth={1.5} />
+          )}
           <text
             x={x(i)}
             y={h - 8}
@@ -101,18 +144,27 @@ export default async function MePage() {
 
   const events = (data ?? []) as EventRow[];
   const avg = averageScore(events);
+  const avgFirst = averageFirstDraft(events);
 
-  // Score moyen par semaine (ordre chronologique)
-  const byWeek = new Map<string, number[]>();
+  // Moyennes par semaine (ordre chronologique) : premiers jets (North Star)
+  // et score après coaching (repère secondaire).
+  const byWeek = new Map<string, { first: number[]; after: number[] }>();
   for (const e of events) {
-    const s = scoreOf(e);
-    if (s === null) continue;
     const key = weekKey(e.ts);
-    byWeek.set(key, [...(byWeek.get(key) ?? []), s]);
+    if (!byWeek.has(key)) byWeek.set(key, { first: [], after: [] });
+    const bucket = byWeek.get(key)!;
+    const f = firstDraftOf(e);
+    if (f !== null) bucket.first.push(f);
+    const s = scoreOf(e);
+    if (s !== null) bucket.after.push(s);
   }
   const weekly = [...byWeek.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([week, scores]) => ({ week, avg: average(scores) ?? 0 }));
+    .map(([week, bucket]) => ({
+      week,
+      first: average(bucket.first),
+      after: average(bucket.after),
+    }));
 
   // Moyennes par rubrique
   const rubriques = RUBRIQUES.map((key) => ({
@@ -136,13 +188,16 @@ export default async function MePage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
-          <p className="text-[13px] text-muted">Prompts analysés</p>
+          <p className="text-[13px] text-muted">Premiers jets</p>
           <p className="mt-2 font-display text-3xl font-medium tracking-tight tabular-nums">
-            {events.length}
+            {fmt(avgFirst)}
+          </p>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+            ton score avant tout coaching : la vraie mesure de ta progression
           </p>
         </div>
         <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
-          <p className="text-[13px] text-muted">Score moyen</p>
+          <p className="text-[13px] text-muted">Score après coaching</p>
           <p className="mt-2 font-display text-3xl font-medium tracking-tight tabular-nums">
             {fmt(avg)}
           </p>
@@ -156,10 +211,25 @@ export default async function MePage() {
       </div>
 
       <section className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
-        <h2 className="mb-5 font-display text-lg font-semibold tracking-tight">
-          Score moyen par semaine
-        </h2>
+        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            Premiers jets par semaine
+          </h2>
+          <div className="flex items-center gap-4 text-xs text-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-0.5 w-5 rounded bg-accent" /> premiers jets
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-0 w-5 border-t border-dashed border-muted" /> après coaching
+            </span>
+          </div>
+        </div>
         <WeeklyChart points={weekly} />
+        <p className="mt-3 text-xs leading-relaxed text-muted">
+          La courbe qui compte est celle des premiers jets : si elle monte, tu
+          progresses par toi-même. L&apos;écart avec la courbe pointillée est
+          l&apos;apport du coaching, appelé à se réduire.
+        </p>
       </section>
 
       <section className="rounded-2xl border border-card-border bg-card p-5 shadow-card">

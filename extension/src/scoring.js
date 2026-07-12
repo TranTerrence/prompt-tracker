@@ -1,7 +1,8 @@
 // Analyse 100 % locale des prompts : catégorie + score qualité sur 4 rubriques,
-// banque de questions socratiques et compilation du prompt final.
-// Bilingue FR/EN : heuristiques et banques couvrent les deux langues ; la langue
-// est passée par l'appelant (state.lang / paramètre lang), défaut français.
+// banque de questions socratiques (instanciées avec les mots du prompt, profondeur
+// contingente au niveau apparent), questions post-réponse, compilation du prompt
+// final, et helpers de progression (streak de premiers jets, seuil adaptatif).
+// Bilingue FR/EN ; la langue est passée par l'appelant, défaut français.
 // Module pur (aucune dépendance chrome) : testable en node.
 
 const CoachScoring = (() => {
@@ -64,6 +65,65 @@ const CoachScoring = (() => {
     return scores;
   }
 
+  /* ---------- Sujet du prompt (pour instancier les questions) ---------- */
+
+  const STOPWORDS = {
+    fr: new Set("le la les un une des du de d' l' et ou mais donc or ni car que qui quoi dont où je tu il elle on nous vous ils elles me te se moi toi lui leur y en ce cet cette ces mon ma mes ton ta tes son sa ses notre nos votre vos leurs à au aux avec sans pour par sur sous dans chez vers entre est es suis sont être avoir ai as a avons avez ont fait faire fais peux peut veux veut dois doit très plus moins aussi comme si ne pas plaît plait merci stp svp bonjour salut alors bien tout toute tous toutes quelque chose".split(" ")),
+    en: new Set("the a an and or but so nor for of to in on at by with without from into about as is are am be been was were do does did have has had can could will would should may might must i you he she it we they me him her us them my your his its our their this that these those what which who whom whose when where why how not no yes please thanks hello hi very more less also like if then than some any all just really something".split(" ")),
+  };
+  // Petits mots tolérés À L'INTÉRIEUR d'un groupe nominal (« devoirs de maths »).
+  const CONNECTORS = new Set("de du des d' la le les l' à au aux en of the for to a an in on".split(" "));
+
+  // Extrait le groupe nominal le plus riche du prompt (« devoirs de maths »),
+  // pour instancier les gabarits de questions avec les mots de l'utilisateur
+  // (King 1994 : les amorces marchent mieux ancrées dans la tâche réelle).
+  // Retourne null quand rien d'assez consistant ne se dégage.
+  function topic(text, lang = "fr") {
+    const stop = STOPWORDS[lang] || STOPWORDS.fr;
+    const words = text
+      .replace(/['’]/g, "' ")
+      .replace(/[«»"“”:;,.!?()[\]{}<>*_`~|]/g, " ")
+      .split(/\s+/)
+      .filter(Boolean);
+
+    const isContent = (w) => {
+      const lower = w.toLowerCase();
+      return !stop.has(lower) && !CONNECTORS.has(lower) && lower.length >= 3 && !/^\d+$/.test(lower) && !ACTION_VERB.test(lower);
+    };
+
+    let best = [];
+    let bestContent = 0;
+    let current = [];
+    let currentContent = 0;
+    const flush = () => {
+      while (current.length && CONNECTORS.has(current[current.length - 1].toLowerCase())) current.pop();
+      if (currentContent > bestContent || (currentContent === bestContent && current.length > best.length)) {
+        best = current;
+        bestContent = currentContent;
+      }
+      current = [];
+      currentContent = 0;
+    };
+    for (const w of words) {
+      if (isContent(w)) {
+        current.push(w);
+        currentContent++;
+      } else if (CONNECTORS.has(w.toLowerCase()) && current.length) {
+        current.push(w);
+      } else {
+        flush();
+      }
+    }
+    flush();
+
+    if (!bestContent) return null;
+    let phrase = best.slice(0, 7).join(" ").replace(/' /g, "'");
+    if (phrase.length > 42) phrase = phrase.slice(0, 42).replace(/\s+\S*$/, "");
+    return phrase.length >= 3 ? phrase : null;
+  }
+
+  /* ---------- Suggestion légère (toast avant-envoi) ---------- */
+
   // Retourne une suggestion socratique légère (toast) ou null.
   function socraticSuggestion(text, scores, recentEvents = [], lang = "fr") {
     const S = SUGGESTIONS[lang] || SUGGESTIONS.fr;
@@ -90,9 +150,14 @@ const CoachScoring = (() => {
     },
   };
 
+  /* ---------- Banques de questions (dialogue avant-envoi) ---------- */
+
   // Banques de questions métacognitives, par langue puis par axe de raisonnement.
-  // Le dialogue est infini par construction ; `label` sert au regroupement dans
-  // le prompt final compilé. Les clés sont stables entre langues (templates org).
+  // `q` est la forme générique ; `qt`, quand elle existe, est la forme instanciée
+  // avec {sujet} (les mots du prompt). {livrable} est remplacé selon le profil
+  // d'usage (étudiant, consultant, salarié). Le dialogue est infini par
+  // construction ; `label` sert au regroupement dans le prompt final compilé.
+  // Les clés sont stables entre langues (templates org).
   const BANKS = {
     fr: {
       intention: {
@@ -108,15 +173,15 @@ const CoachScoring = (() => {
         label: "Ce que je sais déjà ou ai tenté",
         questions: [
           { key: "delegation", q: "Qu'as-tu déjà tenté ou réfléchi de ton côté, même rapidement ?" },
-          { key: "connaissance-2", q: "Qu'en sais-tu déjà, même vaguement ?" },
+          { key: "connaissance-2", q: "Qu'en sais-tu déjà, même vaguement ?", qt: "Que sais-tu déjà sur « {sujet} », même vaguement ?" },
           { key: "connaissance-3", q: "Quelle partie peux-tu faire toi-même, là, sans aide ?" },
           { key: "connaissance-4", q: "Où as-tu déjà cherché avant de poser la question ici ?" },
         ],
       },
       hypothese: {
-        label: "Mon hypothèse",
+        label: "Ma tentative",
         questions: [
-          { key: "hypothese-1", q: "Si tu devais répondre toi-même, tu dirais quoi ?" },
+          { key: "hypothese-1", q: "Si tu devais répondre toi-même, tu dirais quoi ?", qt: "Si tu devais répondre toi-même sur « {sujet} », tu dirais quoi ?" },
           { key: "hypothese-2", q: "Qu'est-ce qui te fait croire que c'est la bonne piste ?" },
           { key: "hypothese-3", q: "Et si c'était l'inverse ? Qu'est-ce qui rendrait la réponse opposée crédible ?" },
         ],
@@ -126,7 +191,7 @@ const CoachScoring = (() => {
         questions: [
           { key: "contexte", q: "Pour qui ou pour quoi est-ce ? Donne le contexte en une phrase." },
           { key: "contexte-2", q: "Quelles contraintes la réponse doit-elle absolument respecter ?" },
-          { key: "contexte-3", q: "Qui va lire ou utiliser le résultat, et qu'est-ce qui compte pour cette personne ?" },
+          { key: "contexte-3", q: "Qui va lire ou utiliser {livrable}, et qu'est-ce qui compte pour cette personne ?" },
         ],
       },
       critique: {
@@ -134,7 +199,7 @@ const CoachScoring = (() => {
         questions: [
           { key: "critique", q: "Comment vérifieras-tu que la réponse est juste ?" },
           { key: "critique-2", q: "Que se passerait-il si la réponse était fausse et que tu ne t'en rendais pas compte ?" },
-          { key: "critique-3", q: "Sur quel point l'IA a-t-elle le plus de chances de se tromper ici ?" },
+          { key: "critique-3", q: "Sur quel point l'IA a-t-elle le plus de chances de se tromper ici ?", qt: "Sur « {sujet} », où l'IA a-t-elle le plus de chances de se tromper ?" },
         ],
       },
       approfondissement: {
@@ -142,7 +207,7 @@ const CoachScoring = (() => {
         questions: [
           { key: "iteration", q: "Ta demande a-t-elle bougé depuis le début de cette réflexion ? En quoi ?" },
           { key: "appro-2", q: "Qu'est-ce qui te ferait changer d'avis ?" },
-          { key: "appro-3", q: "Explique ton besoin comme à un enfant de 10 ans." },
+          { key: "appro-3", q: "Explique ton besoin comme à un enfant de 10 ans.", qt: "Explique « {sujet} » comme à un enfant de 10 ans." },
           { key: "appro-4", q: "Qu'est-ce qui te manque vraiment pour avancer seul ?" },
           { key: "appro-5", q: "Quelle question évites-tu de te poser ?" },
           { key: "appro-6", q: "Sans IA, quel serait ton plan en trois étapes ?" },
@@ -163,15 +228,15 @@ const CoachScoring = (() => {
         label: "What I already know or tried",
         questions: [
           { key: "delegation", q: "What have you already tried or thought about on your own, even briefly?" },
-          { key: "connaissance-2", q: "What do you already know about this, even vaguely?" },
+          { key: "connaissance-2", q: "What do you already know about this, even vaguely?", qt: "What do you already know about “{sujet}”, even vaguely?" },
           { key: "connaissance-3", q: "Which part can you do yourself, right now, without help?" },
           { key: "connaissance-4", q: "Where did you already look before asking here?" },
         ],
       },
       hypothese: {
-        label: "My hypothesis",
+        label: "My attempt",
         questions: [
-          { key: "hypothese-1", q: "If you had to answer yourself, what would you say?" },
+          { key: "hypothese-1", q: "If you had to answer yourself, what would you say?", qt: "If you had to answer yourself about “{sujet}”, what would you say?" },
           { key: "hypothese-2", q: "What makes you believe it's the right lead?" },
           { key: "hypothese-3", q: "And if it were the opposite? What would make the opposite answer credible?" },
         ],
@@ -181,7 +246,7 @@ const CoachScoring = (() => {
         questions: [
           { key: "contexte", q: "Who or what is this for? Give the context in one sentence." },
           { key: "contexte-2", q: "Which constraints must the answer absolutely respect?" },
-          { key: "contexte-3", q: "Who will read or use the result, and what matters to that person?" },
+          { key: "contexte-3", q: "Who will read or use {livrable}, and what matters to that person?" },
         ],
       },
       critique: {
@@ -189,7 +254,7 @@ const CoachScoring = (() => {
         questions: [
           { key: "critique", q: "How will you check that the answer is right?" },
           { key: "critique-2", q: "What would happen if the answer were wrong and you didn't notice?" },
-          { key: "critique-3", q: "On which point is the AI most likely to be wrong here?" },
+          { key: "critique-3", q: "On which point is the AI most likely to be wrong here?", qt: "About “{sujet}”, where is the AI most likely to be wrong?" },
         ],
       },
       approfondissement: {
@@ -197,7 +262,7 @@ const CoachScoring = (() => {
         questions: [
           { key: "iteration", q: "Has your request shifted since the start of this reflection? How?" },
           { key: "appro-2", q: "What would make you change your mind?" },
-          { key: "appro-3", q: "Explain your need as you would to a 10-year-old." },
+          { key: "appro-3", q: "Explain your need as you would to a 10-year-old.", qt: "Explain “{sujet}” as you would to a 10-year-old." },
           { key: "appro-4", q: "What do you really lack to move forward on your own?" },
           { key: "appro-5", q: "Which question are you avoiding asking yourself?" },
           { key: "appro-6", q: "Without AI, what would your three-step plan be?" },
@@ -206,15 +271,32 @@ const CoachScoring = (() => {
     },
   };
 
+  // Vocabulaire du placeholder {livrable} selon le profil déclaré à l'onboarding.
+  const DELIVERABLES = {
+    fr: { student: "ton devoir", consultant: "ton livrable client", employee: "ton travail", default: "le résultat" },
+    en: { student: "your assignment", consultant: "your client deliverable", employee: "your work", default: "the result" },
+  };
+
   const COMPILE_HEADERS = { fr: "Ma réflexion préalable :", en: "My prior reasoning:" };
+
+  // Axes exigeants (contre-factuel, vérification, méta) : différés pour les
+  // prompts pauvres (Kalyuga : l'étayage profond nuit aux novices sans matière).
+  const DEEP_AXES = new Set(["critique", "approfondissement"]);
 
   // Prochaine question du dialogue. Ne retourne jamais null : quand tout a été
   // posé, l'axe « approfondissement » recycle (sans reproposer la dernière).
   // Les templates de l'organisation écrasent les questions de même clé.
+  // Profondeur contingente : prompt pauvre → clarifier d'abord, différer les axes
+  // exigeants ; prompt déjà riche → creuser directement (hypothèses, vérification).
+  // Délégation totale → la tentative de l'utilisateur d'abord (Buçinca : décider
+  // avant de voir l'IA est la friction au meilleur ratio efficacité/acceptation).
   function nextQuestion(state, templates = {}) {
-    const { originalPrompt = "", scores, asked = [], lang = "fr" } = state;
+    const { originalPrompt = "", scores, asked = [], lang = "fr", profile = null } = state;
     const bank = BANKS[lang] || BANKS.fr;
     const askedSet = new Set(asked);
+    const words = wordCount(originalPrompt);
+    const novice = scores.total < 25 || words < 12;
+    const rich = scores.total >= 30 && words >= 20;
 
     const weakAxes = [
       ["intention", scores.clarte],
@@ -226,16 +308,23 @@ const CoachScoring = (() => {
       .map(([axis]) => axis);
 
     const order = [];
-    if (FULL_DELEGATION.test(originalPrompt)) order.push("connaissance");
+    if (FULL_DELEGATION.test(originalPrompt)) order.push("hypothese"); // tentative d'abord
+    if (rich) order.push("hypothese", "critique");
     order.push(...weakAxes, "connaissance", "hypothese", "intention", "contexte", "critique", "approfondissement");
     const seen = new Set();
-    const axes = order.filter((a) => !seen.has(a) && seen.add(a));
+    let axes = order.filter((a) => !seen.has(a) && seen.add(a));
+    if (novice && asked.length < 2) {
+      axes = [...axes.filter((a) => !DEEP_AXES.has(a)), ...axes.filter((a) => DEEP_AXES.has(a))];
+    }
 
+    const subject = topic(originalPrompt, lang);
+    const deliverable = (DELIVERABLES[lang] || DELIVERABLES.fr)[profile] || (DELIVERABLES[lang] || DELIVERABLES.fr).default;
+    const fill = (q) => q.replace("{sujet}", subject || "").replace("{livrable}", deliverable);
     const wrap = (axis, entry) => ({
       key: entry.key,
       axis,
       label: bank[axis].label,
-      question: templates[entry.key] || entry.q,
+      question: templates[entry.key] || fill(subject && entry.qt ? entry.qt : entry.q),
     });
 
     // Rotation entre les axes (un tour = un axe différent) pour un vrai
@@ -252,13 +341,16 @@ const CoachScoring = (() => {
   }
 
   // Assemble le prompt final : la demande initiale + la réflexion construite
-  // pendant le dialogue, regroupée par axe. Les réponses vides sont ignorées.
+  // pendant le dialogue, regroupée par axe. La tentative de l'utilisateur (axe
+  // hypothèse) passe en tête : c'est elle que l'IA doit renforcer, pas remplacer.
+  // Les réponses vides sont ignorées.
   function compilePrompt(originalPrompt, answers, lang = "fr") {
     const filled = (answers || []).filter((a) => a.answer && a.answer.trim());
     if (!filled.length) return originalPrompt;
+    const ordered = [...filled.filter((a) => a.axis === "hypothese"), ...filled.filter((a) => a.axis !== "hypothese")];
     const fallbackLabel = (BANKS[lang] || BANKS.fr).approfondissement.label;
     const byLabel = new Map();
-    for (const a of filled) {
+    for (const a of ordered) {
       const label = a.label || fallbackLabel;
       if (!byLabel.has(label)) byLabel.set(label, []);
       byLabel.get(label).push(a.answer.trim());
@@ -270,7 +362,105 @@ const CoachScoring = (() => {
     return `${originalPrompt.trim()}\n\n${COMPILE_HEADERS[lang] || COMPILE_HEADERS.fr}\n${lines.join("\n")}`;
   }
 
-  return { categorize, score, socraticSuggestion, nextQuestion, compilePrompt, wordCount };
+  /* ---------- Miroir d'après (une fois la réponse IA reçue) ---------- */
+
+  // L'overreliance se joue APRÈS la réponse (Lee 2025) : trois gestes réflexifs,
+  // jamais plus d'un par conversation. explain-back (auto-explication, Chi 1994),
+  // lecture latérale (Wineburg 2019), désaccord (production générative, ICAP).
+  const POST_QUESTIONS = {
+    fr: {
+      explain: "Reformule l'essentiel de cette réponse en une phrase, avec tes mots.",
+      verify: "Quel point de cette réponse vérifieras-tu ailleurs avant de le réutiliser ?",
+      disagree: "Sur quoi n'es-tu pas totalement d'accord avec cette réponse ?",
+    },
+    en: {
+      explain: "Restate the gist of this answer in one sentence, in your own words.",
+      verify: "Which point of this answer will you verify elsewhere before reusing it?",
+      disagree: "What do you not fully agree with in this answer?",
+    },
+  };
+
+  // Choisit le geste post-réponse : vérification prioritaire quand le prompt ne
+  // montrait aucun esprit critique sur du factuel ; sinon rotation déterministe.
+  function postQuestion({ category = "autre", scores = null, lang = "fr", count = 0 } = {}) {
+    const bank = POST_QUESTIONS[lang] || POST_QUESTIONS.fr;
+    let key;
+    if (scores && scores.critique === 0 && (category === "recherche" || category === "analyse")) key = "verify";
+    else key = ["explain", "disagree", "verify"][count % 3];
+    return { key, question: bank[key] };
+  }
+
+  /* ---------- Progression : premiers jets, streak, seuil adaptatif ---------- */
+
+  // Score du PREMIER JET : ce que l'utilisateur a écrit seul, avant tout coaching.
+  // C'est la seule mesure honnête de l'apprentissage (P12) : les événements
+  // interceptés portent scoreBefore, les autres ont leur score direct.
+  function firstDraftScore(e) {
+    if (!e) return null;
+    if (e.scoreBefore !== null && e.scoreBefore !== undefined) return e.scoreBefore;
+    return e.scores ? e.scores.total : null;
+  }
+
+  // Fading : la friction décroît avec la compétence démontrée. Chaque série de
+  // 5 premiers jets consécutifs au-dessus du seuil de base relève le seuil
+  // effectif de 2 points (plafond +15) : la barre monte avec l'utilisateur,
+  // et retombe au premier jet raté (les difficultés restent désirables).
+  function adaptiveThreshold(events, base, cap = 15) {
+    let run = 0;
+    for (let i = (events || []).length - 1; i >= 0; i--) {
+      const s = firstDraftScore(events[i]);
+      if (s === null) continue;
+      if (s >= base) run++;
+      else break;
+    }
+    return Math.min(95, base + Math.min(cap, 2 * Math.floor(run / 5)));
+  }
+
+  // Streak honnête : jours consécutifs (parmi les jours ACTIFS, les jours sans
+  // prompt ne cassent rien) où la médiane des premiers jets atteint le seuil.
+  // On célèbre l'autonomie, pas la dépendance au coaching.
+  function dayStreak(events, threshold, now = Date.now()) {
+    const dayKeyOf = (ms) => {
+      const d = new Date(ms);
+      return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    };
+    const byDay = new Map();
+    for (const e of events || []) {
+      const s = firstDraftScore(e);
+      if (s === null || !e.ts) continue;
+      const k = dayKeyOf(Date.parse(e.ts));
+      if (!byDay.has(k)) byDay.set(k, []);
+      byDay.get(k).push(s);
+    }
+    const median = (arr) => {
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    };
+    let streak = 0;
+    const day = 24 * 3600 * 1000;
+    for (let i = 0; i < 90; i++) {
+      const scores = byDay.get(dayKeyOf(now - i * day));
+      if (!scores) continue; // jour sans prompt : ni gagné ni perdu
+      if (median(scores) >= threshold) streak++;
+      else break;
+    }
+    return streak;
+  }
+
+  return {
+    categorize,
+    score,
+    topic,
+    socraticSuggestion,
+    nextQuestion,
+    compilePrompt,
+    postQuestion,
+    firstDraftScore,
+    adaptiveThreshold,
+    dayStreak,
+    wordCount,
+  };
 })();
 
 if (typeof self !== "undefined") self.CoachScoring = CoachScoring;
