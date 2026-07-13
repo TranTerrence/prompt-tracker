@@ -14,13 +14,22 @@ et des données non-auth ; les comptes sont recréés par inscription.
 - [x] Dashboard recâblé → `.env.local` (noms `NEXT_PUBLIC_SUPABASE_URL` /
       `NEXT_PUBLIC_SUPABASE_ANON_KEY`, valeurs du nouveau projet)
 
-## À exécuter en session NEUVE (connecteur MCP `supabase` du nouveau projet
-authentifié via `claude /mcp`, sinon l'agent n'a pas accès à la cible)
+## Application sur la cible — FAIT le 2026-07-13
 
-1. **Appliquer le schéma** : exécuter `migrations/0001_init.sql` sur la cible
-   (`apply_migration` ou l'éditeur SQL Supabase).
-2. **Semer les données** : exécuter `seed.sql`.
-3. **Créer le compte admin** (stratégie « repartir propre ») :
+Exécuté via le connecteur claude.ai « Supabase AI-Coach - SKOOTT » (scoppé au
+seul projet cible), piloté par des instances `claude -p` headless :
+
+- [x] `0001_init.sql` appliqué (apply_migration). Vérifié : 6 tables public,
+      13 policies, triggers `enforce_capture_mode` + `on_auth_user_created`.
+- [x] `seed.sql` exécuté. Vérifié : 1 organisation, 5 templates.
+- [x] Edge Function `socratic-llm` déployée, ACTIVE, verify_jwt: true.
+- [x] `0002_harden_trigger_functions.sql` (advisor lints 0028/0029) : revoke
+      RPC sur les 2 fonctions de trigger ; RLS re-testée en rôle anon (OK).
+- [x] API REST + Auth de la cible testées avec la clé publishable (HTTP 200).
+
+## Étapes restantes (manuelles)
+
+1. **Créer le compte admin** (stratégie « repartir propre ») :
    - S'inscrire sur le dashboard avec `terrence.tran0+coachtest@gmail.com`
      (le trigger `on_auth_user_created` crée le profil automatiquement).
    - Puis passer ce profil admin et le rattacher à l'org :
@@ -30,13 +39,12 @@ authentifié via `claude /mcp`, sinon l'agent n'a pas accès à la cible)
            org_id = 'c85c638d-0763-4fb8-bef3-7efe6791f1e0'
        where email = 'terrence.tran0+coachtest@gmail.com';
      ```
-4. **Redéployer l'Edge Function** `socratic-llm` sur la cible, puis définir son
-   secret : `ANTHROPIC_API_KEY` (les secrets `SUPABASE_URL` /
-   `SUPABASE_SERVICE_ROLE_KEY` sont injectés automatiquement par Supabase).
-5. **Auth → URL Configuration** (Supabase du nouveau projet) : ajouter l'URL du
-   dashboard (localhost:3000 en dev, l'URL Vercel en prod) comme Site URL /
-   redirect autorisé.
-6. **Vérifier bout en bout** : login dashboard (compte admin → `/admin`),
+2. **Secret de l'Edge Function** (seulement si `llm_enabled` passe à true un
+   jour) : poser `ANTHROPIC_API_KEY` sur la cible. Il n'était PAS posé sur
+   l'ancienne base non plus : parité atteinte, fonction dormante.
+3. **Auth → URL Configuration** (en prod seulement) : ajouter l'URL Vercel du
+   dashboard comme Site URL / redirect. Le défaut localhost:3000 suffit en dev.
+4. **Vérifier bout en bout** : login dashboard (compte admin → `/admin`),
    puis interception sur ChatGPT/Claude/Gemini avec l'extension rechargée.
 
 ## Non migré volontairement
