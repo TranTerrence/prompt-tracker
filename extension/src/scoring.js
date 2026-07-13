@@ -122,12 +122,49 @@ const CoachScoring = (() => {
     return phrase.length >= 3 ? phrase : null;
   }
 
+  /* ---------- Typage des tours : suite ou ouvreur ---------- */
+
+  // Amorces typiques d'une SUITE de conversation : raffinement, anaphore,
+  // acquiescement. FR/EN mélangés comme les autres heuristiques du module.
+  const FOLLOWUP_OPENER =
+    /^\s*(et\b|ok\b|okay\b|oui\b|non\b|yes\b|no\b|mais\b|but\b|aussi\b|also\b|ensuite|maintenant|now\b|then\b|continue|poursuis|développe|détaille|approfondis|raccourcis|allonge|reformule|résume|traduis|corrige|améliore|refais|recommence|encore|plutôt|plus\b|moins\b|pareil|idem|vas[- ]y|go on|expand|elaborate|shorten|lengthen|rephrase|summarize|translate|fix\b|improve|redo|again|rather|instead|more\b|less\b|same\b|make it|ajoute|enlève|retire|change|remplace|add\b|remove|replace|ça\b|ca\b|celui|celle|cette réponse|le même|la même|this\b|that\b|it\b)/i;
+
+  function contentTokens(text) {
+    return new Set(
+      text
+        .toLowerCase()
+        .replace(/['’]/g, "' ")
+        .replace(/[«»"“”:;,.!?()[\]{}<>*_`~|]/g, " ")
+        .split(/\s+/)
+        .filter((w) => w.length >= 3 && !STOPWORDS.fr.has(w) && !STOPWORDS.en.has(w))
+    );
+  }
+
+  // Une SUITE est un tour d'élaboration dans un fil déjà lancé : elle n'est
+  // jamais un début de tâche, et ne doit donc jamais être jugée avec la
+  // grille d'un premier prompt (erreur de catégorie). Heuristique : tour
+  // court à amorce de raffinement/anaphore, ou fort recouvrement lexical
+  // avec le prompt précédent.
+  function isFollowUp(text, previousPrompts = []) {
+    if (!previousPrompts.length) return false; // aucun historique : ouvreur
+    if (wordCount(text) < 10 && FOLLOWUP_OPENER.test(text)) return true;
+    const prev = contentTokens(previousPrompts[previousPrompts.length - 1] || "");
+    const curr = contentTokens(text);
+    if (!prev.size || !curr.size) return false;
+    let inter = 0;
+    for (const w of curr) if (prev.has(w)) inter++;
+    const union = prev.size + curr.size - inter;
+    return union > 0 && inter / union > 0.5;
+  }
+
   /* ---------- Suggestion légère (toast avant-envoi) ---------- */
 
-  // Retourne une suggestion socratique légère (toast) ou null.
-  function socraticSuggestion(text, scores, recentEvents = [], lang = "fr") {
+  // Retourne une suggestion socratique légère (toast) ou null. Sur une SUITE,
+  // la brièveté est un usage normal du chat : jamais la suggestion « short »,
+  // seules les opportunités critiques (sources, délégation, creuse) restent.
+  function socraticSuggestion(text, scores, recentEvents = [], lang = "fr", isFollowUpTurn = false) {
     const S = SUGGESTIONS[lang] || SUGGESTIONS.fr;
-    if (wordCount(text) < 8) return S.short;
+    if (!isFollowUpTurn && wordCount(text) < 8) return S.short;
     if (FULL_DELEGATION.test(text) && scores.contexte < 10) return S.delegation;
     if (categorize(text) === "recherche" && scores.critique === 0) return S.sources;
     const lastThree = recentEvents.slice(-3);
@@ -452,6 +489,7 @@ const CoachScoring = (() => {
     categorize,
     score,
     topic,
+    isFollowUp,
     socraticSuggestion,
     nextQuestion,
     compilePrompt,

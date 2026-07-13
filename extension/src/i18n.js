@@ -8,13 +8,15 @@ const CoachI18n = (() => {
       brandDefault: "Prompt Tracker",
       // Badge
       badgeActive: (name, threshold) =>
-        `${name} actif : tes prompts sous ${threshold}/100 déclencheront un dialogue de réflexion. Clique pour replier.`,
+        `${name} actif : au premier message d'un fil, un prompt sous ${threshold}/100 ouvre le dialogue de réflexion ; ensuite je te laisse la main. Clique pour replier.`,
       badgeWatch: (name) => `${name} actif : interception désactivée, tes prompts sont seulement analysés localement.`,
       badgeBroken: (name) => `${name}. Attention, l'UI du site a peut-être changé, la capture est à vérifier.`,
       badgeStandby: "(veille)",
       // Toast
       toastTitle: "Miroir socratique",
       toastUseful: "👍 Utile",
+      toastPause: "Pas dans ce fil",
+      pauseConfirmed: "C'est noté, je te laisse dérouler. On se retrouve à la prochaine conversation.",
       // Miroir d'après (post-réponse)
       postTitle: "Miroir d'après",
       postPlaceholder: "En une phrase, avec tes mots…",
@@ -25,6 +27,10 @@ const CoachI18n = (() => {
       modalTitle: (name) => `${name} : réfléchissons ensemble`,
       modalSub: (score) =>
         `Prompt retenu avant envoi. Score initial ${score}/100. Réponds autant de fois que tu veux : c'est toi qui décides quand envoyer.`,
+      modalPromise: "Une fois la discussion lancée, je ne t'interromprai plus dans ce fil.",
+      modalSubReentry: (score) =>
+        `Trois prompts d'affilée bien en dessous de ton niveau habituel (dernier : ${score}/100). On reprend deux minutes ? Tu peux toujours envoyer tel quel.`,
+      modalPause: "Laisse-moi sur ce fil",
       modalAnswerPlaceholder: "Ta réponse… (Entrée pour valider, Shift+Entrée pour un saut de ligne)",
       modalReply: "Répondre",
       modalSkip: "Passer cette question",
@@ -127,12 +133,14 @@ const CoachI18n = (() => {
     en: {
       brandDefault: "Prompt Tracker",
       badgeActive: (name, threshold) =>
-        `${name} active: prompts under ${threshold}/100 will trigger a reflection dialogue. Click to collapse.`,
+        `${name} active: on the first message of a thread, a prompt under ${threshold}/100 opens the reflection dialogue; after that, you're in charge. Click to collapse.`,
       badgeWatch: (name) => `${name} active: interception off, your prompts are only analyzed locally.`,
       badgeBroken: (name) => `${name}. Warning, the site UI may have changed, capture needs checking.`,
       badgeStandby: "(standby)",
       toastTitle: "Socratic mirror",
       toastUseful: "👍 Helpful",
+      toastPause: "Not in this thread",
+      pauseConfirmed: "Got it, I'll let you roll. See you in the next conversation.",
       postTitle: "Second look",
       postPlaceholder: "One sentence, in your own words…",
       postReply: "Answer",
@@ -141,6 +149,10 @@ const CoachI18n = (() => {
       modalTitle: (name) => `${name}: let's think this through`,
       modalSub: (score) =>
         `Prompt held before sending. Initial score ${score}/100. Answer as many times as you like: you decide when to send.`,
+      modalPromise: "Once the discussion is launched, I won't interrupt you again in this thread.",
+      modalSubReentry: (score) =>
+        `Three prompts in a row well below your usual level (latest: ${score}/100). Two minutes to regroup? You can always send as is.`,
+      modalPause: "Leave me alone on this thread",
       modalAnswerPlaceholder: "Your answer… (Enter to submit, Shift+Enter for a new line)",
       modalReply: "Answer",
       modalSkip: "Skip this question",

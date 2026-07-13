@@ -91,6 +91,38 @@ assert.strictEqual(S.dayStreak([ev(0, 50), ev(1, 45), ev(3, 60)], 40, now), 3, "
 assert.strictEqual(S.dayStreak([ev(0, 50), ev(1, 20), ev(2, 60)], 40, now), 1, "un jour raté casse la série");
 assert.strictEqual(S.dayStreak([], 40, now), 0);
 
+/* ---------- typage des tours : isFollowUp ---------- */
+
+const prevPrompts = ["Rédige une note sur les politiques de relance de 2008 pour mon cours d'économie"];
+assert.strictEqual(S.isFollowUp("continue", prevPrompts), true, "« continue » est une suite");
+assert.strictEqual(S.isFollowUp("plus court", prevPrompts), true, "« plus court » est une suite");
+assert.strictEqual(S.isFollowUp("et si on comparait avec 2020 ?", prevPrompts), true, "anaphore = suite");
+assert.strictEqual(S.isFollowUp("oui mais pour un lycéen", prevPrompts), true);
+assert.strictEqual(
+  S.isFollowUp("une autre note sur les politiques de relance de 2008 économie", prevPrompts),
+  true,
+  "fort recouvrement lexical = suite"
+);
+assert.strictEqual(S.isFollowUp("continue", []), false, "sans historique : jamais une suite");
+assert.strictEqual(
+  S.isFollowUp(
+    "Analyse l'impact des taux d'intérêt négatifs sur la rentabilité des banques européennes depuis 2014, avec des sources vérifiables",
+    prevPrompts
+  ),
+  false,
+  "tour substantiel sur nouveau sujet = ouvreur"
+);
+
+/* ---------- suggestion : pas de « trop court » sur une suite ---------- */
+
+const shortScores = S.score("continue");
+assert.ok(S.socraticSuggestion("continue", shortScores, [], "fr", false), "ouvreur court → suggestion");
+assert.strictEqual(S.socraticSuggestion("continue", shortScores, [], "fr", true), null, "suite courte saine → silence");
+assert.ok(
+  S.socraticSuggestion("c'est quoi une dérivée ?", S.score("c'est quoi une dérivée ?"), [], "fr", true),
+  "suite recherche sans esprit critique → suggestion sources conservée"
+);
+
 /* ---------- non-régression du score ---------- */
 
 assert.strictEqual(S.score("fais mes devoirs").total < 40, true);

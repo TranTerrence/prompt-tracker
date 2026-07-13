@@ -40,10 +40,27 @@
   // Consentements de l'utilisateur (catégorie → bool), gérés par consent.html.
   let consents = {};
 
-  chrome.storage.local.get(["settings", "orgConfig", "consents", "events"], (data) => {
+  // Cadence « unité de tâche » : état par fil de conversation, hydraté en
+  // mémoire (la décision d'interception doit rester synchrone à l'envoi).
+  const pausedConvs = new Set(); // fils où l'utilisateur a dit « laisse-moi »
+  const toastedConvs = new Set(); // fils ayant déjà reçu leur unique toast
+  let pausePendingNewThread = false; // pause cliquée sur un fil pas encore créé (URL racine)
+  let lowStreak = { conv: null, count: 0 }; // décrochages consécutifs dans le fil courant
+  let pendingReentry = false; // la prochaine modale est une ré-entrée (sous-titre honnête)
+
+  function persistConvSets() {
+    chrome.storage.local.set({
+      pausedConvs: [...pausedConvs].slice(-200),
+      toastedConvs: [...toastedConvs].slice(-200),
+    });
+  }
+
+  chrome.storage.local.get(["settings", "orgConfig", "consents", "events", "pausedConvs", "toastedConvs"], (data) => {
     settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
     orgConfig = data.orgConfig || null;
     consents = data.consents || {};
+    for (const c of data.pausedConvs || []) pausedConvs.add(c);
+    for (const c of data.toastedConvs || []) toastedConvs.add(c);
     recomputeThreshold(data.events);
     CoachTheme.set(settings.theme);
     refreshBadge();
@@ -118,6 +135,7 @@
         // La clé se lit à la FIN : une conversation neuve reçoit son id d'URL
         // pendant la génération (chatgpt.com/ devient chatgpt.com/c/<id>).
         const conv = CoachAdapter.conversationKey();
+        if (isPaused(conv)) return; // « laisse-moi » vaut pour toutes les surfaces du fil
         chrome.storage.local.get(["postConvs", "postCount"], (data) => {
           const convs = data.postConvs || [];
           if (convs.includes(conv)) return;
@@ -152,6 +170,10 @@
   }
 
   CoachMirror.onFeedback = () => pendingToastEventId && markFeedback(pendingToastEventId, "useful");
+  CoachMirror.onPause = () => {
+    pauseCurrentConv();
+    if (pendingToastEventId) markFeedback(pendingToastEventId, "paused_thread");
+  };
   CoachMirror.onClose = (reason) => {
     if (pendingToastEventId && reason === "dismissed") markFeedback(pendingToastEventId, "dismissed");
     pendingToastEventId = null;
@@ -190,11 +212,62 @@
     recentPromptTexts = [...recentPromptTexts.slice(-2), text];
   }
 
+  // Pause d'un fil : le coach se tait sur toutes ses surfaces. Depuis la
+  // modale d'un fil NEUF, l'URL est encore une racine : on mémorise la
+  // demande et on l'applique dès que le fil a sa vraie clé.
+  function pauseCurrentConv() {
+    const conv = CoachAdapter.conversationKey();
+    if (CoachAdapter.isNewConversation()) {
+      pausePendingNewThread = true;
+    } else {
+      pausedConvs.add(conv);
+      persistConvSets();
+    }
+  }
+
+  function isPaused(conv) {
+    if (pausedConvs.has(conv)) return true;
+    if (pausePendingNewThread && !CoachAdapter.isNewConversation()) {
+      // Le fil vient de recevoir son id : matérialiser la pause en attente.
+      pausePendingNewThread = false;
+      pausedConvs.add(conv);
+      persistConvSets();
+      return true;
+    }
+    return pausePendingNewThread;
+  }
+
   CoachAdapter.init({
-    // Décision synchrone, prise pendant l'événement d'envoi : sous le seuil → retenue.
+    // Décision synchrone, prise pendant l'événement d'envoi. Cadence « unité
+    // de tâche » : la modale intercepte des OUVERTURES de fil ; dans un fil
+    // lancé, elle ne revient que sur décrochage répété, jamais sur une suite.
     shouldIntercept(text) {
       if (!effective("interceptEnabled")) return false;
-      return CoachScoring.score(text, recentPromptTexts).total < currentThreshold();
+      const scores = CoachScoring.score(text, recentPromptTexts);
+      pendingReentry = false;
+
+      // Fil neuf (URL racine : l'id n'existe pas encore) : règle d'ouverture.
+      if (CoachAdapter.isNewConversation()) {
+        return scores.total < currentThreshold();
+      }
+
+      // Fil existant.
+      const conv = CoachAdapter.conversationKey();
+      if (lowStreak.conv !== conv) lowStreak = { conv, count: 0 };
+      if (isPaused(conv)) return false;
+      // Une SUITE (raffinement, anaphore) n'est jamais un début de tâche.
+      if (CoachScoring.isFollowUp(text, recentPromptTexts)) return false;
+      // Tour substantiel : filet anti-décrochage (3 échecs nets consécutifs).
+      if (CoachScoring.wordCount(text) >= 10) {
+        if (scores.total < currentThreshold() - 15) lowStreak.count++;
+        else lowStreak.count = 0;
+        if (lowStreak.count >= 3) {
+          lowStreak.count = 0;
+          pendingReentry = true;
+          return true;
+        }
+      }
+      return false;
     },
 
     // Prompt retenu : rien n'est parti vers ChatGPT. Dialogue socratique
@@ -227,10 +300,30 @@
         });
       }
 
+      const reentry = pendingReentry;
+      pendingReentry = false;
       CoachMirror.showModal({
         promptText: text,
         scoreBefore: scores.total,
         branding: orgConfig && orgConfig.branding,
+        // Ouverture de fil : promesse de tranquillité. Ré-entrée : honnêteté
+        // sur la raison (3 décrochages), jamais de reproche.
+        subtitle: reentry ? CoachI18n.t("modalSubReentry", scores.total) : undefined,
+        promise: !reentry,
+        onPause(m) {
+          pauseCurrentConv();
+          appendEvent(
+            buildEvent(text, scores, {
+              intercepted: true,
+              outcome: "cancelled",
+              scoreBefore: scores.total,
+              mirrorShown: true,
+              mirrorFeedback: "paused_thread",
+              rounds: m.rounds,
+              answersCount: m.answersCount,
+            })
+          );
+        },
         rescore: (t) => CoachScoring.score(t, recentPromptTexts),
         compile: (original, answers) => CoachScoring.compilePrompt(original, answers, CoachI18n.lang),
         ask,
@@ -286,15 +379,23 @@
     },
 
     // Prompt parti normalement (au-dessus du seuil ou interception désactivée).
+    // Toast : au plus UN par fil, jamais sur un fil en pause, et jamais la
+    // suggestion « trop court » sur une suite (usage normal du chat).
     onSubmit(text) {
       const scores = CoachScoring.score(text, recentPromptTexts);
+      const conv = CoachAdapter.conversationKey();
+      const isNew = CoachAdapter.isNewConversation();
+      const followUp = CoachScoring.isFollowUp(text, recentPromptTexts);
+      const toastAllowed =
+        effective("interceptEnabled") && (isNew || (!isPaused(conv) && !toastedConvs.has(conv)));
       chrome.storage.local.get("events", (data) => {
-        const suggestion = effective("interceptEnabled")
+        const suggestion = toastAllowed
           ? CoachScoring.socraticSuggestion(
               text,
               scores,
               (data.events || []).filter((e) => e.site === CoachAdapter.site),
-              CoachI18n.lang
+              CoachI18n.lang,
+              followUp
             )
           : null;
         const event = buildEvent(text, scores, { outcome: "sent", mirrorShown: Boolean(suggestion) });
@@ -303,6 +404,10 @@
         appendEvent(event, () => {
           armPostMirror();
           if (suggestion) {
+            if (!isNew) {
+              toastedConvs.add(conv);
+              persistConvSets();
+            }
             pendingToastEventId = event.id;
             CoachMirror.show(suggestion, orgConfig && orgConfig.branding && orgConfig.branding.color);
           }

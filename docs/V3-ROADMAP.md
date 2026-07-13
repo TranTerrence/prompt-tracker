@@ -71,6 +71,17 @@ Le pattern « update » de Buçinca (décider avant de voir l'IA) est la frictio
 ### 6d. La North Star honnête (dashboard)
 Mesurer l'apprentissage, pas la performance assistée (Bastani ; Bjork) : la courbe qui compte est **le score moyen des premiers jets** (score_before) semaine après semaine. Le champ existe déjà en base ; le dashboard doit l'afficher comme métrique principale, au-dessus du score après amélioration. Un client white-label achète cette courbe-là.
 
+### 6e bis. Cadence « unité de tâche » (V3.6, issue d'une étude divergence/convergence pédagogie x UX)
+La modale intercepte des OUVERTURES de tâche, jamais des suites : typage des tours
+(une suite courte à verbe de raffinement ou fort recouvrement lexical n'est jamais
+éligible), modale au premier message d'un fil seulement, ré-entrée uniquement sur
+décrochage répété (3 tours substantiels consécutifs sous seuil−15, sous-titre
+honnête), toast plafonné à 1 par fil sur opportunité critique, et soupape
+« Laisse-moi sur ce fil » (Grüning : l'option de sortie EST le mécanisme).
+La cadence n'est PAS personnalisée par profil (Kalyuga : expertise démontrée,
+pas déclarée : le seuil adaptatif fait déjà ce fading). Hypothèse v2 : ré-ouvrir
+sur changement de sujet détecté par recouvrement lexical, à calibrer.
+
 ### 6e. Garde-fous de conception (les 3 erreurs à ne jamais commettre)
 1. Friction uniforme → fading obligatoire (section 2).
 2. Blocage ou moralisation → « envoyer quand même » inamovible, ton des questions strictement non culpabilisant.

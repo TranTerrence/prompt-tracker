@@ -17,4 +17,5 @@ const CoachAdapter = createCoachAdapter({
     "button[aria-label*='send' i]",
     "button[type='submit']",
   ],
+  rootPaths: ["/", "/new", "/chats"],
 });

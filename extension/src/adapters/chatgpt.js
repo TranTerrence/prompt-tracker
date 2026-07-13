@@ -13,4 +13,5 @@ const CoachAdapter = createCoachAdapter({
     "button[aria-label*='envoyer' i]",
     "button[aria-label*='send' i]",
   ],
+  rootPaths: ["/"],
 });

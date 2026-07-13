@@ -4,7 +4,7 @@
 // UI change, seul le fichier de config du site est à retoucher.
 
 function createCoachAdapter(config) {
-  const { site, composerSelectors, sendButtonSelectors } = config;
+  const { site, composerSelectors, sendButtonSelectors, rootPaths = ["/"] } = config;
 
   let hooks = { shouldIntercept: () => false, onIntercept: null, onSubmit: null };
   let bypassUntil = 0; // fenêtre pendant laquelle send() programmatique n'est pas ré-intercepté
@@ -187,6 +187,14 @@ function createCoachAdapter(config) {
     return `${site}:${location.pathname}`;
   }
 
+  // Fil NEUF : au moment d'envoyer le premier message, l'URL est encore une
+  // racine (l'id de conversation n'arrive que pendant la génération). C'est
+  // le détecteur synchrone de « début de tâche » utilisé par la cadence.
+  function isNewConversation() {
+    const path = location.pathname;
+    return rootPaths.some((root) => path === root || (root !== "/" && path.endsWith(root)));
+  }
+
   let responseWatch = null;
 
   // Détection générique de fin de réponse : après un envoi, le document mute
@@ -239,5 +247,5 @@ function createCoachAdapter(config) {
     responseWatch = null;
   }
 
-  return { init, healthy, setComposerText, send, submitText, readComposerText, watchResponse, cancelResponseWatch, conversationKey, site };
+  return { init, healthy, setComposerText, send, submitText, readComposerText, watchResponse, cancelResponseWatch, conversationKey, isNewConversation, site };
 }

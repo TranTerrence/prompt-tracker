@@ -37,12 +37,15 @@ const CoachMirror = (() => {
         .useful { margin-top: 12px; cursor: pointer; border: 1px solid var(--border); background: var(--soft);
           color: var(--ink); border-radius: 999px; padding: 5px 12px; font: 12px var(--font-text); }
         .useful:hover { border-color: var(--accent); color: var(--accent); }
+        .pause { margin: 12px 0 0 8px; cursor: pointer; border: 0; background: none; color: var(--muted);
+          font: 11.5px var(--font-text); text-decoration: underline; text-underline-offset: 2px; padding: 5px 2px; }
+        .pause:hover { color: var(--ink); }
       </style>
       <div class="root">
         <div class="panel" role="status">
           <div class="title"><span class="brand">🪞 ${t("toastTitle")}</span> <button class="close">✕</button></div>
           <div class="message"></div>
-          <button class="useful">${t("toastUseful")}</button>
+          <button class="useful">${t("toastUseful")}</button><button class="pause">${t("toastPause")}</button>
         </div>
       </div>`;
     document.documentElement.appendChild(toastHost);
@@ -51,12 +54,23 @@ const CoachMirror = (() => {
       if (typeof CoachMirror.onFeedback === "function") CoachMirror.onFeedback("useful");
       hideToast("useful");
     });
+    shadow.querySelector(".pause").addEventListener("click", () => {
+      if (typeof CoachMirror.onPause === "function") CoachMirror.onPause();
+      // Peak-end : la pause se clôt sur un choix respecté, pas sur un rejet.
+      shadow.querySelector(".message").textContent = t("pauseConfirmed");
+      shadow.querySelector(".useful").hidden = true;
+      shadow.querySelector(".pause").hidden = true;
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => hideToast("paused"), 1800);
+    });
     return shadow;
   }
 
   function show(message, accent) {
     const shadow = ensureToast(accent);
     shadow.querySelector(".message").textContent = message;
+    shadow.querySelector(".useful").hidden = false;
+    shadow.querySelector(".pause").hidden = false;
     const panel = shadow.querySelector(".panel");
     requestAnimationFrame(() => panel.classList.add("visible"));
     clearTimeout(hideTimer);
@@ -176,9 +190,11 @@ const CoachMirror = (() => {
   /* ---------- Modale : dialogue socratique itératif ---------- */
 
   // opts: { promptText, scoreBefore, branding: {name, color},
+  //   subtitle (remplace le sous-titre : ré-entrée honnête),
+  //   promise (bool : afficher la promesse « je ne t'interromprai plus »),
   //   rescore(text) -> scores, compile(originalPrompt, answers) -> string,
   //   ask(state) -> Promise<{key, axis, label, question}>,
-  //   onSend(finalText, meta), onSendAnyway(meta), onCancel(meta) }
+  //   onSend(finalText, meta), onSendAnyway(meta), onCancel(meta), onPause(meta) }
   function showModal(opts) {
     closeModal();
     const accent = (opts.branding && opts.branding.color) || CoachTheme.DEFAULT_ACCENT;
@@ -210,6 +226,10 @@ const CoachMirror = (() => {
         .closex { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px; }
         .closex:hover { color: var(--ink); }
         .sub { padding: 0 22px 12px; color: var(--muted); font-size: 12.5px; }
+        .promise { padding: 0 22px 12px; color: var(--accent); font-size: 12px; font-style: italic; }
+        .pause-link { border: 0; background: none; color: var(--muted); font-size: 11.5px; cursor: pointer;
+          text-decoration: underline; text-underline-offset: 2px; padding: 8px 0 0; align-self: center; }
+        .pause-link:hover { color: var(--ink); }
         .score { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
 
         .thread { flex: 1; min-height: 60px; max-height: 32vh; overflow-y: auto; padding: 6px 22px; }
@@ -254,6 +274,7 @@ const CoachMirror = (() => {
           <div class="modal" role="dialog" aria-modal="true">
             <div class="head"><h1><span class="tick">🪞</span> </h1><button class="closex"></button></div>
             <div class="sub"></div>
+            <div class="promise" hidden></div>
             <div class="thread"></div>
             <div class="thinking" hidden>…</div>
             <div class="answer-zone">
@@ -273,6 +294,7 @@ const CoachMirror = (() => {
                 <button class="send"></button>
                 <button class="anyway"></button>
               </div>
+              <button class="pause-link"></button>
             </div>
           </div>
         </div>
@@ -283,7 +305,13 @@ const CoachMirror = (() => {
     el("h1").append(t("modalTitle", brand));
     el(".closex").textContent = "✕";
     el(".closex").title = t("modalCancelTitle");
-    el(".sub").textContent = t("modalSub", opts.scoreBefore);
+    // Sous-titre : ré-entrée honnête si fournie, sinon standard + promesse.
+    el(".sub").textContent = opts.subtitle || t("modalSub", opts.scoreBefore);
+    if (opts.promise) {
+      el(".promise").textContent = t("modalPromise");
+      el(".promise").hidden = false;
+    }
+    el(".pause-link").textContent = t("modalPause");
     el(".answer").placeholder = t("modalAnswerPlaceholder");
     el(".reply").textContent = t("modalReply");
     el(".skip-link").textContent = t("modalSkip");
@@ -392,6 +420,11 @@ const CoachMirror = (() => {
       const m = meta();
       closeModal();
       if (opts.onCancel) opts.onCancel(m);
+    });
+    el(".pause-link").addEventListener("click", () => {
+      const m = meta();
+      closeModal();
+      if (opts.onPause) opts.onPause(m);
     });
     el(".overlay").addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
