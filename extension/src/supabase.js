@@ -108,6 +108,14 @@ const CoachApi = (() => {
     return orgConfig;
   }
 
+  // Rejoint une classe par son code : rattachement org + groupe, atomique
+  // côté serveur (RPC security definer). Rafraîchit la config dans la foulée.
+  async function joinGroup(code) {
+    const data = await rest("rpc/join_group_with_code", { method: "POST", body: { p_code: code } });
+    await refreshOrgConfig();
+    return data; // { org_id, group_id, group_name, org_name }
+  }
+
   // Pousse les événements non synchronisés (file offline). Idempotent grâce à
   // unique(user_id, client_event_id) + ignore-duplicates.
   async function syncEvents() {
@@ -175,7 +183,7 @@ const CoachApi = (() => {
     }
   }
 
-  return { login, signup, logout, ensureSession, refreshOrgConfig, syncEvents, llmNextQuestion, SUPABASE_URL };
+  return { login, signup, logout, ensureSession, refreshOrgConfig, joinGroup, syncEvents, llmNextQuestion, SUPABASE_URL };
 })();
 
 if (typeof self !== "undefined") self.CoachApi = CoachApi;

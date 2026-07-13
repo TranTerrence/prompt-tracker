@@ -33,6 +33,13 @@
     <div id="auth-connected" hidden>
       <p><span id="auth-user"></span> · <span id="auth-org" class="muted"></span></p>
       <p id="sync-status" class="muted"></p>
+      <div id="join-org" hidden>
+        <input type="text" id="join-code" maxlength="10" autocomplete="off" spellcheck="false" />
+        <div class="auth-buttons">
+          <button id="join-submit"></button>
+        </div>
+        <p id="join-error" class="auth-error" hidden></p>
+      </div>
       <div class="auth-buttons">
         <button id="open-dashboard"></button>
         <button id="auth-logout" class="secondary"></button>

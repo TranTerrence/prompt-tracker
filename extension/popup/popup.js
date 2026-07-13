@@ -54,6 +54,8 @@ function showAuthState(session, profile, orgConfig, pendingCount) {
     document.getElementById("auth-org").textContent =
       orgConfig && orgConfig.branding ? orgConfig.branding.name : t("authNoOrg");
     document.getElementById("sync-status").textContent = pendingCount ? t("authPending", pendingCount) : t("authSynced");
+    // Sans organisation : proposer le rattachement par code de classe.
+    document.getElementById("join-org").hidden = Boolean(orgConfig);
     if (orgConfig && orgConfig.branding) {
       document.getElementById("brand-title").textContent = orgConfig.branding.name;
       if (orgConfig.branding.color) {
@@ -65,6 +67,31 @@ function showAuthState(session, profile, orgConfig, pendingCount) {
     connected.hidden = true;
   }
 }
+
+/* ---------- Rejoindre une classe par code ---------- */
+
+document.getElementById("join-code").placeholder = t("joinCodePlaceholder");
+document.getElementById("join-submit").textContent = t("joinCta");
+
+function joinError(message) {
+  const el = document.getElementById("join-error");
+  el.textContent = message;
+  el.hidden = !message;
+}
+
+document.getElementById("join-submit").addEventListener("click", async () => {
+  joinError("");
+  const code = document.getElementById("join-code").value.trim();
+  if (!code) return;
+  try {
+    await CoachApi.joinGroup(code);
+    chrome.runtime.sendMessage({ type: "sync-now" }, () => refreshAuthUi());
+  } catch (e) {
+    if (String(e.message).includes("invalid_code")) joinError(t("joinInvalid"));
+    else if (String(e.message).includes("already_in_other_org")) joinError(t("joinOtherOrg"));
+    else joinError(e.message);
+  }
+});
 
 function authError(message) {
   const el = document.getElementById("auth-error");

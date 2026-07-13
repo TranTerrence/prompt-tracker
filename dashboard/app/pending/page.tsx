@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import JoinForm from "./join-form";
 
 function HourglassIcon() {
   return (
@@ -41,11 +42,15 @@ export default async function PendingPage() {
           <HourglassIcon />
         </div>
         <h1 className="font-display text-xl font-semibold tracking-tight">
-          Compte en attente
+          Rejoins ton organisation
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-muted">
           Ton compte n&apos;est rattaché à aucune organisation pour le moment.
-          Demande à ton administrateur de rattacher ton compte (avec l&apos;adresse{" "}
+        </p>
+        <JoinForm />
+        <p className="mt-5 text-xs leading-relaxed text-muted">
+          Pas de code ? Demande à ton administrateur de rattacher ton compte
+          (avec l&apos;adresse{" "}
           <span className="font-medium text-foreground">{user.email}</span>),
           puis reconnecte-toi.
         </p>
