@@ -4,6 +4,13 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/login", "/privacy", "/install"];
 
 export async function proxy(request: NextRequest) {
+  // L'API v1 s'authentifie par clé d'organisation, pas par cookie : early
+  // return explicite (l'exclusion par matcher n'est pas fiable une fois
+  // compilée en path-to-regexp, vérifié en prod).
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
