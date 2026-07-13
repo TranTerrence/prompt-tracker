@@ -123,10 +123,38 @@ assert.ok(
   "suite recherche sans esprit critique → suggestion sources conservée"
 );
 
-/* ---------- non-régression du score ---------- */
+/* ---------- non-régression du score (recalibration v2) ---------- */
 
 assert.strictEqual(S.score("fais mes devoirs").total < 40, true);
-assert.ok(S.score(richPrompt).total >= 40);
+assert.ok(S.score(richPrompt).total >= 40, `prompt riche doit passer : ${S.score(richPrompt).total}`);
 assert.strictEqual(S.categorize("résume ce document"), "résumé");
+
+// Bugs corrigés : possessif « ton », interrogatif « pourquoi »
+assert.strictEqual(S.score("donne ton avis sur ce texte").contexte, 0, "« ton » possessif n'est pas du contexte");
+assert.ok(S.score("réponds sur un ton professionnel s'il te plaît").contexte >= 15, "« ton professionnel » reste du contexte");
+assert.strictEqual(S.score("pourquoi le ciel est bleu").critique, 0, "un interrogatif naïf n'est pas de l'esprit critique");
+assert.strictEqual(S.score("I am not really sure what to do here can you help me with this task please").contexte, 0, "« I am not sure » n'est pas un rôle");
+
+// Anti-gaming : répétition et bourrage de mots-clés
+assert.ok(S.score("blabla ".repeat(30)).clarte <= 10, "la répétition n'achète pas la clarté");
+assert.ok(
+  S.score("je suis étudiant contexte : devoirs. public : prof. format : copie. fais mes devoirs de maths et vérifie tes sources car je suis en tant que étudiant avec contraintes maximum étapes").total < 40,
+  "le bourrage de mots-clés sur une délégation sans matière n'achète pas le passage"
+);
+
+// L'échafaudage du prompt compilé ne se score pas lui-même
+const scaffolded = S.compilePrompt(
+  "fais mes devoirs",
+  [{ key: "contexte", axis: "contexte", label: "Mon contexte", answer: "lycée" }],
+  "fr"
+);
+const stripped = S.stripScaffolding(scaffolded);
+assert.ok(!stripped.includes("Ma réflexion préalable"), "en-tête retiré");
+assert.ok(!stripped.includes("Mon contexte :"), "labels retirés");
+assert.ok(stripped.includes("lycée"), "la réponse de l'utilisateur reste");
+assert.ok(
+  S.score(stripped).total <= S.score(scaffolded).total,
+  "le score de l'aperçu ne compte plus la structure injectée"
+);
 
 console.log("scoring.test.js : toutes les assertions passent ✓");

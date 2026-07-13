@@ -183,6 +183,9 @@
     const event = {
       id: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
       ts: new Date().toISOString(),
+      // Version du barème : indispensable pour recalibrer le scorer sans
+      // polluer la courbe de progression (comparer à barème constant).
+      scoringVersion: 2,
       site: CoachAdapter.site,
       category: CoachScoring.categorize(text),
       words: CoachScoring.wordCount(text),
@@ -324,7 +327,9 @@
             })
           );
         },
-        rescore: (t) => CoachScoring.score(t, recentPromptTexts),
+        // L'aperçu est re-scoré SANS l'échafaudage injecté par compilePrompt :
+        // on mesure la réflexion de l'utilisateur, pas la structure du produit.
+        rescore: (t) => CoachScoring.score(CoachScoring.stripScaffolding(t), recentPromptTexts),
         compile: (original, answers) => CoachScoring.compilePrompt(original, answers, CoachI18n.lang),
         ask,
         onSend(finalText, m) {

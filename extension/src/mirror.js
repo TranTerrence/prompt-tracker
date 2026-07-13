@@ -256,7 +256,9 @@ const CoachMirror = (() => {
 
         .preview-zone { padding: 12px 22px 18px; border-top: 1px solid var(--border); background: var(--soft); }
         .preview-head { display: flex; align-items: center; gap: 10px; font-size: 10.5px; color: var(--muted);
-          text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+          text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; flex-wrap: wrap; }
+        .score-detail { color: var(--muted); text-transform: none; letter-spacing: normal;
+          font-variant-numeric: tabular-nums; }
         .recompile { display: none; border: 0; background: none; color: var(--accent); font-size: 11px;
           cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
         .preview-zone.frozen .recompile { display: inline; }
@@ -324,13 +326,19 @@ const CoachMirror = (() => {
     const preview = el(".preview");
     const previewTitle = el(".preview-title");
 
-    function setPreviewScore(total) {
+    // Transparence : le total ET sa ventilation, mise à jour en direct :
+    // l'utilisateur voit quelle réponse fait bouger quelle rubrique.
+    function setPreviewScore(scores) {
       previewTitle.textContent = "";
       previewTitle.append(`${t("modalPreviewHead")} `);
       const s = document.createElement("span");
       s.className = "score";
-      s.textContent = total;
+      s.textContent = scores.total;
       previewTitle.append(s, "/100");
+      const detail = document.createElement("span");
+      detail.className = "score-detail";
+      detail.textContent = ` · ${t("rubClarte")} ${scores.clarte} · ${t("rubContexte")} ${scores.contexte} · ${t("rubCritique")} ${scores.critique}`;
+      previewTitle.append(detail);
     }
 
     function bubble(kind, text) {
@@ -344,7 +352,7 @@ const CoachMirror = (() => {
     function updatePreview() {
       if (state.previewFrozen) return;
       preview.value = opts.compile(opts.promptText, state.answers);
-      setPreviewScore(opts.rescore(preview.value).total);
+      setPreviewScore(opts.rescore(preview.value));
     }
 
     function meta() {
@@ -396,7 +404,7 @@ const CoachMirror = (() => {
     preview.addEventListener("input", () => {
       state.previewFrozen = true;
       el(".preview-zone").classList.add("frozen");
-      setPreviewScore(opts.rescore(preview.value).total);
+      setPreviewScore(opts.rescore(preview.value));
     });
     el(".recompile").addEventListener("click", () => {
       state.previewFrozen = false;

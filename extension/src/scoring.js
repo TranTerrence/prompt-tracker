@@ -16,11 +16,19 @@ const CoachScoring = (() => {
     { key: "recherche", re: /\b(qu'est[- ]ce|c'est quoi|qui est|quand|combien|pourquoi|explique|définis|définition|what is|who is|when|how many|why|explain|define)\b/i },
   ];
 
-  const CONTEXT_MARKERS = /\b(contexte|context|je suis|i am|i'm|nous sommes|mon objectif|my goal|pour (un|une|mon|ma|mes|des)|for (a|an|my|our)|à destination de|public|audience|ton|tone|format|contrainte|constraint|en tant que|as a|tu es|you are|agis comme|act as|maximum|minimum|étapes?|steps?)\b/i;
+  // « ton » n'est du contexte que suivi d'un adjectif de registre (sinon c'est
+  // le possessif) ; « je suis / i am » est exclu devant une négation ou un
+  // adverbe d'hésitation (« i am not sure » n'est pas un rôle).
+  const CONTEXT_MARKERS = /\b(contexte|context|(?:je suis|i am|i'm) (?!(?:pas|not|really|just|sure|très|vraiment)\b)|nous sommes|mon objectif|my goal|pour (un|une|mon|ma|mes|des)|for (a|an|my|our)|à destination de|public|audience|ton (?:professionnel|formel|neutre|amical|direct|soutenu|ferme|léger|sérieux)|tone|format|contrainte|constraint|en tant que|as a|tu es|you are|agis comme|act as|maximum|minimum|étapes?|steps?)\b/i;
   const ITERATION_MARKERS = /\b(reformule|rephrase|améliore|improve|plutôt|instead|à la place|reprends|corrige|fix|ajuste|adjust|modifie|modify|précédent|previous|ta (réponse|proposition)|your (answer|response)|cette (réponse|version)|this (answer|version)|plus (court|long|simple|détaillé)|(shorter|longer|simpler)|autrement|version)\b/i;
-  const CRITICAL_MARKERS = /\b(sources?|vérifie|verify|fiable|reliable|limites?|limitations?|risques?|risks?|biais|bias|alternatives?|contre[- ]arguments?|counter[- ]?arguments?|pourquoi|why|justifie|justify|nuance|incertitudes?|uncertaint(y|ies)|hypothèses?|assumptions?|es[- ]tu sûr|are you sure)\b/i;
+  // « pourquoi/why » retirés : un interrogatif naïf n'est pas une posture
+  // critique (il déclenchait déjà la catégorie recherche).
+  const CRITICAL_MARKERS = /\b(sources?|cite[sz]?|evidence|preuves?|vérifie|verify|fiable|reliable|limites?|limitations?|risques?|risks?|biais|bias|alternatives?|contre[- ]arguments?|counter[- ]?arguments?|justifie|justify|nuance|incertitudes?|uncertaint(y|ies)|hypothèses?|assumptions?|es[- ]tu sûr|are you sure)\b/i;
   const ACTION_VERB = /\b(rédige|écris|explique|analyse|compare|résume|traduis|propose|liste|crée|génère|corrige|améliore|évalue|décris|calcule|trouve|donne|fais|montre|aide|write|explain|analyze|compare|summarize|translate|suggest|list|create|generate|fix|improve|evaluate|describe|calculate|find|give|make|show|help)\b/i;
   const FULL_DELEGATION = /^\s*(fais|écris|rédige|génère|crée|fais[- ]moi|donne[- ]moi|do|write|generate|create|make me|give me)\b/i;
+  // Délégation détectée n'importe où (« ... fais mes devoirs ... ») : sert au
+  // verrou anti-bourrage, que l'ancrage en début de texte laisserait contourner.
+  const DELEGATION_ANYWHERE = /\b(fais|écris|rédige|génère|crée|do|write|generate|create|make)\b[^.!?\n]{0,30}\b(mes|mon|ma|my)\b/i;
 
   function wordCount(text) {
     return text.trim().split(/\s+/).filter(Boolean).length;
@@ -32,27 +40,44 @@ const CoachScoring = (() => {
   }
 
   // Chaque rubrique vaut 0–25 ; le score total est sur 100.
+  // Recalibration v2 (banc d'évaluation extension/tests/scoring-eval.js) :
+  // les bonus de longueur comptent les mots UNIQUES (anti-répétition), la
+  // « matière fournie » exige une vraie citation (pas un deux-points), et une
+  // délégation totale sans matière ne peut pas acheter contexte/critique à
+  // coups de mots-clés (règle nommée : « délégation sans matière »).
   function score(text, previousPrompts = []) {
     const words = wordCount(text);
+    const uniqueWords = new Set(
+      text.toLowerCase().replace(/[^\p{L}\p{N}\s']/gu, " ").split(/\s+/).filter(Boolean)
+    ).size;
+    const hasMaterial = /[«"“].{15,}|```[\s\S]{15,}/.test(text);
 
     let clarte = 0;
-    if (words >= 8) clarte += 10;
-    if (words >= 20) clarte += 5;
+    if (uniqueWords >= 8) clarte += 10;
+    if (uniqueWords >= 20) clarte += 5;
     if (ACTION_VERB.test(text)) clarte += 7;
     if (/[?.!]/.test(text)) clarte += 3;
 
     let contexte = 0;
     if (CONTEXT_MARKERS.test(text)) contexte += 15;
     if (words >= 30) contexte += 5;
-    if (/:\s|«|"|```/.test(text)) contexte += 5; // matière fournie (citation, données, code)
+    if (hasMaterial) contexte += 5;
 
     let iteration = 0;
     if (ITERATION_MARKERS.test(text)) iteration += 20;
-    if (previousPrompts.length > 0 && words < wordCount(previousPrompts[previousPrompts.length - 1] || "") * 3) iteration += 5;
 
     let critique = 0;
     if (CRITICAL_MARKERS.test(text)) critique += 20;
     if (/\b(2|deux|two|3|trois|three|plusieurs|several) (options|versions|approches|approaches|angles)\b/i.test(text)) critique += 5;
+
+    // Verrou anti-bourrage : une délégation sans matière ET sans élaboration
+    // réelle (peu de vocabulaire distinct) ne peut pas acheter contexte et
+    // esprit critique à coups de mots-clés. Une délégation RICHE (rôle,
+    // contraintes, spécificités) n'est pas touchée.
+    if ((FULL_DELEGATION.test(text) || DELEGATION_ANYWHERE.test(text)) && !hasMaterial && uniqueWords < 28) {
+      contexte = Math.min(contexte, 6);
+      critique = Math.min(critique, 6);
+    }
 
     const clamp = (v) => Math.min(25, v);
     const scores = {
@@ -63,6 +88,18 @@ const CoachScoring = (() => {
     };
     scores.total = scores.clarte + scores.contexte + scores.iteration + scores.critique;
     return scores;
+  }
+
+  // Retire l'échafaudage de compilePrompt (en-tête + préfixes « - Label : »)
+  // pour que le re-score de l'aperçu mesure le texte de l'utilisateur, pas la
+  // structure injectée par le produit.
+  function stripScaffolding(text) {
+    const headers = new Set(Object.values(COMPILE_HEADERS).map((h) => h.trim()));
+    return text
+      .split("\n")
+      .filter((line) => !headers.has(line.trim()))
+      .map((line) => line.replace(/^\s*-\s[^:\n]{1,40}\s:\s/, ""))
+      .join("\n");
   }
 
   /* ---------- Sujet du prompt (pour instancier les questions) ---------- */
@@ -488,6 +525,7 @@ const CoachScoring = (() => {
   return {
     categorize,
     score,
+    stripScaffolding,
     topic,
     isFollowUp,
     socraticSuggestion,
