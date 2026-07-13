@@ -18,5 +18,6 @@ export default async function Home() {
 
   if (!profile || !profile.org_id) redirect("/pending");
   if (profile.role === "admin") redirect("/admin");
+  if (profile.role === "teacher") redirect("/teacher");
   redirect("/me");
 }

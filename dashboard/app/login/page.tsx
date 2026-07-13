@@ -71,6 +71,8 @@ export default function LoginPage() {
         router.replace("/pending");
       } else if (profile.role === "admin") {
         router.replace("/admin");
+      } else if (profile.role === "teacher") {
+        router.replace("/teacher");
       } else {
         router.replace("/me");
       }

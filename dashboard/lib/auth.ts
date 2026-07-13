@@ -44,3 +44,14 @@ export async function requireAdmin(): Promise<SessionContext> {
   if (ctx.profile.role !== "admin") redirect("/me");
   return ctx;
 }
+
+/**
+ * Vue professeur : réservée au rôle teacher (l'admin a sa propre vue org-wide).
+ * La RLS scope naturellement la lecture aux étudiants de ses groupes.
+ */
+export async function requireTeacher(): Promise<SessionContext> {
+  const ctx = await requireSession();
+  if (ctx.profile.role === "admin") redirect("/admin");
+  if (ctx.profile.role !== "teacher") redirect("/me");
+  return ctx;
+}
