@@ -182,6 +182,13 @@ export default function LoginPage() {
 
       <p className="text-center text-xs text-muted">
         Le garde-fou de votre prompting ·{" "}
+        <Link
+          href="/install"
+          className="font-medium text-accent hover:underline"
+        >
+          Installer l&apos;extension
+        </Link>{" "}
+        ·{" "}
         <Link href="/privacy" className="hover:text-foreground hover:underline">
           Politique de confidentialité
         </Link>
