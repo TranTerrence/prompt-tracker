@@ -12,4 +12,5 @@ dist/
 .playwright-mcp/
 *.log
 *.zip
+!dashboard/public/downloads/*.zip
 .vercel/

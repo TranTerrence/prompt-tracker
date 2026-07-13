@@ -8,8 +8,8 @@ export const metadata: Metadata = {
     "Installer l'extension Chrome Prompt Tracker : interception socratique de vos prompts sur ChatGPT, Claude et Gemini, analyse 100 % locale.",
 };
 
-const REPO_ZIP =
-  "https://github.com/TranTerrence/prompt-tracker/archive/refs/heads/main.zip";
+const DIRECT_ZIP = "/downloads/prompt-tracker-latest.zip";
+const VERSION = "0.4.3";
 
 function Step({
   n,
@@ -78,16 +78,21 @@ export default function InstallPage() {
             <Step n={1} title="Télécharger l'extension">
               <p>
                 <a
-                  href={REPO_ZIP}
-                  className="font-medium text-accent hover:underline"
+                  href={DIRECT_ZIP}
+                  download
+                  className="inline-block rounded-lg bg-accent px-4 py-2 font-medium text-white transition hover:opacity-90"
                 >
-                  Téléchargez l&apos;archive ZIP
-                </a>{" "}
-                et décompressez-la. Le dossier qui nous intéresse est{" "}
+                  ⬇︎ Télécharger Prompt Tracker (v{VERSION}, zip)
+                </a>
+              </p>
+              <p className="mt-2">
+                Décompressez l&apos;archive (double-clic) : elle contient
+                directement l&apos;extension (le dossier avec{" "}
                 <code className="rounded bg-soft px-1.5 py-0.5 text-xs">
-                  prompt-tracker-main/extension
+                  manifest.json
                 </code>
-                .
+                ). Gardez ce dossier : Chrome le lit en place, ne le supprimez
+                pas après l&apos;installation.
               </p>
             </Step>
 
@@ -105,14 +110,11 @@ export default function InstallPage() {
             <Step n={3} title="Charger l'extension">
               <p>
                 Cliquez sur « Charger l&apos;extension non empaquetée » et
-                sélectionnez le dossier{" "}
-                <code className="rounded bg-soft px-1.5 py-0.5 text-xs">
-                  extension
-                </code>{" "}
-                décompressé. La page de bienvenue s&apos;ouvre : choisissez
-                votre profil d&apos;usage, votre thème et votre niveau de
-                friction. Épinglez l&apos;icône via le menu extensions (puzzle)
-                pour garder les statistiques à portée de clic.
+                sélectionnez le dossier décompressé à l&apos;étape 1. La page
+                de bienvenue s&apos;ouvre : choisissez votre profil
+                d&apos;usage, votre thème et votre niveau de friction.
+                Épinglez l&apos;icône via le menu extensions (puzzle) pour
+                garder les statistiques à portée de clic.
               </p>
             </Step>
 
