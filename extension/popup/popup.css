@@ -18,7 +18,7 @@
   --ink: #1b1815;
   --muted: #6e655a;
   --border: #e5ded2;
-  --accent: #3e5c50;
+  --accent: #0060a0;
   --danger: #b3402e;
   --shadow: 0 4px 14px rgba(27, 24, 21, 0.1);
 }
@@ -29,7 +29,7 @@
   --ink: #f3eee6;
   --muted: #9a9084;
   --border: #3a342c;
-  --accent: #7fa896;
+  --accent: #4d9fd6;
   --danger: #e07a5f;
   --shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
@@ -46,8 +46,9 @@ body {
 }
 
 header { margin-bottom: 14px; }
-.brand-row { display: flex; align-items: center; justify-content: space-between; }
-h1 { font: 600 18px/1.2 "Fraunces", Georgia, serif; letter-spacing: .005em; }
+.brand-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#brand-logo { border-radius: 7px; flex: none; }
+h1 { font: 600 18px/1.2 "Fraunces", Georgia, serif; letter-spacing: .005em; margin-right: auto; }
 .tagline { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
 h2 { font: 600 10.5px/1 "IBM Plex Sans", sans-serif; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 16px 0 8px; }
 .health { color: #c97b2d; font-size: 12px; display: block; margin-top: 6px; }

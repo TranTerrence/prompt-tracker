@@ -24,7 +24,12 @@ export default function Header({
               alt={`Logo ${brand}`}
               className="h-8 w-8 rounded-lg object-contain"
             />
+          ) : !org.brand_name ? (
+            // Marque par défaut : le logo produit.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/logo.svg" alt="" className="h-8 w-8 rounded-lg" />
           ) : (
+            // Org white-label sans logo : monogramme de SES initiales.
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent font-display text-sm font-semibold text-white">
               {brand.slice(0, 2).toUpperCase()}
             </span>
@@ -43,6 +48,7 @@ export default function Header({
               <NavLink href="/admin/export">Export</NavLink>
             </>
           )}
+          {profile.role === "teacher" && <NavLink href="/teacher">Mes classes</NavLink>}
           <NavLink href="/me">Ma progression</NavLink>
         </nav>
 

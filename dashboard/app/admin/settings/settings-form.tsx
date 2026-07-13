@@ -35,7 +35,7 @@ export default function SettingsForm({
 }) {
   const router = useRouter();
   const [brandName, setBrandName] = useState(org.brand_name ?? "");
-  const [brandColor, setBrandColor] = useState(org.brand_color ?? "#3E5C50");
+  const [brandColor, setBrandColor] = useState(org.brand_color ?? "#0060A0");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [threshold, setThreshold] = useState(org.threshold ?? 50);
   const [llmEnabled, setLlmEnabled] = useState(org.llm_enabled);

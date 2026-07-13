@@ -41,9 +41,8 @@ export default function InstallPage() {
       <header className="border-b border-card-border bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 py-3">
           <Link href="/login" className="flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent font-display text-sm font-semibold text-white">
-              PT
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" className="h-8 w-8 rounded-lg" />
             <span className="font-display text-lg font-semibold tracking-tight">
               Prompt Tracker
             </span>

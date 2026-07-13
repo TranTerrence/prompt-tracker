@@ -86,9 +86,12 @@ export default function LoginPage() {
     <main className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
       <div className="w-full max-w-sm rounded-2xl border border-card-border bg-card p-8 shadow-card">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent font-display text-lg font-semibold text-white">
-            PT
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.svg"
+            alt="Prompt Tracker"
+            className="mx-auto mb-4 h-12 w-12 rounded-xl"
+          />
           <h1 className="font-display text-2xl font-semibold tracking-tight">
             Prompt Tracker
           </h1>

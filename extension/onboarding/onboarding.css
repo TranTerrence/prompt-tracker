@@ -18,7 +18,7 @@
   --ink: #1b1815;
   --muted: #6e655a;
   --border: #e5ded2;
-  --accent: #3e5c50;
+  --accent: #0060a0;
 }
 [data-theme="dark"] {
   --bg: #161311;
@@ -27,7 +27,7 @@
   --ink: #f3eee6;
   --muted: #9a9084;
   --border: #3a342c;
-  --accent: #7fa896;
+  --accent: #4d9fd6;
 }
 
 * { box-sizing: border-box; margin: 0; }
@@ -43,11 +43,8 @@ body {
 main { max-width: 620px; margin: 0 auto; padding: 56px 24px 72px; }
 
 header { text-align: center; margin-bottom: 28px; }
-.mark {
-  width: 56px; height: 56px; margin: 0 auto 18px; border-radius: 16px;
-  background: var(--accent); color: #fdfcf9; display: flex; align-items: center; justify-content: center;
-  font: 600 22px "Fraunces", Georgia, serif; letter-spacing: -1px;
-}
+.mark { width: 56px; height: 56px; margin: 0 auto 18px; }
+.mark img { display: block; width: 56px; height: 56px; border-radius: 16px; }
 h1 { font: 600 32px/1.15 "Fraunces", Georgia, serif; letter-spacing: -.01em; }
 .subtitle { color: var(--muted); margin-top: 10px; font-size: 16px; }
 
