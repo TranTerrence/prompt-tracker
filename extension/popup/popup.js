@@ -1,7 +1,7 @@
 // Popup : login, stats rapides, réglages (dont thème), export CSV.
 // Les stats détaillées vivent dans le dashboard web ; ici, l'essentiel.
 
-const DASHBOARD_URL = "http://localhost:3000"; // URL Vercel en production
+const DASHBOARD_URL = "https://track-prompt.vercel.app";
 const t = (...a) => CoachI18n.t(...a);
 
 /* ---------- i18n ---------- */
