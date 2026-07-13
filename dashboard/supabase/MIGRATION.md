@@ -52,3 +52,30 @@ seul projet cible), piloté par des instances `claude -p` headless :
 - Les 2 utilisateurs `auth.users` (recréés par inscription, stratégie A).
 - Le 1 `prompt_event` de test (donnée jetable).
 - L'extension `supabase_vault` (gérée automatiquement par Supabase).
+
+## Cutover — clôture formelle (13 juillet 2026)
+
+La migration par recâblage est TERMINÉE. Preuves :
+
+1. **Code** : zéro référence à `myvrkgurplqbrjzcuzwg` dans le code exécutable
+   (grep sur js/ts/tsx/json/html/env : seule cette documentation la mentionne).
+   Extension (`supabase.js`), dashboard (`.env.local`, variables Vercel du
+   projet track-prompt) et connecteur MCP projet (`.mcp.json`) pointent tous
+   sur `ovbvwawzrciwpudnaysp`.
+2. **Runtime prod** : l'inscription et la connexion effectuées sur
+   https://track-prompt.vercel.app ont créé les comptes DANS la nouvelle base
+   (vérifié en SQL) ; l'admin y est rattaché à l'org de démo.
+3. **Trafic ancienne base** : zéro `prompt_events` écrit depuis le cutover
+   (dernier événement : 10/07, antérieur à la migration). Résidu observé :
+   un refresh de jeton auth le 13/07 au matin, émis par une instance de
+   l'ancienne version de l'extension non rechargée : il cesse au rechargement
+   (obligatoire pour ≥ 0.4.x).
+4. **Schéma/US** : nouvelles migrations 0003→0013 appliquées uniquement sur la
+   nouvelle base ; aucune réplication n'a jamais existé entre les deux projets.
+
+Décisions : l'ancienne base est CONSERVÉE INTACTE (demande explicite : « don't
+delete just rewire ») sous l'org Cerene. Option disponible à tout moment :
+la mettre en pause depuis le dashboard Supabase (réversible) pour geler tout
+accès résiduel. La seule dépendance restante n'est pas technique : le secret
+ANTHROPIC_API_KEY de l'Edge Function socratic-llm n'a jamais été posé (ni sur
+l'ancienne ni sur la nouvelle : fonction dormante, llm_enabled=false).
