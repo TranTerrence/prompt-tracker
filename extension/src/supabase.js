@@ -3,8 +3,8 @@
 // La clé publishable est publique par conception ; la sécurité repose sur RLS.
 
 const CoachApi = (() => {
-  const SUPABASE_URL = "https://myvrkgurplqbrjzcuzwg.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_1yFB0KGH7sEe34qXvXQujA_liP7CKdP";
+  const SUPABASE_URL = "https://ovbvwawzrciwpudnaysp.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_qWIkcDbQUoVqE9awpkyhKA_RdYnRUaa";
 
   const storage = {
     get: (keys) => new Promise((r) => chrome.storage.local.get(keys, r)),
