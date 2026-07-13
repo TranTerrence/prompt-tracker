@@ -14,7 +14,7 @@ et des données non-auth ; les comptes sont recréés par inscription.
 - [x] Dashboard recâblé → `.env.local` (noms `NEXT_PUBLIC_SUPABASE_URL` /
       `NEXT_PUBLIC_SUPABASE_ANON_KEY`, valeurs du nouveau projet)
 
-## Application sur la cible — FAIT le 2026-07-13
+## Application sur la cible : FAIT le 2026-07-13
 
 Exécuté via le connecteur claude.ai « Supabase AI-Coach - SKOOTT » (scoppé au
 seul projet cible), piloté par des instances `claude -p` headless :
@@ -49,6 +49,6 @@ seul projet cible), piloté par des instances `claude -p` headless :
 
 ## Non migré volontairement
 
-- Les 2 utilisateurs `auth.users` (recréés par inscription — stratégie A).
+- Les 2 utilisateurs `auth.users` (recréés par inscription, stratégie A).
 - Le 1 `prompt_event` de test (donnée jetable).
 - L'extension `supabase_vault` (gérée automatiquement par Supabase).
