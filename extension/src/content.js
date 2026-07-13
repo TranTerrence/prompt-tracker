@@ -125,6 +125,12 @@
     });
   }
 
+  // Les conversations SANS id d'URL (chat éphémère, session déconnectée)
+  // partagent toutes la clé racine : la marquer dans le storage supprimerait
+  // le miroir d'après pour toujours sur ces chats. Pour elles, la règle
+  // « une fois par conversation » se tient en mémoire (session de page).
+  let postShownOnRoot = false;
+
   // Arme la détection de fin de réponse après chaque envoi. À la fin de la
   // génération : une question réflexive (explain-back, vérification, désaccord),
   // au maximum UNE par conversation, jamais bloquante (P4, P10).
@@ -136,9 +142,11 @@
         // pendant la génération (chatgpt.com/ devient chatgpt.com/c/<id>).
         const conv = CoachAdapter.conversationKey();
         if (isPaused(conv)) return; // « laisse-moi » vaut pour toutes les surfaces du fil
+        const rootConv = CoachAdapter.isNewConversation();
+        if (rootConv && postShownOnRoot) return;
         chrome.storage.local.get(["postConvs", "postCount"], (data) => {
           const convs = data.postConvs || [];
-          if (convs.includes(conv)) return;
+          if (!rootConv && convs.includes(conv)) return;
           const count = data.postCount || 0;
           const q = CoachScoring.postQuestion({
             category: lastPrompt && lastPrompt.category,
@@ -146,7 +154,12 @@
             lang: CoachI18n.lang,
             count,
           });
-          chrome.storage.local.set({ postConvs: [...convs.slice(-199), conv], postCount: count + 1 });
+          if (rootConv) {
+            postShownOnRoot = true;
+            chrome.storage.local.set({ postCount: count + 1 });
+          } else {
+            chrome.storage.local.set({ postConvs: [...convs.slice(-199), conv], postCount: count + 1 });
+          }
           CoachMirror.showPost({
             question: q.question,
             branding: orgConfig && orgConfig.branding,

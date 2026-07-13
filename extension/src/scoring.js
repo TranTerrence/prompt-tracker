@@ -23,7 +23,9 @@ const CoachScoring = (() => {
   const ITERATION_MARKERS = /\b(reformule|rephrase|améliore|improve|plutôt|instead|à la place|reprends|corrige|fix|ajuste|adjust|modifie|modify|précédent|previous|ta (réponse|proposition)|your (answer|response)|cette (réponse|version)|this (answer|version)|plus (court|long|simple|détaillé)|(shorter|longer|simpler)|autrement|version)\b/i;
   // « pourquoi/why » retirés : un interrogatif naïf n'est pas une posture
   // critique (il déclenchait déjà la catégorie recherche).
-  const CRITICAL_MARKERS = /\b(sources?|cite[sz]?|evidence|preuves?|vérifie|verify|fiable|reliable|limites?|limitations?|risques?|risks?|biais|bias|alternatives?|contre[- ]arguments?|counter[- ]?arguments?|justifie|justify|nuance|incertitudes?|uncertaint(y|ies)|hypothèses?|assumptions?|es[- ]tu sûr|are you sure)\b/i;
+  // « vérifi\w* » couvre les conjugaisons (je vérifierai, il vérifiera...) :
+  // trouvaille terrain, le futur est la formulation naturelle de la vérification.
+  const CRITICAL_MARKERS = /\b(sources?|cite[sz]?|citations?|evidence|preuves?|vérifi\w*|verify|verif\w*|fiable|reliable|limites?|limitations?|risques?|risks?|biais|bias|alternatives?|contre[- ]arguments?|counter[- ]?arguments?|justifie|justify|nuance|incertitudes?|uncertaint(y|ies)|hypothèses?|assumptions?|es[- ]tu sûr|are you sure)\b/i;
   const ACTION_VERB = /\b(rédige|écris|explique|analyse|compare|résume|traduis|propose|liste|crée|génère|corrige|améliore|évalue|décris|calcule|trouve|donne|fais|montre|aide|write|explain|analyze|compare|summarize|translate|suggest|list|create|generate|fix|improve|evaluate|describe|calculate|find|give|make|show|help)\b/i;
   const FULL_DELEGATION = /^\s*(fais|écris|rédige|génère|crée|fais[- ]moi|donne[- ]moi|do|write|generate|create|make me|give me)\b/i;
   // Délégation détectée n'importe où (« ... fais mes devoirs ... ») : sert au

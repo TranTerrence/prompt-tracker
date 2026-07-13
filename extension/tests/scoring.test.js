@@ -129,6 +129,12 @@ assert.strictEqual(S.score("fais mes devoirs").total < 40, true);
 assert.ok(S.score(richPrompt).total >= 40, `prompt riche doit passer : ${S.score(richPrompt).total}`);
 assert.strictEqual(S.categorize("résume ce document"), "résumé");
 
+// Trouvaille terrain : la vérification au futur compte comme esprit critique
+assert.ok(
+  S.score("propose un plan et je vérifierai chaque citation dans mon édition").critique >= 20,
+  "« je vérifierai » (futur) est de l'esprit critique"
+);
+
 // Bugs corrigés : possessif « ton », interrogatif « pourquoi »
 assert.strictEqual(S.score("donne ton avis sur ce texte").contexte, 0, "« ton » possessif n'est pas du contexte");
 assert.ok(S.score("réponds sur un ton professionnel s'il te plaît").contexte >= 15, "« ton professionnel » reste du contexte");

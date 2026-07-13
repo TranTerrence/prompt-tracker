@@ -3,33 +3,67 @@
 <head>
   <meta charset="UTF-8" />
   <title>Harnais modale (dev)</title>
-  <style>body { margin: 0; font-family: sans-serif; background: #ddd; height: 300vh; }</style>
+  <style>
+    /* Fond de scène neutre façon page de chat (aucune marque tierce). */
+    body { margin: 0; font-family: -apple-system, "Segoe UI", sans-serif; background: #fff; min-height: 100vh; }
+    .topbar { display: flex; align-items: center; gap: 10px; padding: 14px 22px; color: #444;
+      border-bottom: 1px solid #eee; font-size: 15px; font-weight: 600; }
+    .topbar .dot { width: 22px; height: 22px; border-radius: 50%; background: #111; }
+    .hero { text-align: center; margin-top: 26vh; color: #333; }
+    .hero h1 { font-size: 28px; font-weight: 650; margin: 0 0 24px; }
+    .composer { width: min(680px, 90vw); margin: 0 auto; display: flex; align-items: center; gap: 10px;
+      background: #f2f2f2; border: 1px solid #e3e3e3; border-radius: 999px; padding: 14px 20px; color: #8a8a8a; font-size: 15px; }
+    .composer .send { margin-left: auto; width: 30px; height: 30px; border-radius: 50%; background: #111; }
+  </style>
 </head>
 <body>
-  <p style="padding:20px">Page hôte factice : vérifie le comportement de la modale (petits écrans, branding par défaut).
-    Servir depuis extension/ : <code>python3 -m http.server 8765</code> puis ouvrir /tests/modal-harness.html.</p>
+  <div class="topbar"><span class="dot"></span> Assistant IA</div>
+  <div class="hero">
+    <h1>Comment puis-je vous aider ?</h1>
+    <div class="composer">fais ma dissertation sur Candide pour demain<span class="send"></span></div>
+  </div>
+
   <script src="../src/i18n.js"></script>
   <script src="../src/theme.js"></script>
   <script src="../src/scoring.js"></script>
   <script src="../src/mirror.js"></script>
   <script>
+    // Modes : (défaut) modale d'interception ; ?post=1 : miroir d'après.
     const prompt = "fais ma dissertation sur Candide pour demain";
     const scores = CoachScoring.score(prompt);
-    CoachMirror.showModal({
-      promptText: prompt,
-      scoreBefore: scores.total,
-      promise: true,
-      branding: null,
-      rescore: (t) => CoachScoring.score(CoachScoring.stripScaffolding(t)),
-      compile: (o, a) => CoachScoring.compilePrompt(o, a, "fr"),
-      ask: (state) => Promise.resolve(CoachScoring.nextQuestion({
-        originalPrompt: prompt, scores, asked: state.asked, lang: "fr", profile: "student",
-      })),
-      onSend: (t) => alert("send: " + t.slice(0, 60)),
-      onSendAnyway: () => alert("send anyway"),
-      onCancel: () => {},
-      onPause: () => alert("pause"),
-    });
+
+    if (new URLSearchParams(location.search).has("post")) {
+      document.querySelector(".hero h1").textContent = "Voici un plan de dissertation en trois parties…";
+      CoachMirror.showPost({
+        question: CoachScoring.postQuestion({ lang: "fr", count: 0 }).question,
+        branding: null,
+        onReply: () => {},
+        onSkip: () => {},
+      });
+    } else {
+      CoachMirror.showModal({
+        promptText: prompt,
+        scoreBefore: scores.total,
+        promise: true,
+        branding: null,
+        rescore: (t) => CoachScoring.score(CoachScoring.stripScaffolding(t)),
+        compile: (o, a) => CoachScoring.compilePrompt(o, a, "fr"),
+        ask: (state) => Promise.resolve(CoachScoring.nextQuestion({
+          originalPrompt: prompt, scores, asked: state.asked, lang: "fr", profile: "student",
+        })),
+        onSend: () => {},
+        onSendAnyway: () => {},
+        onCancel: () => {},
+        onPause: () => {},
+      });
+    }
+
+    // Pilotage par les tests : répondre à la question courante.
+    window.__answer = (text) => {
+      const shadow = document.getElementById("coach-ia-modal").shadowRoot;
+      shadow.querySelector(".answer").value = text;
+      shadow.querySelector(".reply").click();
+    };
   </script>
 </body>
 </html>

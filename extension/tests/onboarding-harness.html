@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Harnais onboarding (dev)</title>
+</head>
+<body>
+  <script>
+    // Stub chrome.* minimal : l'onboarding ne dépend que du storage.
+    (function () {
+      const store = { settings: { theme: "light", threshold: 40, profile: "student" } };
+      window.chrome = {
+        storage: {
+          local: {
+            get(keys, cb) {
+              const out = {};
+              for (const k of Array.isArray(keys) ? keys : [keys]) if (k in store) out[k] = store[k];
+              cb(out);
+            },
+            set(obj, cb) { Object.assign(store, obj); cb && cb(); },
+            remove(_k, cb) { cb && cb(); },
+          },
+          onChanged: { addListener() {} },
+        },
+        runtime: { getURL: (p) => p },
+        tabs: { create() {} },
+        i18n: { getUILanguage: () => "fr" },
+      };
+    })();
+  </script>
+  <script>
+    fetch("../onboarding/onboarding.html")
+      .then((r) => r.text())
+      .then((html) => {
+        html = html.replace("<head>", "<head><base href='../onboarding/'>");
+        document.open();
+        document.write(html);
+        document.close();
+      });
+  </script>
+</body>
+</html>
