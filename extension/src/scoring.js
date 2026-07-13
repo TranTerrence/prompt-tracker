@@ -189,7 +189,7 @@ const CoachScoring = (() => {
       contexte: {
         label: "Mon contexte",
         questions: [
-          { key: "contexte", q: "Pour qui ou pour quoi est-ce ? Donne le contexte en une phrase." },
+          { key: "contexte", q: "À quoi va servir cette réponse ? Donne le contexte en une phrase." },
           { key: "contexte-2", q: "Quelles contraintes la réponse doit-elle absolument respecter ?" },
           { key: "contexte-3", q: "Qui va lire ou utiliser {livrable}, et qu'est-ce qui compte pour cette personne ?" },
         ],
@@ -244,7 +244,7 @@ const CoachScoring = (() => {
       contexte: {
         label: "My context",
         questions: [
-          { key: "contexte", q: "Who or what is this for? Give the context in one sentence." },
+          { key: "contexte", q: "What will this answer be used for? Give the context in one sentence." },
           { key: "contexte-2", q: "Which constraints must the answer absolutely respect?" },
           { key: "contexte-3", q: "Who will read or use {livrable}, and what matters to that person?" },
         ],
