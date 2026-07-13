@@ -23,7 +23,11 @@ const HEADERS = [
   "score_after",
   "mirror_shown",
   "mirror_feedback",
+  "rounds",
+  "answers_count",
+  "conv_key",
   "text",
+  "dialogue",
 ];
 
 function csvCell(value: unknown): string {
@@ -87,7 +91,12 @@ export default function ExportClient({ orgId }: { orgId: string }) {
             e.score_after,
             e.mirror_shown,
             e.mirror_feedback,
+            e.rounds,
+            e.answers_count,
+            e.conv_key,
             e.text,
+            // Le dialogue n'existe en base que si l'utilisateur a consenti.
+            e.dialogue ? JSON.stringify(e.dialogue) : "",
           ]
             .map(csvCell)
             .join(";")

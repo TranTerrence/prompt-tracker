@@ -21,7 +21,10 @@ function setupAlarms() {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   try {
-    if (alarm.name === "sync-events") await CoachApi.syncEvents();
+    if (alarm.name === "sync-events") {
+      await CoachApi.syncEvents();
+      await CoachApi.syncPostEvents();
+    }
     if (alarm.name === "refresh-config") await CoachApi.refreshOrgConfig();
   } catch (e) {
     // Hors-ligne ou non connecté : on réessaiera à la prochaine alarme.
@@ -32,8 +35,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 // Le popup (après login) ou le content script peuvent demander une action immédiate.
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === "sync-now") {
-    Promise.all([CoachApi.refreshOrgConfig(), CoachApi.syncEvents()])
-      .then(([config, sync]) => sendResponse({ ok: true, config, sync }))
+    Promise.all([CoachApi.refreshOrgConfig(), CoachApi.syncEvents(), CoachApi.syncPostEvents()])
+      .then(([config, sync, postSync]) => sendResponse({ ok: true, config, sync, postSync }))
       .catch((e) => sendResponse({ ok: false, error: e.message }));
     return true; // réponse asynchrone
   }

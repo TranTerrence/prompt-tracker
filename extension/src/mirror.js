@@ -320,9 +320,13 @@ const CoachMirror = (() => {
     }
 
     function meta() {
+      const filled = state.answers.filter((a) => a.answer && a.answer.trim());
       return {
         rounds: state.asked.length,
-        answersCount: state.answers.filter((a) => a.answer && a.answer.trim()).length,
+        answersCount: filled.length,
+        // Le raisonnement lui-même (paires question/réponse) : capturé en
+        // local, transmis à l'org uniquement si l'utilisateur y a consenti.
+        answers: filled.map((a) => ({ q: a.question, a: a.answer.trim(), axis: a.axis })),
       };
     }
 

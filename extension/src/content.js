@@ -95,8 +95,11 @@
       category: (lastPrompt && lastPrompt.category) || "autre",
       answered,
       answerWords: CoachScoring.wordCount(answer || ""),
+      // Texte gardé en local (c'est la réflexion de l'utilisateur, chez lui) ;
+      // il ne part en sync que si post_reflection est demandé ET consenti.
+      answer: answer || null,
+      synced: false,
     };
-    if (effective("captureMode") === "full" && answer) event.answer = answer;
     chrome.storage.local.get("postEvents", (data) => {
       const postEvents = data.postEvents || [];
       postEvents.push(event);
@@ -244,6 +247,7 @@
               mirrorShown: true,
               rounds: m.rounds,
               answersCount: m.answersCount,
+              dialogue: m.answers && m.answers.length ? m.answers : null,
             }),
             () => CoachAdapter.submitText(finalText).then(() => armPostMirror())
           );
@@ -260,6 +264,7 @@
               mirrorShown: true,
               rounds: m.rounds,
               answersCount: m.answersCount,
+              dialogue: m.answers && m.answers.length ? m.answers : null,
             }),
             () => CoachAdapter.submitText(text).then(() => armPostMirror())
           );
