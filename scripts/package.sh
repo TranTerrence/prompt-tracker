@@ -9,6 +9,6 @@ OUT="$ROOT/dist/prompt-tracker-$VERSION.zip"
 mkdir -p "$ROOT/dist"
 rm -f "$OUT"
 cd "$ROOT/extension"
-zip -r -q "$OUT" . -x "*.DS_Store"
+zip -r -q "$OUT" . -x "*.DS_Store" -x "tests/*"
 echo "→ $OUT"
 unzip -l "$OUT" | tail -3

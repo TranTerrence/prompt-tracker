@@ -9,11 +9,14 @@ Comme les applications qui t'aident à décrocher de ton téléphone, **Prompt T
 🪞 **Le miroir socratique**
 Quand ta demande est trop vague (« fais mes devoirs »), l'envoi est retenu AVANT d'atteindre l'IA. Un dialogue s'ouvre, une question à la fois : qu'as-tu déjà tenté ? quelle est ton hypothèse ? comment vérifieras-tu ? Tu itères aussi longtemps que tu veux, puis c'est TOUJOURS toi qui décides : envoyer ta version enrichie de ta réflexion, ou ta demande initiale telle quelle.
 
-📈 **Ta progression, mesurée**
-Chaque prompt est scoré localement sur 4 rubriques (clarté, contexte, itération, esprit critique). Le popup montre ton score moyen, ta progression sur 7 jours et tes catégories d'usage. Export CSV en un clic.
+🪞 **Le miroir d'après**
+Une fois la réponse de l'IA reçue, une invitation discrète (jamais bloquante, une fois par conversation au maximum) : reformule l'essentiel avec tes mots, choisis ce que tu vérifieras ailleurs. C'est là que l'esprit critique se construit.
 
-🔒 **100 % local par défaut**
-Tes prompts sont analysés dans ton navigateur. Rien n'est envoyé nulle part, pas de compte requis. Les écoles, organismes de formation et entreprises peuvent déployer leur espace white-label (marque, seuil, questions personnalisées) : seuls des indicateurs y sont synchronisés, jamais le texte par défaut.
+📈 **Ta progression, mesurée honnêtement**
+Chaque prompt est scoré localement, ventilation affichée en direct (clarté, contexte, esprit critique). La métrique qui compte : tes PREMIERS JETS, ce que tu écris seul avant tout coaching. Série de jours réussis, seuil qui monte avec tes progrès, export CSV en un clic. Et le coach connaît sa place : il intervient à l'ouverture d'un sujet, puis te laisse dérouler ta conversation (« Laisse-moi sur ce fil » est toujours à un clic).
+
+🔒 **100 % local par défaut, consentement réel sinon**
+Tes prompts sont analysés dans ton navigateur. Rien n'est envoyé nulle part, pas de compte requis. Si tu rejoins l'espace de ton école ou de ton entreprise (simple code de classe), TU choisis catégorie par catégorie ce qui est partagé : les demandes de l'organisation sont justifiées, tu peux refuser, révoquer et effacer à tout moment. Par défaut, seuls des indicateurs sont synchronisés, jamais aucun texte.
 
 Pour qui ?
 • Étudiants : apprendre AVEC l'IA sans qu'elle pense à ta place
@@ -31,4 +34,4 @@ Prompt Tracker analyse localement la qualité des prompts saisis sur les sites d
 - Hôtes `chatgpt.com`, `chat.openai.com`, `claude.ai`, `gemini.google.com` : injecter l'analyse locale et le dialogue de réflexion dans le champ de saisie de ces sites uniquement.
 
 ## Privacy policy
-https://<dashboard-vercel>/privacy (à renseigner après déploiement)
+https://track-prompt.vercel.app/privacy
