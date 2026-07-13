@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Harnais modale (dev)</title>
+  <style>body { margin: 0; font-family: sans-serif; background: #ddd; height: 300vh; }</style>
+</head>
+<body>
+  <p style="padding:20px">Page hôte factice : vérifie le comportement de la modale (petits écrans, branding par défaut).
+    Servir depuis extension/ : <code>python3 -m http.server 8765</code> puis ouvrir /tests/modal-harness.html.</p>
+  <script src="../src/i18n.js"></script>
+  <script src="../src/theme.js"></script>
+  <script src="../src/scoring.js"></script>
+  <script src="../src/mirror.js"></script>
+  <script>
+    const prompt = "fais ma dissertation sur Candide pour demain";
+    const scores = CoachScoring.score(prompt);
+    CoachMirror.showModal({
+      promptText: prompt,
+      scoreBefore: scores.total,
+      promise: true,
+      branding: null,
+      rescore: (t) => CoachScoring.score(CoachScoring.stripScaffolding(t)),
+      compile: (o, a) => CoachScoring.compilePrompt(o, a, "fr"),
+      ask: (state) => Promise.resolve(CoachScoring.nextQuestion({
+        originalPrompt: prompt, scores, asked: state.asked, lang: "fr", profile: "student",
+      })),
+      onSend: (t) => alert("send: " + t.slice(0, 60)),
+      onSendAnyway: () => alert("send anyway"),
+      onCancel: () => {},
+      onPause: () => alert("pause"),
+    });
+  </script>
+</body>
+</html>

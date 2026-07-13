@@ -215,11 +215,22 @@ const CoachMirror = (() => {
         :host { all: initial; }
         .root { ${CoachTheme.vars(accent)} }
         .overlay { position: fixed; inset: 0; z-index: 2147483647; background: var(--overlay);
-          display: flex; align-items: center; justify-content: center; font: 14px/1.55 var(--font-text);
-          -webkit-font-smoothing: antialiased; }
-        .modal { width: min(660px, 94vw); max-height: 90vh; display: flex; flex-direction: column;
+          display: flex; align-items: center; justify-content: center; padding: 12px;
+          font: 14px/1.55 var(--font-text); -webkit-font-smoothing: antialiased; }
+        /* Écrans peu hauts : la modale elle-même devient défilante plutôt que
+           de couper ses boutons (les sections internes gardent leur propre
+           défilement quand tout tient). */
+        .modal { width: min(660px, 94vw); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
+          display: flex; flex-direction: column;
           background: var(--bg); color: var(--ink); border: 1px solid var(--border); border-radius: 18px;
-          box-shadow: var(--shadow); overflow: hidden; }
+          box-shadow: var(--shadow); overflow-y: auto; overflow-x: hidden; }
+        @media (max-height: 700px) {
+          .thread { max-height: 22vh; }
+          .preview { min-height: 48px; }
+          .answer { min-height: 36px; }
+          .head { padding-top: 12px; }
+          .preview-zone { padding-bottom: 12px; }
+        }
         .head { display: flex; align-items: center; padding: 18px 22px 8px; }
         h1 { font: 600 17px/1.3 var(--font-display); margin: 0; color: var(--ink); letter-spacing: .005em; }
         h1 .tick { color: var(--accent); }
