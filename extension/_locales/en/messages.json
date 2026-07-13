@@ -4,7 +4,7 @@
     "description": "Extension name on the Chrome Web Store"
   },
   "appDesc": {
-    "message": "Adds a thoughtful pause before your AI prompts. Vague requests are held and a Socratic dialogue helps you think for yourself : on ChatGPT, Claude and Gemini. 100% local by default.",
+    "message": "A thoughtful pause before your AI prompts: a Socratic dialogue to think for yourself. ChatGPT, Claude, Gemini. 100% local.",
     "description": "Extension description"
   }
 }
