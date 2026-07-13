@@ -21,7 +21,7 @@ export type Organization = {
 export type Profile = {
   id: string;
   org_id: string | null;
-  role: "admin" | "member";
+  role: "admin" | "teacher" | "member";
   email: string | null;
   display_name: string | null;
   disabled: boolean;
@@ -31,6 +31,42 @@ export type Group = {
   id: string;
   org_id: string;
   name: string;
+  join_code: string | null;
+  join_code_active: boolean;
+  join_code_expires_at: string | null;
+};
+
+export type ConsentCategory =
+  | "prompt_text"
+  | "socratic_dialogue"
+  | "post_reflection"
+  | "conversation_history";
+
+export const CONSENT_CATEGORIES: ConsentCategory[] = [
+  "prompt_text",
+  "socratic_dialogue",
+  "post_reflection",
+  "conversation_history",
+];
+
+export const CONSENT_LABELS: Record<ConsentCategory, string> = {
+  prompt_text: "Texte des prompts",
+  socratic_dialogue: "Raisonnement socratique",
+  post_reflection: "Réflexions d'après",
+  conversation_history: "Fil des conversations",
+};
+
+export type OrgDataRequest = {
+  org_id: string;
+  category: ConsentCategory;
+  requested: boolean;
+  purpose: string | null;
+};
+
+export type Consent = {
+  user_id: string;
+  category: ConsentCategory;
+  granted: boolean;
 };
 
 export type GroupMember = {
@@ -62,7 +98,11 @@ export type PromptEvent = {
   score_after: number | null;
   mirror_shown: boolean | null;
   mirror_feedback: string | null;
+  rounds: number | null;
+  answers_count: number | null;
   text: string | null;
+  dialogue: { q: string; a: string; axis?: string }[] | null;
+  conv_key: string | null;
 };
 
 export const SOCRATIC_KEYS = [

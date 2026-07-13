@@ -90,9 +90,20 @@ const CoachApi = (() => {
       await storage.set({ profile: profile || null, orgConfig: null });
       return null;
     }
-    const templatesRows = await rest("socratic_templates?select=key,question&active=is.true");
+    const [templatesRows, requestRows, consentRows] = await Promise.all([
+      rest("socratic_templates?select=key,question&active=is.true"),
+      rest("org_data_requests?select=category,requested,purpose"),
+      rest(`consents?user_id=eq.${session.user_id}&select=category,granted`),
+    ]);
     const templates = {};
     for (const row of templatesRows) templates[row.key] = row.question;
+    // Ce que l'org demande (catégorie → {requested, purpose}) et ce que
+    // l'utilisateur a accordé (catégorie → bool). L'envoi d'un contenu exige
+    // demandé ET consenti (voir syncEvents) ; le serveur re-vérifie (trigger).
+    const dataRequests = {};
+    for (const row of requestRows) dataRequests[row.category] = { requested: row.requested, purpose: row.purpose };
+    const consents = {};
+    for (const row of consentRows) consents[row.category] = row.granted;
     const org = profile.organizations;
     const orgConfig = {
       orgId: profile.org_id,
@@ -103,9 +114,33 @@ const CoachApi = (() => {
       interceptEnabled: org.intercept_enabled,
       llmEnabled: org.llm_enabled,
       templates,
+      dataRequests,
     };
-    await storage.set({ profile: { org_id: profile.org_id, role: profile.role }, orgConfig });
+    await storage.set({ profile: { org_id: profile.org_id, role: profile.role }, orgConfig, consents });
     return orgConfig;
+  }
+
+  // Enregistre les choix de consentement (upsert + journal côté serveur).
+  async function setConsents(choices) {
+    const session = await ensureSession();
+    if (!session) throw new Error("not_authenticated");
+    const rows = Object.entries(choices).map(([category, granted]) => ({
+      user_id: session.user_id,
+      category,
+      granted: Boolean(granted),
+    }));
+    await rest("consents?on_conflict=user_id,category", {
+      method: "POST",
+      body: rows,
+      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    });
+    await storage.set({ consents: choices });
+    return choices;
+  }
+
+  // Droit à l'effacement : purge le contenu déjà partagé (jamais les indicateurs).
+  async function purgeSharedContent() {
+    return rest("rpc/purge_my_content", { method: "POST", body: {} });
   }
 
   // Rejoint une classe par son code : rattachement org + groupe, atomique
@@ -118,13 +153,22 @@ const CoachApi = (() => {
 
   // Pousse les événements non synchronisés (file offline). Idempotent grâce à
   // unique(user_id, client_event_id) + ignore-duplicates.
+  // Minimisation à la source : un contenu (texte, dialogue, conversation) ne
+  // QUITTE la machine que si l'org le demande ET que l'utilisateur a consenti.
+  // Le trigger serveur enforce_consent re-vérifie (défense en profondeur).
+  function buildSendAllowed(orgConfig, consents) {
+    const requests = (orgConfig && orgConfig.dataRequests) || {};
+    return (cat) => Boolean(requests[cat] && requests[cat].requested && consents && consents[cat]);
+  }
+
   async function syncEvents() {
     const session = await ensureSession();
     if (!session) return { pushed: 0, reason: "not_authenticated" };
-    const { events = [], profile } = await storage.get(["events", "profile"]);
+    const { events = [], profile, orgConfig, consents } = await storage.get(["events", "profile", "orgConfig", "consents"]);
     if (!profile || !profile.org_id) return { pushed: 0, reason: "no_org" };
     const pending = events.filter((e) => !e.synced);
     if (!pending.length) return { pushed: 0 };
+    const sendAllowed = buildSendAllowed(orgConfig, consents);
 
     const rows = pending.map((e) => ({
       client_event_id: e.id,
@@ -143,7 +187,9 @@ const CoachApi = (() => {
       mirror_feedback: e.mirrorFeedback,
       rounds: e.rounds || 0,
       answers_count: e.answersCount || 0,
-      text: e.text ?? null, // le trigger serveur l'efface si l'org est en mode metadata
+      text: sendAllowed("prompt_text") ? (e.text ?? null) : null,
+      dialogue: sendAllowed("socratic_dialogue") ? (e.dialogue ?? null) : null,
+      conv_key: sendAllowed("conversation_history") ? (e.conv ?? null) : null,
     }));
 
     await rest("prompt_events?on_conflict=user_id,client_event_id", {
@@ -155,6 +201,43 @@ const CoachApi = (() => {
     const pushedIds = new Set(pending.map((e) => e.id));
     const updated = events.map((e) => (pushedIds.has(e.id) ? { ...e, synced: true } : e));
     await storage.set({ events: updated });
+    return { pushed: pending.length };
+  }
+
+  // Pousse les réflexions du miroir d'après. Les indicateurs (répondu, nombre
+  // de mots) sont le socle ; le texte n'est envoyé que si consenti.
+  async function syncPostEvents() {
+    const session = await ensureSession();
+    if (!session) return { pushed: 0, reason: "not_authenticated" };
+    const { postEvents = [], profile, orgConfig, consents } = await storage.get(["postEvents", "profile", "orgConfig", "consents"]);
+    if (!profile || !profile.org_id) return { pushed: 0, reason: "no_org" };
+    const pending = postEvents.filter((e) => !e.synced);
+    if (!pending.length) return { pushed: 0 };
+    const sendAllowed = buildSendAllowed(orgConfig, consents);
+
+    const rows = pending.map((e) => ({
+      client_event_id: e.id,
+      user_id: session.user_id,
+      org_id: profile.org_id,
+      ts: e.ts,
+      site: e.site,
+      conv_key: sendAllowed("conversation_history") ? (e.conv ?? null) : null,
+      post_key: e.postKey,
+      category: e.category,
+      answered: e.answered || false,
+      answer_words: e.answerWords ?? null,
+      answer: sendAllowed("post_reflection") ? (e.answer ?? null) : null,
+    }));
+
+    await rest("post_events?on_conflict=user_id,client_event_id", {
+      method: "POST",
+      body: rows,
+      headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
+    });
+
+    const pushedIds = new Set(pending.map((e) => e.id));
+    const updated = postEvents.map((e) => (pushedIds.has(e.id) ? { ...e, synced: true } : e));
+    await storage.set({ postEvents: updated });
     return { pushed: pending.length };
   }
 
@@ -183,7 +266,20 @@ const CoachApi = (() => {
     }
   }
 
-  return { login, signup, logout, ensureSession, refreshOrgConfig, joinGroup, syncEvents, llmNextQuestion, SUPABASE_URL };
+  return {
+    login,
+    signup,
+    logout,
+    ensureSession,
+    refreshOrgConfig,
+    joinGroup,
+    setConsents,
+    purgeSharedContent,
+    syncEvents,
+    syncPostEvents,
+    llmNextQuestion,
+    SUPABASE_URL,
+  };
 })();
 
 if (typeof self !== "undefined") self.CoachApi = CoachApi;

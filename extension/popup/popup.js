@@ -55,7 +55,9 @@ function showAuthState(session, profile, orgConfig, pendingCount) {
       orgConfig && orgConfig.branding ? orgConfig.branding.name : t("authNoOrg");
     document.getElementById("sync-status").textContent = pendingCount ? t("authPending", pendingCount) : t("authSynced");
     // Sans organisation : proposer le rattachement par code de classe.
+    // Avec : l'accès permanent aux choix de partage (consentement).
     document.getElementById("join-org").hidden = Boolean(orgConfig);
+    document.getElementById("open-consent").hidden = !orgConfig;
     if (orgConfig && orgConfig.branding) {
       document.getElementById("brand-title").textContent = orgConfig.branding.name;
       if (orgConfig.branding.color) {
@@ -72,6 +74,12 @@ function showAuthState(session, profile, orgConfig, pendingCount) {
 
 document.getElementById("join-code").placeholder = t("joinCodePlaceholder");
 document.getElementById("join-submit").textContent = t("joinCta");
+document.getElementById("open-consent").textContent = t("popupConsentLink");
+
+const CONSENT_URL = chrome.runtime.getURL("consent/consent.html");
+document.getElementById("open-consent").addEventListener("click", () => {
+  chrome.tabs.create({ url: CONSENT_URL });
+});
 
 function joinError(message) {
   const el = document.getElementById("join-error");
@@ -86,6 +94,9 @@ document.getElementById("join-submit").addEventListener("click", async () => {
   try {
     await CoachApi.joinGroup(code);
     chrome.runtime.sendMessage({ type: "sync-now" }, () => refreshAuthUi());
+    // Le consentement se présente immédiatement après l'adhésion : c'est
+    // l'utilisateur qui décide ce que l'organisation recevra.
+    chrome.tabs.create({ url: CONSENT_URL });
   } catch (e) {
     if (String(e.message).includes("invalid_code")) joinError(t("joinInvalid"));
     else if (String(e.message).includes("already_in_other_org")) joinError(t("joinOtherOrg"));

@@ -4,31 +4,53 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
+  CONSENT_CATEGORIES,
+  CONSENT_LABELS,
   SOCRATIC_KEYS,
   SOCRATIC_LABELS,
+  type ConsentCategory,
   type Organization,
+  type OrgDataRequest,
   type SocraticTemplate,
 } from "@/lib/types";
 
 type TemplateState = { question: string; active: boolean };
+type RequestState = { requested: boolean; purpose: string };
+
+const CONSENT_HINTS: Record<ConsentCategory, string> = {
+  prompt_text: "Ce que l'utilisateur écrit à l'IA, mot pour mot.",
+  socratic_dialogue: "Ses réponses aux questions du dialogue : son raisonnement.",
+  post_reflection: "Ses reformulations et vérifications après les réponses de l'IA.",
+  conversation_history: "Le regroupement de ses prompts par conversation.",
+};
 
 export default function SettingsForm({
   org,
   templates,
+  dataRequests,
 }: {
   org: Organization;
   templates: SocraticTemplate[];
+  dataRequests: OrgDataRequest[];
 }) {
   const router = useRouter();
   const [brandName, setBrandName] = useState(org.brand_name ?? "");
   const [brandColor, setBrandColor] = useState(org.brand_color ?? "#3E5C50");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [threshold, setThreshold] = useState(org.threshold ?? 50);
-  const [captureMode, setCaptureMode] = useState<"metadata" | "full">(
-    org.capture_mode ?? "metadata"
-  );
   const [llmEnabled, setLlmEnabled] = useState(org.llm_enabled);
   const [interceptEnabled, setInterceptEnabled] = useState(org.intercept_enabled);
+  const [requests, setRequests] = useState<Record<ConsentCategory, RequestState>>(() => {
+    const state = {} as Record<ConsentCategory, RequestState>;
+    for (const cat of CONSENT_CATEGORIES) {
+      const existing = dataRequests.find((r) => r.category === cat);
+      state[cat] = {
+        requested: existing?.requested ?? false,
+        purpose: existing?.purpose ?? "",
+      };
+    }
+    return state;
+  });
   const [tpl, setTpl] = useState<Record<string, TemplateState>>(() => {
     const state: Record<string, TemplateState> = {};
     for (const key of SOCRATIC_KEYS) {
@@ -66,7 +88,8 @@ export default function SettingsForm({
         logoUrl = supabase.storage.from("logos").getPublicUrl(path).data.publicUrl;
       }
 
-      // 2. Mise à jour de l'organisation
+      // 2. Mise à jour de l'organisation (capture_mode est déprécié : les
+      // demandes de données ci-dessous le remplacent, il n'est plus modifié)
       const { error: orgError } = await supabase
         .from("organizations")
         .update({
@@ -74,13 +97,29 @@ export default function SettingsForm({
           brand_color: brandColor,
           logo_url: logoUrl,
           threshold,
-          capture_mode: captureMode,
           llm_enabled: llmEnabled,
           intercept_enabled: interceptEnabled,
         })
         .eq("id", org.id);
       if (orgError) {
         setMessage({ ok: false, text: `Échec de la mise à jour : ${orgError.message}` });
+        return;
+      }
+
+      // 2 bis. Demandes de données (le maximum demandé ; chaque utilisateur
+      // reste libre de consentir en dessous)
+      const requestRows = CONSENT_CATEGORIES.map((cat) => ({
+        org_id: org.id,
+        category: cat,
+        requested: requests[cat].requested,
+        purpose: requests[cat].purpose || null,
+        updated_at: new Date().toISOString(),
+      }));
+      const { error: reqError } = await supabase
+        .from("org_data_requests")
+        .upsert(requestRows, { onConflict: "org_id,category" });
+      if (reqError) {
+        setMessage({ ok: false, text: `Échec des demandes de données : ${reqError.message}` });
         return;
       }
 
@@ -210,32 +249,6 @@ export default function SettingsForm({
             </p>
           </div>
 
-          <div>
-            <span className="mb-1.5 block text-sm text-muted">Mode de capture</span>
-            <div className="flex gap-4 text-sm">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="capture_mode"
-                  checked={captureMode === "metadata"}
-                  onChange={() => setCaptureMode("metadata")}
-                  className="accent-accent"
-                />
-                Métadonnées seulement
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="capture_mode"
-                  checked={captureMode === "full"}
-                  onChange={() => setCaptureMode("full")}
-                  className="accent-accent"
-                />
-                Texte complet
-              </label>
-            </div>
-          </div>
-
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -254,6 +267,62 @@ export default function SettingsForm({
             />
             Interception activée
           </label>
+        </div>
+      </section>
+
+      {/* Données demandées (consentement hybride) */}
+      <section className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
+        <h2 className="font-display text-lg font-semibold tracking-tight">
+          Données demandées aux utilisateurs
+        </h2>
+        <p className="mt-1.5 text-sm text-muted">
+          Vous définissez ici le maximum que votre organisation demande. Chaque
+          utilisateur voit ces demandes (avec votre justification) et reste
+          libre de refuser, catégorie par catégorie. Les indicateurs et scores
+          sont toujours collectés ; seul le contenu est soumis à consentement.
+        </p>
+        <div className="mt-4 space-y-4">
+          {CONSENT_CATEGORIES.map((cat) => (
+            <div
+              key={cat}
+              className="rounded-xl border border-card-border bg-background p-4"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">{CONSENT_LABELS[cat]}</p>
+                  <p className="text-xs text-muted">{CONSENT_HINTS[cat]}</p>
+                </div>
+                <label className="flex shrink-0 items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={requests[cat].requested}
+                    onChange={(e) =>
+                      setRequests((s) => ({
+                        ...s,
+                        [cat]: { ...s[cat], requested: e.target.checked },
+                      }))
+                    }
+                    className="accent-accent"
+                  />
+                  demander
+                </label>
+              </div>
+              {requests[cat].requested && (
+                <input
+                  type="text"
+                  value={requests[cat].purpose}
+                  onChange={(e) =>
+                    setRequests((s) => ({
+                      ...s,
+                      [cat]: { ...s[cat], purpose: e.target.value },
+                    }))
+                  }
+                  placeholder="Pourquoi le demandez-vous ? (affiché à l'utilisateur)"
+                  className="mt-3 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-accent"
+                />
+              )}
+            </div>
+          ))}
         </div>
       </section>
 

@@ -37,9 +37,13 @@
     effectiveThreshold = CoachScoring.adaptiveThreshold(events || [], effective("threshold"));
   }
 
-  chrome.storage.local.get(["settings", "orgConfig", "events"], (data) => {
+  // Consentements de l'utilisateur (catégorie → bool), gérés par consent.html.
+  let consents = {};
+
+  chrome.storage.local.get(["settings", "orgConfig", "consents", "events"], (data) => {
     settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
     orgConfig = data.orgConfig || null;
+    consents = data.consents || {};
     recomputeThreshold(data.events);
     CoachTheme.set(settings.theme);
     refreshBadge();
@@ -47,6 +51,7 @@
   chrome.storage.onChanged.addListener((changes) => {
     if (changes.settings) settings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
     if (changes.orgConfig) orgConfig = changes.orgConfig.newValue || null;
+    if (changes.consents) consents = changes.consents.newValue || {};
     if (changes.settings || changes.orgConfig) {
       chrome.storage.local.get("events", (data) => recomputeThreshold(data.events));
       CoachTheme.set(settings.theme);
@@ -57,6 +62,12 @@
   function effective(key) {
     if (orgConfig && orgConfig[key] !== undefined && orgConfig[key] !== null) return orgConfig[key];
     return settings[key];
+  }
+
+  // La catégorie est demandée par l'org ET consentie par l'utilisateur.
+  function consented(cat) {
+    const req = orgConfig && orgConfig.dataRequests && orgConfig.dataRequests[cat];
+    return Boolean(req && req.requested && consents[cat]);
   }
 
   function appendEvent(event, callback) {
@@ -159,10 +170,16 @@
       mirrorFeedback: null,
       rounds: 0,
       answersCount: 0,
+      // Clé de conversation : locale toujours (c'est la machine de
+      // l'utilisateur) ; elle ne part en sync que si consentie.
+      conv: CoachAdapter.conversationKey(),
       synced: false,
       ...extra,
     };
-    if (effective("captureMode") === "full") event.text = text;
+    // Texte capturé localement si l'utilisateur le veut (réglage local) ou
+    // s'il a consenti à le partager avec son org (il faut bien le capturer
+    // pour pouvoir l'envoyer). La sync ne le transmet que si consenti.
+    if (effective("captureMode") === "full" || consented("prompt_text")) event.text = text;
     return event;
   }
 

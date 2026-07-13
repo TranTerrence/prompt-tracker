@@ -36,7 +36,7 @@ export async function attachUserByEmail(
 
 export async function setRole(
   userId: string,
-  role: "admin" | "member"
+  role: "admin" | "teacher" | "member"
 ): Promise<ActionResult> {
   const { org } = await requireAdmin();
   const supabase = await createClient();
@@ -48,6 +48,35 @@ export async function setRole(
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/users");
   return { ok: true, message: "Rôle mis à jour." };
+}
+
+/** Régénère le code d'un groupe (l'ancien cesse immédiatement de fonctionner). */
+export async function regenerateGroupCode(groupId: string): Promise<ActionResult> {
+  const { org } = await requireAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("regenerate_group_code", {
+    p_group: groupId,
+  });
+  void org;
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/users");
+  return { ok: true, message: `Nouveau code : ${data}` };
+}
+
+export async function setGroupCodeActive(
+  groupId: string,
+  active: boolean
+): Promise<ActionResult> {
+  const { org } = await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("groups")
+    .update({ join_code_active: active })
+    .eq("id", groupId)
+    .eq("org_id", org.id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/users");
+  return { ok: true, message: active ? "Code activé." : "Code désactivé." };
 }
 
 export async function setDisabled(

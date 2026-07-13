@@ -1,27 +1,42 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { Group, GroupMember, Profile } from "@/lib/types";
+import {
+  CONSENT_LABELS,
+  type Consent,
+  type Group,
+  type GroupMember,
+  type OrgDataRequest,
+  type Profile,
+} from "@/lib/types";
 import {
   addToGroup,
   attachUserByEmail,
   createGroup,
+  regenerateGroupCode,
   removeFromGroup,
   setDisabled,
+  setGroupCodeActive,
   setRole,
 } from "./actions";
 
 type Message = { ok: boolean; message: string } | null;
 
+const ROLE_LABELS = { admin: "admin", teacher: "professeur", member: "membre" } as const;
+
 export default function UsersClient({
   profiles,
   groups,
   members,
+  consents,
+  dataRequests,
   currentUserId,
 }: {
   profiles: Profile[];
   groups: Group[];
   members: GroupMember[];
+  consents: Consent[];
+  dataRequests: OrgDataRequest[];
   currentUserId: string;
 }) {
   const [message, setMessage] = useState<Message>(null);
@@ -38,6 +53,12 @@ export default function UsersClient({
     members.filter((m) => m.group_id === selectedGroup).map((m) => m.user_id)
   );
   const nameOf = (p: Profile) => p.display_name || p.email || p.id;
+  const group = groups.find((g) => g.id === selectedGroup);
+
+  // Consentements par utilisateur, limités aux catégories que l'org demande.
+  const requestedCategories = dataRequests.map((r) => r.category);
+  const consentOf = (userId: string, category: string) =>
+    consents.some((c) => c.user_id === userId && c.category === category && c.granted);
 
   return (
     <div className="space-y-10">
@@ -99,6 +120,9 @@ export default function UsersClient({
               <tr className="text-left text-xs uppercase tracking-wider text-muted">
                 <th className="px-5 py-3 font-medium">Utilisateur</th>
                 <th className="px-5 py-3 font-medium">Rôle</th>
+                {requestedCategories.length > 0 && (
+                  <th className="px-5 py-3 font-medium">Partage consenti</th>
+                )}
                 <th className="px-5 py-3 font-medium">Statut</th>
                 <th className="px-5 py-3 font-medium">Actions</th>
               </tr>
@@ -122,10 +146,36 @@ export default function UsersClient({
                       <span className="rounded-md bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
                         admin
                       </span>
+                    ) : p.role === "teacher" ? (
+                      <span className="rounded-md bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                        professeur
+                      </span>
                     ) : (
                       <span className="text-muted">membre</span>
                     )}
                   </td>
+                  {requestedCategories.length > 0 && (
+                    <td className="px-5 py-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {requestedCategories.map((cat) => {
+                          const granted = consentOf(p.id, cat);
+                          return (
+                            <span
+                              key={cat}
+                              title={`${CONSENT_LABELS[cat]} : ${granted ? "consenti" : "refusé ou sans réponse"}`}
+                              className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                                granted
+                                  ? "bg-success/15 text-success"
+                                  : "bg-soft text-muted line-through"
+                              }`}
+                            >
+                              {CONSENT_LABELS[cat]}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </td>
+                  )}
                   <td className="px-5 py-3">
                     {p.disabled ? (
                       <span className="text-danger">désactivé</span>
@@ -137,18 +187,25 @@ export default function UsersClient({
                     {p.id === currentUserId ? (
                       <span className="text-xs text-muted">(toi)</span>
                     ) : (
-                      <div className="flex flex-wrap gap-2">
-                        <button
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={p.role}
                           disabled={pending}
-                          onClick={() =>
+                          onChange={(e) =>
                             run(() =>
-                              setRole(p.id, p.role === "admin" ? "member" : "admin")
+                              setRole(p.id, e.target.value as "admin" | "teacher" | "member")
                             )
                           }
-                          className="rounded-lg border border-card-border px-2.5 py-1 text-xs text-muted transition-colors hover:bg-soft hover:text-foreground disabled:opacity-50"
+                          className="rounded-lg border border-card-border bg-background px-2 py-1 text-xs outline-none transition-colors focus:border-accent disabled:opacity-50"
                         >
-                          {p.role === "admin" ? "Rétrograder membre" : "Promouvoir admin"}
-                        </button>
+                          {(Object.keys(ROLE_LABELS) as (keyof typeof ROLE_LABELS)[]).map(
+                            (role) => (
+                              <option key={role} value={role}>
+                                {ROLE_LABELS[role]}
+                              </option>
+                            )
+                          )}
+                        </select>
                         <button
                           disabled={pending}
                           onClick={() => run(() => setDisabled(p.id, !p.disabled))}
@@ -211,6 +268,59 @@ export default function UsersClient({
                 ))}
               </select>
             </div>
+
+            {group && (
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-card-border bg-background p-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted">
+                    Code de classe
+                  </p>
+                  <p
+                    className={`font-mono text-2xl font-semibold tracking-[0.2em] ${
+                      group.join_code_active ? "" : "text-muted line-through"
+                    }`}
+                  >
+                    {group.join_code ?? "—"}
+                  </p>
+                </div>
+                <div className="ml-auto flex flex-wrap gap-2">
+                  <button
+                    disabled={pending || !group.join_code}
+                    onClick={() => {
+                      navigator.clipboard.writeText(group.join_code ?? "");
+                      setMessage({ ok: true, message: "Code copié." });
+                    }}
+                    className="rounded-lg border border-card-border px-2.5 py-1 text-xs text-muted transition-colors hover:bg-soft hover:text-foreground disabled:opacity-50"
+                  >
+                    Copier
+                  </button>
+                  <button
+                    disabled={pending}
+                    onClick={() =>
+                      run(() => setGroupCodeActive(group.id, !group.join_code_active))
+                    }
+                    className="rounded-lg border border-card-border px-2.5 py-1 text-xs text-muted transition-colors hover:bg-soft hover:text-foreground disabled:opacity-50"
+                  >
+                    {group.join_code_active ? "Désactiver" : "Activer"}
+                  </button>
+                  <button
+                    disabled={pending}
+                    onClick={() => {
+                      if (confirm("Régénérer le code ? L'ancien cessera de fonctionner."))
+                        run(() => regenerateGroupCode(group.id));
+                    }}
+                    className="rounded-lg border border-card-border px-2.5 py-1 text-xs text-muted transition-colors hover:bg-soft hover:text-foreground disabled:opacity-50"
+                  >
+                    Régénérer
+                  </button>
+                </div>
+                <p className="w-full text-xs text-muted">
+                  Les utilisateurs saisissent ce code dans l&apos;extension ou sur
+                  la page d&apos;attente pour rejoindre l&apos;organisation et ce
+                  groupe.
+                </p>
+              </div>
+            )}
 
             <ul className="divide-y divide-card-border overflow-hidden rounded-xl border border-card-border">
               {profiles.map((p) => {
