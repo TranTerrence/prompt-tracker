@@ -23,15 +23,15 @@ Pour qui ?
 • Consultants : des prompts qui montrent ton raisonnement
 • Entreprises : bonnes pratiques, esprit critique et alternative au shadow IT
 
-Fonctionne sur ChatGPT, Claude et Gemini.
+Fonctionne sur ChatGPT, Claude, Gemini, Mistral (Le Chat) et Grok.
 
 ## Single purpose (déclaration Google)
-Prompt Tracker analyse localement la qualité des prompts saisis sur les sites d'IA (ChatGPT, Claude, Gemini) et propose un dialogue de réflexion optionnel avant l'envoi.
+Prompt Tracker analyse localement la qualité des prompts saisis sur les sites d'IA (ChatGPT, Claude, Gemini, Mistral, Grok) et propose un dialogue de réflexion optionnel avant l'envoi.
 
 ## Justification des permissions
 - `storage` : conserver localement les réglages (thème, seuil) et les indicateurs de prompts (scores, catégories).
 - `alarms` : synchronisation périodique des indicateurs pour les utilisateurs connectés à un espace organisation (optionnel).
-- Hôtes `chatgpt.com`, `chat.openai.com`, `claude.ai`, `gemini.google.com` : injecter l'analyse locale et le dialogue de réflexion dans le champ de saisie de ces sites uniquement.
+- Hôtes `chatgpt.com`, `chat.openai.com`, `claude.ai`, `gemini.google.com`, `chat.mistral.ai`, `grok.com` : injecter l'analyse locale et le dialogue de réflexion dans le champ de saisie de ces sites uniquement.
 
 ## Privacy policy
 https://track-prompt.vercel.app/privacy

@@ -235,7 +235,7 @@ function toCsv(events) {
   return [header.join(";"), ...rows].join("\n");
 }
 
-chrome.storage.local.get(["events", "settings", "health_chatgpt", "health_claude", "health_gemini"], (data) => {
+chrome.storage.local.get(["events", "settings", "health_chatgpt", "health_claude", "health_gemini", "health_mistral", "health_grok"], (data) => {
   const events = data.events || [];
   const settings = { captureMode: "metadata", interceptEnabled: true, threshold: 40, theme: "light", ...(data.settings || {}) };
   render(events, settings.threshold);
@@ -257,6 +257,8 @@ chrome.storage.local.get(["events", "settings", "health_chatgpt", "health_claude
     ["ChatGPT", data.health_chatgpt],
     ["Claude", data.health_claude],
     ["Gemini", data.health_gemini],
+    ["Mistral", data.health_mistral],
+    ["Grok", data.health_grok],
   ].filter(([, h]) => h && !h.healthy);
   if (broken.length) {
     const el = document.getElementById("health");
@@ -299,7 +301,7 @@ document.getElementById("export").addEventListener("click", () => {
 document.getElementById("reset").addEventListener("click", () => {
   if (confirm(t("popupResetConfirm"))) {
     chrome.storage.local.remove(
-      ["events", "postEvents", "postConvs", "postCount", "health_chatgpt", "health_claude", "health_gemini"],
+      ["events", "postEvents", "postConvs", "postCount", "health_chatgpt", "health_claude", "health_gemini", "health_mistral", "health_grok"],
       () => render([], 40)
     );
   }

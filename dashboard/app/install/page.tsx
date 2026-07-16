@@ -5,11 +5,11 @@ import ThemeToggle from "@/components/ThemeToggle";
 export const metadata: Metadata = {
   title: "Installer l'extension : Prompt Tracker",
   description:
-    "Installer l'extension Chrome Prompt Tracker : interception socratique de vos prompts sur ChatGPT, Claude et Gemini, analyse 100 % locale.",
+    "Installer l'extension Chrome Prompt Tracker : interception socratique de vos prompts sur ChatGPT, Claude, Gemini, Mistral et Grok, analyse 100 % locale.",
 };
 
 const DIRECT_ZIP = "/downloads/prompt-tracker-latest.zip";
-const VERSION = "0.4.3";
+const VERSION = "0.5.0";
 
 function Step({
   n,
@@ -67,7 +67,7 @@ export default function InstallPage() {
             </h1>
             <p className="text-muted">
               Prompt Tracker ajoute une pause réfléchie avant vos prompts sur
-              ChatGPT, Claude et Gemini. L&apos;analyse est 100 % locale : rien
+              ChatGPT, Claude, Gemini, Mistral (Le Chat) et Grok. L&apos;analyse est 100 % locale : rien
               ne quitte votre navigateur tant que vous ne rejoignez pas une
               organisation. La publication sur le Chrome Web Store arrive ; en
               attendant, l&apos;installation manuelle prend deux minutes.
@@ -120,7 +120,7 @@ export default function InstallPage() {
 
             <Step n={4} title="Essayer">
               <p>
-                Ouvrez ChatGPT, Claude ou Gemini et tapez un prompt volontairement
+                Ouvrez ChatGPT, Claude, Gemini, Mistral ou Grok et tapez un prompt volontairement
                 vague, par exemple « fais mes devoirs de maths ». L&apos;envoi
                 est retenu et le dialogue socratique s&apos;ouvre. Vous décidez
                 toujours : améliorer, envoyer tel quel, ou annuler.
