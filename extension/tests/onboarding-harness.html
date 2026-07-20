@@ -22,7 +22,8 @@
           },
           onChanged: { addListener() {} },
         },
-        runtime: { getURL: (p) => p },
+        runtime: { getURL: (p) => p, getManifest: () => ({ content_scripts: [{ matches: ["https://chatgpt.com/*"] }] }) },
+        permissions: { request(_o, cb) { cb && cb(true); } },
         tabs: { create() {} },
         i18n: { getUILanguage: () => "fr" },
       };

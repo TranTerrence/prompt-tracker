@@ -1,0 +1,991 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A50BA166300A28A8006BB0C0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50BA165300A28A8006BB0C0 /* AppDelegate.swift */; };
+		A50BA168300A28A8006BB0C0 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50BA167300A28A8006BB0C0 /* SceneDelegate.swift */; };
+		A50BA16B300A28A8006BB0C0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A50BA169300A28A8006BB0C0 /* LaunchScreen.storyboard */; };
+		A50BA16E300A28A8006BB0C0 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A50BA16C300A28A8006BB0C0 /* Main.storyboard */; };
+		A50BA177300A28A8006BB0C0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50BA176300A28A8006BB0C0 /* AppDelegate.swift */; };
+		A50BA17A300A28A8006BB0C0 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A50BA178300A28A8006BB0C0 /* Main.storyboard */; };
+		A50BA182300A28A8006BB0C0 /* Prompt Tracker Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A50BA181300A28A8006BB0C0 /* Prompt Tracker Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A50BA18C300A28A8006BB0C0 /* Prompt Tracker Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A50BA18B300A28A8006BB0C0 /* Prompt Tracker Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A50BA192300A28A8006BB0C0 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = A50BA155300A28A6006BB0C0 /* Main.html */; };
+		A50BA193300A28A8006BB0C0 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = A50BA155300A28A6006BB0C0 /* Main.html */; };
+		A50BA194300A28A8006BB0C0 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = A50BA157300A28A6006BB0C0 /* Icon.png */; };
+		A50BA195300A28A8006BB0C0 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = A50BA157300A28A6006BB0C0 /* Icon.png */; };
+		A50BA196300A28A8006BB0C0 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = A50BA158300A28A6006BB0C0 /* Style.css */; };
+		A50BA197300A28A8006BB0C0 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = A50BA158300A28A6006BB0C0 /* Style.css */; };
+		A50BA198300A28A8006BB0C0 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = A50BA159300A28A6006BB0C0 /* Script.js */; };
+		A50BA199300A28A8006BB0C0 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = A50BA159300A28A6006BB0C0 /* Script.js */; };
+		A50BA19A300A28A8006BB0C0 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50BA15A300A28A6006BB0C0 /* ViewController.swift */; };
+		A50BA19B300A28A8006BB0C0 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50BA15A300A28A6006BB0C0 /* ViewController.swift */; };
+		A50BA19C300A28A8006BB0C0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A50BA15B300A28A8006BB0C0 /* Assets.xcassets */; };
+		A50BA19D300A28A8006BB0C0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A50BA15B300A28A8006BB0C0 /* Assets.xcassets */; };
+		A50BA19E300A28A8006BB0C0 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50BA15D300A28A8006BB0C0 /* SafariWebExtensionHandler.swift */; };
+		A50BA19F300A28A8006BB0C0 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50BA15D300A28A8006BB0C0 /* SafariWebExtensionHandler.swift */; };
+		A50BA1BC300A28A8006BB0C0 /* popup in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B1300A28A8006BB0C0 /* popup */; };
+		A50BA1BD300A28A8006BB0C0 /* prompt-tracker-logo in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B2300A28A8006BB0C0 /* prompt-tracker-logo */; };
+		A50BA1BE300A28A8006BB0C0 /* tests in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B3300A28A8006BB0C0 /* tests */; };
+		A50BA1BF300A28A8006BB0C0 /* consent in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B4300A28A8006BB0C0 /* consent */; };
+		A50BA1C0300A28A8006BB0C0 /* icons in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B5300A28A8006BB0C0 /* icons */; };
+		A50BA1C1300A28A8006BB0C0 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B6300A28A8006BB0C0 /* manifest.json */; };
+		A50BA1C2300A28A8006BB0C0 /* MVP mobile et desktop.zip in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B7300A28A8006BB0C0 /* MVP mobile et desktop.zip */; };
+		A50BA1C3300A28A8006BB0C0 /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B8300A28A8006BB0C0 /* _locales */; };
+		A50BA1C4300A28A8006BB0C0 /* fonts in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B9300A28A8006BB0C0 /* fonts */; };
+		A50BA1C5300A28A8006BB0C0 /* onboarding in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1BA300A28A8006BB0C0 /* onboarding */; };
+		A50BA1C6300A28A8006BB0C0 /* src in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1BB300A28A8006BB0C0 /* src */; };
+		A50BA1C7300A28A8006BB0C0 /* popup in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B1300A28A8006BB0C0 /* popup */; };
+		A50BA1C8300A28A8006BB0C0 /* prompt-tracker-logo in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B2300A28A8006BB0C0 /* prompt-tracker-logo */; };
+		A50BA1C9300A28A8006BB0C0 /* tests in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B3300A28A8006BB0C0 /* tests */; };
+		A50BA1CA300A28A8006BB0C0 /* consent in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B4300A28A8006BB0C0 /* consent */; };
+		A50BA1CB300A28A8006BB0C0 /* icons in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B5300A28A8006BB0C0 /* icons */; };
+		A50BA1CC300A28A8006BB0C0 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B6300A28A8006BB0C0 /* manifest.json */; };
+		A50BA1CD300A28A8006BB0C0 /* MVP mobile et desktop.zip in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B7300A28A8006BB0C0 /* MVP mobile et desktop.zip */; };
+		A50BA1CE300A28A8006BB0C0 /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B8300A28A8006BB0C0 /* _locales */; };
+		A50BA1CF300A28A8006BB0C0 /* fonts in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1B9300A28A8006BB0C0 /* fonts */; };
+		A50BA1D0300A28A8006BB0C0 /* onboarding in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1BA300A28A8006BB0C0 /* onboarding */; };
+		A50BA1D1300A28A8006BB0C0 /* src in Resources */ = {isa = PBXBuildFile; fileRef = A50BA1BB300A28A8006BB0C0 /* src */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A50BA183300A28A8006BB0C0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A50BA14F300A28A6006BB0C0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A50BA180300A28A8006BB0C0;
+			remoteInfo = "Prompt Tracker Extension (iOS)";
+		};
+		A50BA18D300A28A8006BB0C0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A50BA14F300A28A6006BB0C0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A50BA18A300A28A8006BB0C0;
+			remoteInfo = "Prompt Tracker Extension (macOS)";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A50BA1A5300A28A8006BB0C0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A50BA182300A28A8006BB0C0 /* Prompt Tracker Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A50BA1AC300A28A8006BB0C0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A50BA18C300A28A8006BB0C0 /* Prompt Tracker Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A50BA156300A28A6006BB0C0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		A50BA157300A28A6006BB0C0 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		A50BA158300A28A6006BB0C0 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		A50BA159300A28A6006BB0C0 /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		A50BA15A300A28A6006BB0C0 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		A50BA15B300A28A8006BB0C0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A50BA15D300A28A8006BB0C0 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		A50BA162300A28A8006BB0C0 /* Prompt Tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Prompt Tracker.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A50BA165300A28A8006BB0C0 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A50BA167300A28A8006BB0C0 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		A50BA16A300A28A8006BB0C0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		A50BA16D300A28A8006BB0C0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		A50BA16F300A28A8006BB0C0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A50BA174300A28A8006BB0C0 /* Prompt Tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Prompt Tracker.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A50BA176300A28A8006BB0C0 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A50BA179300A28A8006BB0C0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		A50BA17B300A28A8006BB0C0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A50BA17C300A28A8006BB0C0 /* Prompt Tracker.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Prompt Tracker.entitlements"; sourceTree = "<group>"; };
+		A50BA181300A28A8006BB0C0 /* Prompt Tracker Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Prompt Tracker Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A50BA186300A28A8006BB0C0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A50BA18B300A28A8006BB0C0 /* Prompt Tracker Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Prompt Tracker Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A50BA190300A28A8006BB0C0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A50BA191300A28A8006BB0C0 /* Prompt Tracker.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Prompt Tracker.entitlements"; sourceTree = "<group>"; };
+		A50BA1B1300A28A8006BB0C0 /* popup */ = {isa = PBXFileReference; lastKnownFileType = folder; name = popup; path = Resources/popup; sourceTree = "<group>"; };
+		A50BA1B2300A28A8006BB0C0 /* prompt-tracker-logo */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "prompt-tracker-logo"; path = "Resources/prompt-tracker-logo"; sourceTree = "<group>"; };
+		A50BA1B3300A28A8006BB0C0 /* tests */ = {isa = PBXFileReference; lastKnownFileType = folder; name = tests; path = Resources/tests; sourceTree = "<group>"; };
+		A50BA1B4300A28A8006BB0C0 /* consent */ = {isa = PBXFileReference; lastKnownFileType = folder; name = consent; path = Resources/consent; sourceTree = "<group>"; };
+		A50BA1B5300A28A8006BB0C0 /* icons */ = {isa = PBXFileReference; lastKnownFileType = folder; name = icons; path = Resources/icons; sourceTree = "<group>"; };
+		A50BA1B6300A28A8006BB0C0 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = Resources/manifest.json; sourceTree = "<group>"; };
+		A50BA1B7300A28A8006BB0C0 /* MVP mobile et desktop.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; name = "MVP mobile et desktop.zip"; path = "Resources/MVP mobile et desktop.zip"; sourceTree = "<group>"; };
+		A50BA1B8300A28A8006BB0C0 /* _locales */ = {isa = PBXFileReference; lastKnownFileType = folder; name = _locales; path = Resources/_locales; sourceTree = "<group>"; };
+		A50BA1B9300A28A8006BB0C0 /* fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; name = fonts; path = Resources/fonts; sourceTree = "<group>"; };
+		A50BA1BA300A28A8006BB0C0 /* onboarding */ = {isa = PBXFileReference; lastKnownFileType = folder; name = onboarding; path = Resources/onboarding; sourceTree = "<group>"; };
+		A50BA1BB300A28A8006BB0C0 /* src */ = {isa = PBXFileReference; lastKnownFileType = folder; name = src; path = Resources/src; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A50BA15F300A28A8006BB0C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A50BA171300A28A8006BB0C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A50BA17E300A28A8006BB0C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A50BA188300A28A8006BB0C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A50BA14E300A28A6006BB0C0 = {
+			isa = PBXGroup;
+			children = (
+				A50BA153300A28A6006BB0C0 /* Shared (App) */,
+				A50BA15C300A28A8006BB0C0 /* Shared (Extension) */,
+				A50BA164300A28A8006BB0C0 /* iOS (App) */,
+				A50BA175300A28A8006BB0C0 /* macOS (App) */,
+				A50BA185300A28A8006BB0C0 /* iOS (Extension) */,
+				A50BA18F300A28A8006BB0C0 /* macOS (Extension) */,
+				A50BA163300A28A8006BB0C0 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A50BA153300A28A6006BB0C0 /* Shared (App) */ = {
+			isa = PBXGroup;
+			children = (
+				A50BA15A300A28A6006BB0C0 /* ViewController.swift */,
+				A50BA15B300A28A8006BB0C0 /* Assets.xcassets */,
+				A50BA154300A28A6006BB0C0 /* Resources */,
+			);
+			path = "Shared (App)";
+			sourceTree = "<group>";
+		};
+		A50BA154300A28A6006BB0C0 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A50BA155300A28A6006BB0C0 /* Main.html */,
+				A50BA157300A28A6006BB0C0 /* Icon.png */,
+				A50BA158300A28A6006BB0C0 /* Style.css */,
+				A50BA159300A28A6006BB0C0 /* Script.js */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A50BA15C300A28A8006BB0C0 /* Shared (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				A50BA1B0300A28A8006BB0C0 /* Resources */,
+				A50BA15D300A28A8006BB0C0 /* SafariWebExtensionHandler.swift */,
+			);
+			path = "Shared (Extension)";
+			sourceTree = "<group>";
+		};
+		A50BA163300A28A8006BB0C0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A50BA162300A28A8006BB0C0 /* Prompt Tracker.app */,
+				A50BA174300A28A8006BB0C0 /* Prompt Tracker.app */,
+				A50BA181300A28A8006BB0C0 /* Prompt Tracker Extension.appex */,
+				A50BA18B300A28A8006BB0C0 /* Prompt Tracker Extension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A50BA164300A28A8006BB0C0 /* iOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				A50BA165300A28A8006BB0C0 /* AppDelegate.swift */,
+				A50BA167300A28A8006BB0C0 /* SceneDelegate.swift */,
+				A50BA169300A28A8006BB0C0 /* LaunchScreen.storyboard */,
+				A50BA16C300A28A8006BB0C0 /* Main.storyboard */,
+				A50BA16F300A28A8006BB0C0 /* Info.plist */,
+			);
+			path = "iOS (App)";
+			sourceTree = "<group>";
+		};
+		A50BA175300A28A8006BB0C0 /* macOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				A50BA176300A28A8006BB0C0 /* AppDelegate.swift */,
+				A50BA178300A28A8006BB0C0 /* Main.storyboard */,
+				A50BA17B300A28A8006BB0C0 /* Info.plist */,
+				A50BA17C300A28A8006BB0C0 /* Prompt Tracker.entitlements */,
+			);
+			path = "macOS (App)";
+			sourceTree = "<group>";
+		};
+		A50BA185300A28A8006BB0C0 /* iOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				A50BA186300A28A8006BB0C0 /* Info.plist */,
+			);
+			path = "iOS (Extension)";
+			sourceTree = "<group>";
+		};
+		A50BA18F300A28A8006BB0C0 /* macOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				A50BA190300A28A8006BB0C0 /* Info.plist */,
+				A50BA191300A28A8006BB0C0 /* Prompt Tracker.entitlements */,
+			);
+			path = "macOS (Extension)";
+			sourceTree = "<group>";
+		};
+		A50BA1B0300A28A8006BB0C0 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A50BA1B1300A28A8006BB0C0 /* popup */,
+				A50BA1B2300A28A8006BB0C0 /* prompt-tracker-logo */,
+				A50BA1B3300A28A8006BB0C0 /* tests */,
+				A50BA1B4300A28A8006BB0C0 /* consent */,
+				A50BA1B5300A28A8006BB0C0 /* icons */,
+				A50BA1B6300A28A8006BB0C0 /* manifest.json */,
+				A50BA1B7300A28A8006BB0C0 /* MVP mobile et desktop.zip */,
+				A50BA1B8300A28A8006BB0C0 /* _locales */,
+				A50BA1B9300A28A8006BB0C0 /* fonts */,
+				A50BA1BA300A28A8006BB0C0 /* onboarding */,
+				A50BA1BB300A28A8006BB0C0 /* src */,
+			);
+			name = Resources;
+			path = "Shared (Extension)";
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50BA161300A28A8006BB0C0 /* Prompt Tracker (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A50BA1A6300A28A8006BB0C0 /* Build configuration list for PBXNativeTarget "Prompt Tracker (iOS)" */;
+			buildPhases = (
+				A50BA15E300A28A8006BB0C0 /* Sources */,
+				A50BA15F300A28A8006BB0C0 /* Frameworks */,
+				A50BA160300A28A8006BB0C0 /* Resources */,
+				A50BA1A5300A28A8006BB0C0 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A50BA184300A28A8006BB0C0 /* PBXTargetDependency */,
+			);
+			name = "Prompt Tracker (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "Prompt Tracker (iOS)";
+			productReference = A50BA162300A28A8006BB0C0 /* Prompt Tracker.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A50BA173300A28A8006BB0C0 /* Prompt Tracker (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A50BA1AD300A28A8006BB0C0 /* Build configuration list for PBXNativeTarget "Prompt Tracker (macOS)" */;
+			buildPhases = (
+				A50BA170300A28A8006BB0C0 /* Sources */,
+				A50BA171300A28A8006BB0C0 /* Frameworks */,
+				A50BA172300A28A8006BB0C0 /* Resources */,
+				A50BA1AC300A28A8006BB0C0 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A50BA18E300A28A8006BB0C0 /* PBXTargetDependency */,
+			);
+			name = "Prompt Tracker (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "Prompt Tracker (macOS)";
+			productReference = A50BA174300A28A8006BB0C0 /* Prompt Tracker.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A50BA180300A28A8006BB0C0 /* Prompt Tracker Extension (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A50BA1A2300A28A8006BB0C0 /* Build configuration list for PBXNativeTarget "Prompt Tracker Extension (iOS)" */;
+			buildPhases = (
+				A50BA17D300A28A8006BB0C0 /* Sources */,
+				A50BA17E300A28A8006BB0C0 /* Frameworks */,
+				A50BA17F300A28A8006BB0C0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Prompt Tracker Extension (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "Prompt Tracker Extension (iOS)";
+			productReference = A50BA181300A28A8006BB0C0 /* Prompt Tracker Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A50BA18A300A28A8006BB0C0 /* Prompt Tracker Extension (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A50BA1A9300A28A8006BB0C0 /* Build configuration list for PBXNativeTarget "Prompt Tracker Extension (macOS)" */;
+			buildPhases = (
+				A50BA187300A28A8006BB0C0 /* Sources */,
+				A50BA188300A28A8006BB0C0 /* Frameworks */,
+				A50BA189300A28A8006BB0C0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Prompt Tracker Extension (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "Prompt Tracker Extension (macOS)";
+			productReference = A50BA18B300A28A8006BB0C0 /* Prompt Tracker Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A50BA14F300A28A6006BB0C0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					A50BA161300A28A8006BB0C0 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					A50BA173300A28A8006BB0C0 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					A50BA180300A28A8006BB0C0 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					A50BA18A300A28A8006BB0C0 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+				};
+			};
+			buildConfigurationList = A50BA152300A28A6006BB0C0 /* Build configuration list for PBXProject "Prompt Tracker" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A50BA14E300A28A6006BB0C0;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A50BA163300A28A8006BB0C0 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A50BA161300A28A8006BB0C0 /* Prompt Tracker (iOS) */,
+				A50BA173300A28A8006BB0C0 /* Prompt Tracker (macOS) */,
+				A50BA180300A28A8006BB0C0 /* Prompt Tracker Extension (iOS) */,
+				A50BA18A300A28A8006BB0C0 /* Prompt Tracker Extension (macOS) */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A50BA160300A28A8006BB0C0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A50BA194300A28A8006BB0C0 /* Icon.png in Resources */,
+				A50BA16B300A28A8006BB0C0 /* LaunchScreen.storyboard in Resources */,
+				A50BA192300A28A8006BB0C0 /* Main.html in Resources */,
+				A50BA198300A28A8006BB0C0 /* Script.js in Resources */,
+				A50BA19C300A28A8006BB0C0 /* Assets.xcassets in Resources */,
+				A50BA16E300A28A8006BB0C0 /* Main.storyboard in Resources */,
+				A50BA196300A28A8006BB0C0 /* Style.css in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A50BA172300A28A8006BB0C0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A50BA195300A28A8006BB0C0 /* Icon.png in Resources */,
+				A50BA197300A28A8006BB0C0 /* Style.css in Resources */,
+				A50BA17A300A28A8006BB0C0 /* Main.storyboard in Resources */,
+				A50BA199300A28A8006BB0C0 /* Script.js in Resources */,
+				A50BA19D300A28A8006BB0C0 /* Assets.xcassets in Resources */,
+				A50BA193300A28A8006BB0C0 /* Main.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A50BA17F300A28A8006BB0C0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A50BA1C9300A28A8006BB0C0 /* tests in Resources */,
+				A50BA1CA300A28A8006BB0C0 /* consent in Resources */,
+				A50BA1CE300A28A8006BB0C0 /* _locales in Resources */,
+				A50BA1D0300A28A8006BB0C0 /* onboarding in Resources */,
+				A50BA1C8300A28A8006BB0C0 /* prompt-tracker-logo in Resources */,
+				A50BA1CB300A28A8006BB0C0 /* icons in Resources */,
+				A50BA1CC300A28A8006BB0C0 /* manifest.json in Resources */,
+				A50BA1D1300A28A8006BB0C0 /* src in Resources */,
+				A50BA1CF300A28A8006BB0C0 /* fonts in Resources */,
+				A50BA1C7300A28A8006BB0C0 /* popup in Resources */,
+				A50BA1CD300A28A8006BB0C0 /* MVP mobile et desktop.zip in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A50BA189300A28A8006BB0C0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A50BA1BE300A28A8006BB0C0 /* tests in Resources */,
+				A50BA1BF300A28A8006BB0C0 /* consent in Resources */,
+				A50BA1C3300A28A8006BB0C0 /* _locales in Resources */,
+				A50BA1C5300A28A8006BB0C0 /* onboarding in Resources */,
+				A50BA1BD300A28A8006BB0C0 /* prompt-tracker-logo in Resources */,
+				A50BA1C0300A28A8006BB0C0 /* icons in Resources */,
+				A50BA1C1300A28A8006BB0C0 /* manifest.json in Resources */,
+				A50BA1C6300A28A8006BB0C0 /* src in Resources */,
+				A50BA1C4300A28A8006BB0C0 /* fonts in Resources */,
+				A50BA1BC300A28A8006BB0C0 /* popup in Resources */,
+				A50BA1C2300A28A8006BB0C0 /* MVP mobile et desktop.zip in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A50BA15E300A28A8006BB0C0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A50BA19A300A28A8006BB0C0 /* ViewController.swift in Sources */,
+				A50BA166300A28A8006BB0C0 /* AppDelegate.swift in Sources */,
+				A50BA168300A28A8006BB0C0 /* SceneDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A50BA170300A28A8006BB0C0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A50BA19B300A28A8006BB0C0 /* ViewController.swift in Sources */,
+				A50BA177300A28A8006BB0C0 /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A50BA17D300A28A8006BB0C0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A50BA19E300A28A8006BB0C0 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A50BA187300A28A8006BB0C0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A50BA19F300A28A8006BB0C0 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A50BA184300A28A8006BB0C0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A50BA180300A28A8006BB0C0 /* Prompt Tracker Extension (iOS) */;
+			targetProxy = A50BA183300A28A8006BB0C0 /* PBXContainerItemProxy */;
+		};
+		A50BA18E300A28A8006BB0C0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A50BA18A300A28A8006BB0C0 /* Prompt Tracker Extension (macOS) */;
+			targetProxy = A50BA18D300A28A8006BB0C0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		A50BA155300A28A6006BB0C0 /* Main.html */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A50BA156300A28A6006BB0C0 /* Base */,
+			);
+			name = Main.html;
+			sourceTree = "<group>";
+		};
+		A50BA169300A28A8006BB0C0 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A50BA16A300A28A8006BB0C0 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+		A50BA16C300A28A8006BB0C0 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A50BA16D300A28A8006BB0C0 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		A50BA178300A28A8006BB0C0 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A50BA179300A28A8006BB0C0 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		A50BA1A0300A28A8006BB0C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A50BA1A1300A28A8006BB0C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A50BA1A3300A28A8006BB0C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Prompt Tracker Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "app.track-prompt.Prompt-Tracker.Extension";
+				PRODUCT_NAME = "Prompt Tracker Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A50BA1A4300A28A8006BB0C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Prompt Tracker Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "app.track-prompt.Prompt-Tracker.Extension";
+				PRODUCT_NAME = "Prompt Tracker Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A50BA1A7300A28A8006BB0C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Prompt Tracker";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "app.track-prompt.Prompt-Tracker";
+				PRODUCT_NAME = "Prompt Tracker";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A50BA1A8300A28A8006BB0C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Prompt Tracker";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "app.track-prompt.Prompt-Tracker";
+				PRODUCT_NAME = "Prompt Tracker";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A50BA1AA300A28A8006BB0C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "macOS (Extension)/Prompt Tracker.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Prompt Tracker Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "app.track-prompt.Prompt-Tracker.Extension";
+				PRODUCT_NAME = "Prompt Tracker Extension";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A50BA1AB300A28A8006BB0C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "macOS (Extension)/Prompt Tracker.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Prompt Tracker Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "app.track-prompt.Prompt-Tracker.Extension";
+				PRODUCT_NAME = "Prompt Tracker Extension";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A50BA1AE300A28A8006BB0C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "macOS (App)/Prompt Tracker.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Prompt Tracker";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "app.track-prompt.Prompt-Tracker";
+				PRODUCT_NAME = "Prompt Tracker";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A50BA1AF300A28A8006BB0C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "macOS (App)/Prompt Tracker.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Prompt Tracker";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "app.track-prompt.Prompt-Tracker";
+				PRODUCT_NAME = "Prompt Tracker";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A50BA152300A28A6006BB0C0 /* Build configuration list for PBXProject "Prompt Tracker" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A50BA1A0300A28A8006BB0C0 /* Debug */,
+				A50BA1A1300A28A8006BB0C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A50BA1A2300A28A8006BB0C0 /* Build configuration list for PBXNativeTarget "Prompt Tracker Extension (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A50BA1A3300A28A8006BB0C0 /* Debug */,
+				A50BA1A4300A28A8006BB0C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A50BA1A6300A28A8006BB0C0 /* Build configuration list for PBXNativeTarget "Prompt Tracker (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A50BA1A7300A28A8006BB0C0 /* Debug */,
+				A50BA1A8300A28A8006BB0C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A50BA1A9300A28A8006BB0C0 /* Build configuration list for PBXNativeTarget "Prompt Tracker Extension (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A50BA1AA300A28A8006BB0C0 /* Debug */,
+				A50BA1AB300A28A8006BB0C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A50BA1AD300A28A8006BB0C0 /* Build configuration list for PBXNativeTarget "Prompt Tracker (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A50BA1AE300A28A8006BB0C0 /* Debug */,
+				A50BA1AF300A28A8006BB0C0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A50BA14F300A28A6006BB0C0 /* Project object */;
+}

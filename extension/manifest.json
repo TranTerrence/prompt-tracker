@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "__MSG_appDesc__",
   "default_locale": "fr",
   "icons": {
@@ -10,13 +10,19 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage", "alarms"],
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
   "background": {
     "service_worker": "src/background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ],
       "js": [
         "src/i18n.js",
         "src/theme.js",
@@ -30,7 +36,9 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://claude.ai/*"],
+      "matches": [
+        "https://claude.ai/*"
+      ],
       "js": [
         "src/i18n.js",
         "src/theme.js",
@@ -44,7 +52,9 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://gemini.google.com/*"],
+      "matches": [
+        "https://gemini.google.com/*"
+      ],
       "js": [
         "src/i18n.js",
         "src/theme.js",
@@ -58,7 +68,9 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://chat.mistral.ai/*"],
+      "matches": [
+        "https://chat.mistral.ai/*"
+      ],
       "js": [
         "src/i18n.js",
         "src/theme.js",
@@ -72,7 +84,9 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://grok.com/*"],
+      "matches": [
+        "https://grok.com/*"
+      ],
       "js": [
         "src/i18n.js",
         "src/theme.js",

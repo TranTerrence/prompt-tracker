@@ -1,0 +1,10 @@
+{
+  "appName": {
+    "message": "Prompt Tracker : le garde-fou de ton prompting",
+    "description": "Nom de l'extension sur le Chrome Web Store"
+  },
+  "appDesc": {
+    "message": "Une pause réfléchie avant tes prompts IA : un dialogue socratique pour penser par toi-même. ChatGPT, Claude, Gemini, Mistral, Grok.",
+    "description": "Description de l'extension"
+  }
+}

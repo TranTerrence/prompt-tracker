@@ -3,7 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { average, averageScore, averageFirstDraft, firstDraftOf, fmt, fmtDate, scoreOf, weekKey } from "@/lib/stats";
 import {
   OUTCOME_LABELS,
+  POST_KEYS,
+  POST_KEY_LABELS,
   SOCRATIC_LABELS,
+  type PostEvent,
   type PromptEvent,
   type Scores,
 } from "@/lib/types";
@@ -12,6 +15,11 @@ type EventRow = Pick<
   PromptEvent,
   "id" | "ts" | "scores" | "intercepted" | "outcome" | "score_before" | "score_after" | "site"
 > & { rounds: number | null };
+
+type PostRow = Pick<
+  PostEvent,
+  "id" | "ts" | "site" | "post_key" | "answered" | "answer_words" | "answer"
+>;
 
 const RUBRIQUES = ["clarte", "contexte", "iteration", "critique"] as const;
 
@@ -135,14 +143,29 @@ export default async function MePage() {
   const { userId } = await requireSession();
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("prompt_events")
-    .select("id, ts, scores, intercepted, outcome, score_before, score_after, site, rounds")
-    .eq("user_id", userId)
-    .order("ts", { ascending: false })
-    .limit(5000);
+  const [{ data }, { data: postData }] = await Promise.all([
+    supabase
+      .from("prompt_events")
+      .select("id, ts, scores, intercepted, outcome, score_before, score_after, site, rounds")
+      .eq("user_id", userId)
+      .order("ts", { ascending: false })
+      .limit(5000),
+    supabase
+      .from("post_events")
+      .select("id, ts, site, post_key, answered, answer_words, answer")
+      .eq("user_id", userId)
+      .order("ts", { ascending: false })
+      .limit(1000),
+  ]);
 
   const events = (data ?? []) as EventRow[];
+  const postEvents = (postData ?? []) as PostRow[];
+  const postAnswered = postEvents.filter((p) => p.answered).length;
+  const postByKey = POST_KEYS.map((key) => ({
+    key,
+    label: POST_KEY_LABELS[key],
+    count: postEvents.filter((p) => p.post_key === key).length,
+  }));
   const avg = averageScore(events);
   const avgFirst = averageFirstDraft(events);
 
@@ -277,6 +300,81 @@ export default async function MePage() {
                     {typeof e.score_before === "number" ? e.score_before : ":"}
                     {" → "}
                     {typeof e.score_after === "number" ? e.score_after : ":"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
+        <div className="border-b border-card-border px-5 py-4">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            Miroir d&apos;après
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Les questions réflexives posées après les réponses de l&apos;IA :
+            reformuler, vérifier, oser le désaccord.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-4 border-b border-card-border px-5 py-4 sm:grid-cols-4">
+          <div>
+            <p className="text-[13px] text-muted">Réflexions</p>
+            <p className="mt-1 font-display text-2xl font-medium tracking-tight tabular-nums">
+              {postEvents.length}
+            </p>
+            <p className="mt-0.5 text-xs text-muted">
+              dont {postAnswered} répondue{postAnswered > 1 ? "s" : ""}
+            </p>
+          </div>
+          {postByKey.map((k) => (
+            <div key={k.key}>
+              <p className="text-[13px] text-muted">{k.label}</p>
+              <p className="mt-1 font-display text-2xl font-medium tracking-tight tabular-nums">
+                {k.count}
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wider text-muted">
+                <th className="px-5 py-3 font-medium">Date</th>
+                <th className="px-5 py-3 font-medium">Type</th>
+                <th className="px-5 py-3 font-medium">Réponse</th>
+              </tr>
+            </thead>
+            <tbody>
+              {postEvents.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-5 py-8 text-center text-muted">
+                    Pas encore de réflexion. Le miroir d&apos;après apparaît une
+                    fois par conversation, après une réponse de l&apos;IA.
+                  </td>
+                </tr>
+              )}
+              {postEvents.slice(0, 20).map((p) => (
+                <tr
+                  key={p.id}
+                  className="border-t border-card-border transition-colors hover:bg-soft/50"
+                >
+                  <td className="px-5 py-3 tabular-nums">{fmtDate(p.ts)}</td>
+                  <td className="px-5 py-3">{POST_KEY_LABELS[p.post_key] ?? p.post_key}</td>
+                  <td className="px-5 py-3">
+                    {p.answered ? (
+                      p.answer ? (
+                        <span className="whitespace-pre-wrap">{p.answer}</span>
+                      ) : (
+                        <span className="text-muted">
+                          répondue ({p.answer_words ?? 0} mot{(p.answer_words ?? 0) > 1 ? "s" : ""},
+                          texte non conservé)
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-muted">passée</span>
+                    )}
                   </td>
                 </tr>
               ))}

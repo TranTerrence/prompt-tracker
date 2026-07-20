@@ -105,6 +105,30 @@ export type PromptEvent = {
   conv_key: string | null;
 };
 
+export type PostEvent = {
+  id: string;
+  client_event_id: string | null;
+  user_id: string;
+  org_id: string;
+  ts: string;
+  site: string | null;
+  conv_key: string | null;
+  post_key: "explain" | "verify" | "disagree" | string;
+  category: string | null;
+  answered: boolean;
+  answer_words: number | null;
+  answer: string | null;
+  created_at: string;
+};
+
+export const POST_KEYS = ["explain", "verify", "disagree"] as const;
+
+export const POST_KEY_LABELS: Record<string, string> = {
+  explain: "Reformulation",
+  verify: "Vérification",
+  disagree: "Désaccord",
+};
+
 export const SOCRATIC_KEYS = [
   "delegation",
   "clarte",

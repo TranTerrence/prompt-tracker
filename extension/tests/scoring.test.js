@@ -91,6 +91,35 @@ assert.strictEqual(S.dayStreak([ev(0, 50), ev(1, 45), ev(3, 60)], 40, now), 3, "
 assert.strictEqual(S.dayStreak([ev(0, 50), ev(1, 20), ev(2, 60)], 40, now), 1, "un jour raté casse la série");
 assert.strictEqual(S.dayStreak([], 40, now), 0);
 
+/* ---------- gel de série : 7 réussites consécutives = 1 gel (2 max) ---------- */
+
+const week = Array.from({ length: 7 }, (_, i) => ev(i + 1, 60)); // J-7 à J-1 réussis
+assert.deepStrictEqual(
+  S.dayStreakInfo(week, 40, now),
+  { streak: 7, freezes: 1 },
+  "7 jours réussis mettent un gel en réserve"
+);
+assert.deepStrictEqual(
+  S.dayStreakInfo([...week, ev(0, 20)], 40, now),
+  { streak: 7, freezes: 0 },
+  "le jour raté consomme le gel : la série tient sans avancer"
+);
+assert.strictEqual(
+  S.dayStreak([...week.map((e) => ({ ...e, ts: new Date(Date.parse(e.ts) - day).toISOString() })), ev(1, 20), ev(0, 55)], 40, now),
+  8,
+  "après un jour gelé, la série reprend sa progression"
+);
+assert.deepStrictEqual(
+  S.dayStreakInfo([ev(2, 60), ev(1, 20), ev(0, 55)], 40, now),
+  { streak: 1, freezes: 0 },
+  "sans gel en réserve, le jour raté casse la série"
+);
+assert.strictEqual(
+  S.dayStreakInfo(Array.from({ length: 21 }, (_, i) => ev(i, 60)), 40, now).freezes,
+  2,
+  "jamais plus de 2 gels en réserve"
+);
+
 /* ---------- typage des tours : isFollowUp ---------- */
 
 const prevPrompts = ["Rédige une note sur les politiques de relance de 2008 pour mon cours d'économie"];
@@ -162,5 +191,76 @@ assert.ok(
   S.score(stripped).total <= S.score(scaffolded).total,
   "le score de l'aperçu ne compte plus la structure injectée"
 );
+
+/* ---------- V3.9 : banque enrichie, sélection contextuelle, relance ---------- */
+
+// Non-répétition : aucune clé servie deux fois avant l'épuisement (recycled)
+{
+  const asked = [];
+  const seen = new Set();
+  let recycledAt = null;
+  for (let i = 0; i < 80; i++) {
+    const q = S.nextQuestion({ originalPrompt: "la guerre froide", scores: S.score("la guerre froide"), asked, lang: "fr" });
+    if (q.recycled) { recycledAt = i; break; }
+    assert.ok(!seen.has(q.key), `clé répétée avant épuisement : ${q.key}`);
+    seen.add(q.key);
+    asked.push(q.key);
+  }
+  assert.ok(recycledAt !== null, "l'épuisement finit par arriver (recycled: true)");
+  assert.ok(seen.size >= 40, `banque réellement enrichie : ${seen.size} questions servies`);
+}
+
+// Sélection contextuelle : un prompt code obtient des questions ciblées code,
+// jamais une question ciblée sur une autre catégorie
+{
+  const codePrompt = "corrige ce bug python dans ma fonction";
+  const asked = [];
+  const served = [];
+  for (let i = 0; i < 15; i++) {
+    const q = S.nextQuestion({ originalPrompt: codePrompt, scores: S.score(codePrompt), asked, lang: "fr" });
+    if (q.recycled) break;
+    served.push(q.key);
+    asked.push(q.key);
+  }
+  assert.ok(served.some((k) => k.includes("-code")), `au moins une question ciblée code : ${served.join(", ")}`);
+  assert.ok(!served.some((k) => k.includes("redaction") || k.includes("traduction")), `jamais une question d'une autre catégorie : ${served.join(", ")}`);
+}
+
+// Relance : même axe, niveau strictement supérieur, clé écartée jamais reproposée
+{
+  const scores = S.score("la guerre froide");
+  const first = S.nextQuestion({ originalPrompt: "la guerre froide", scores, asked: [], lang: "fr" });
+  const re = S.nextQuestion({
+    originalPrompt: "la guerre froide", scores, asked: [first.key], answeredCount: 0,
+    reroll: true, lastAxis: first.axis, lastLevel: first.level, lang: "fr",
+  });
+  assert.notStrictEqual(re.key, first.key, "la clé écartée ne revient pas");
+  assert.strictEqual(re.axis, first.axis, "la relance reste sur le même axe");
+  assert.ok(re.level > first.level, `la relance est plus exigeante : ${first.level} -> ${re.level}`);
+}
+
+// Métadonnées de retour : level/source/recycled présents, rétro-compat surcharge org
+{
+  const q = S.nextQuestion({ originalPrompt: "fais mes devoirs de maths", scores: S.score("fais mes devoirs de maths"), asked: [], lang: "fr" });
+  assert.strictEqual(q.source, "local");
+  assert.ok(q.level >= 1 && q.level <= 3, `level valide : ${q.level}`);
+  assert.strictEqual(q.recycled, false);
+  const custom = S.nextQuestion(
+    { originalPrompt: "fais mes devoirs de maths", scores: S.score("fais mes devoirs de maths"), asked: [], lang: "fr" },
+    { [q.key]: "Question de l'organisation ?" }
+  );
+  assert.strictEqual(custom.question, "Question de l'organisation ?", "la surcharge org gagne toujours");
+}
+
+// Profils : une question ciblée student ne sort jamais pour un consultant
+{
+  const asked = [];
+  for (let i = 0; i < 80; i++) {
+    const q = S.nextQuestion({ originalPrompt: "la guerre froide", scores: S.score("la guerre froide"), asked, lang: "fr", profile: "consultant" });
+    if (q.recycled) break;
+    assert.notStrictEqual(q.key, "appro-13", "appro-13 est réservée au profil student");
+    asked.push(q.key);
+  }
+}
 
 console.log("scoring.test.js : toutes les assertions passent ✓");

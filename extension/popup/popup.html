@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
+  <div id="fatal" class="fatal" hidden></div>
   <header>
     <div class="brand-row">
       <img id="brand-logo" src="../icons/icon48.png" alt="" width="24" height="24" />
@@ -19,6 +20,13 @@
     <p class="tagline" data-i18n="popupTagline"></p>
     <span id="health" class="health" hidden></span>
   </header>
+
+  <!-- Extension en veille : la divulgation des données n'a pas encore été
+       acceptée. Rien n'est capturé ; ce bandeau ramène à l'onboarding. -->
+  <section id="inert-banner" class="inert" hidden>
+    <p id="inert-text"></p>
+    <button id="inert-cta"></button>
+  </section>
 
   <section id="auth" class="auth">
     <div id="auth-form">
@@ -39,12 +47,23 @@
         <div class="auth-buttons">
           <button id="join-submit"></button>
         </div>
+        <!-- Divulgation avant la jonction : rejoindre une classe = partager les
+             indicateurs listés. L'acte affirmatif est le bouton d'accord. -->
+        <div id="join-disclosure" class="join-disclosure" hidden>
+          <h3 id="join-disc-title"></h3>
+          <p id="join-disc-body"></p>
+          <div class="auth-buttons">
+            <button id="join-disc-accept"></button>
+            <button id="join-disc-cancel" class="cancel"></button>
+          </div>
+        </div>
         <p id="join-error" class="auth-error" hidden></p>
       </div>
       <div class="auth-buttons">
         <button id="open-dashboard"></button>
         <button id="auth-logout" class="secondary"></button>
       </div>
+      <p class="auth-hint" data-i18n="authDashboardHint"></p>
       <button id="open-consent" class="secondary" hidden></button>
     </div>
   </section>
@@ -80,6 +99,7 @@
     <button id="export"></button>
     <button id="reset" class="danger"></button>
   </footer>
+  <p class="privacy-link"><a id="method-link" href="https://track-prompt.vercel.app/methode" target="_blank" rel="noreferrer"></a> · <a id="privacy-link" href="https://track-prompt.vercel.app/privacy" target="_blank" rel="noreferrer"></a></p>
 
   <script src="../src/i18n.js"></script>
   <script src="../src/scoring.js"></script>

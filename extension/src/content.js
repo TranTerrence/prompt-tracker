@@ -21,6 +21,10 @@
 
   // Repère visible dans l'UI du chat : l'extension est active (couleurs de l'org).
   function refreshBadge() {
+    if (!disclosureAccepted) {
+      CoachBadge.remove();
+      return;
+    }
     CoachBadge.render({
       branding: orgConfig && orgConfig.branding,
       healthy: adapterHealthy,
@@ -40,6 +44,11 @@
   // Consentements de l'utilisateur (catégorie → bool), gérés par consent.html.
   let consents = {};
 
+  // Divulgation bien visible (onboarding) : tant que l'utilisateur n'a pas
+  // cliqué « J'accepte et j'active », l'extension est inerte : aucune capture,
+  // même locale, aucun badge injecté dans la page.
+  let disclosureAccepted = false;
+
   // Cadence « unité de tâche » : état par fil de conversation, hydraté en
   // mémoire (la décision d'interception doit rester synchrone à l'envoi).
   const pausedConvs = new Set(); // fils où l'utilisateur a dit « laisse-moi »
@@ -55,10 +64,11 @@
     });
   }
 
-  chrome.storage.local.get(["settings", "orgConfig", "consents", "events", "pausedConvs", "toastedConvs"], (data) => {
+  chrome.storage.local.get(["settings", "orgConfig", "consents", "events", "pausedConvs", "toastedConvs", "disclosure"], (data) => {
     settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
     orgConfig = data.orgConfig || null;
     consents = data.consents || {};
+    disclosureAccepted = Boolean(data.disclosure && data.disclosure.accepted);
     for (const c of data.pausedConvs || []) pausedConvs.add(c);
     for (const c of data.toastedConvs || []) toastedConvs.add(c);
     recomputeThreshold(data.events);
@@ -69,6 +79,10 @@
     if (changes.settings) settings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
     if (changes.orgConfig) orgConfig = changes.orgConfig.newValue || null;
     if (changes.consents) consents = changes.consents.newValue || {};
+    if (changes.disclosure) {
+      disclosureAccepted = Boolean(changes.disclosure.newValue && changes.disclosure.newValue.accepted);
+      refreshBadge();
+    }
     if (changes.settings || changes.orgConfig) {
       chrome.storage.local.get("events", (data) => recomputeThreshold(data.events));
       CoachTheme.set(settings.theme);
@@ -135,6 +149,7 @@
   // génération : une question réflexive (explain-back, vérification, désaccord),
   // au maximum UNE par conversation, jamais bloquante (P4, P10).
   function armPostMirror() {
+    if (!disclosureAccepted) return;
     if (!effective("postMirrorEnabled")) return;
     CoachAdapter.watchResponse({
       onComplete() {
@@ -258,6 +273,7 @@
     // de tâche » : la modale intercepte des OUVERTURES de fil ; dans un fil
     // lancé, elle ne revient que sur décrochage répété, jamais sur une suite.
     shouldIntercept(text) {
+      if (!disclosureAccepted) return false;
       if (!effective("interceptEnabled")) return false;
       const scores = CoachScoring.score(text, recentPromptTexts);
       pendingReentry = false;
@@ -295,19 +311,55 @@
 
       // Question suivante : LLM sur mesure si l'org l'active (repli silencieux
       // sur la banque locale : l'itération n'attend jamais le réseau plus de 2 s).
+      // Le prompt brut et le dialogue transitent par le serveur : cela exige
+      // les consentements prompt_text ET socratic_dialogue (re-vérifié serveur).
+      // llmActive est transmis à la modale : notice et badge disent à
+      // l'utilisateur ce qui est généré par IA (transparence, retour terrain).
+      const llmActive = Boolean(
+        effective("llmEnabled") && consented("prompt_text") && consented("socratic_dialogue")
+      );
       function ask(dialogueState) {
+        // La relance (« autre question ») escalade l'exigence : un cran
+        // au-dessus de la question écartée, localement comme côté LLM.
+        const depth = Math.min(3, 1 + dialogueState.answers.length);
         const local = () =>
           CoachScoring.nextQuestion(
-            { originalPrompt: text, scores, asked: dialogueState.asked, lang: CoachI18n.lang, profile: effective("profile") },
+            {
+              originalPrompt: text,
+              scores,
+              asked: dialogueState.asked,
+              answeredCount: dialogueState.answers.length,
+              reroll: Boolean(dialogueState.reroll),
+              lastAxis: dialogueState.lastAxis || null,
+              lastLevel: dialogueState.lastLevel || null,
+              lang: CoachI18n.lang,
+              profile: effective("profile"),
+            },
             templates
           );
-        if (!effective("llmEnabled")) return Promise.resolve(local());
+        if (!llmActive) return Promise.resolve(local());
         return new Promise((resolve) => {
           chrome.runtime.sendMessage(
-            { type: "llm-question", prompt: text, dialogue: dialogueState.answers.map((a) => ({ question: a.question, answer: a.answer })) },
+            {
+              type: "llm-question",
+              prompt: text,
+              dialogue: dialogueState.answers.map((a) => ({ question: a.question, answer: a.answer })),
+              lang: CoachI18n.lang,
+              intent: dialogueState.reroll ? "reroll" : "next",
+              rejected: dialogueState.reroll && dialogueState.lastQuestion ? [dialogueState.lastQuestion] : [],
+              askedQuestions: dialogueState.answers.slice(-3).map((a) => a.question),
+              depth,
+            },
             (res) => {
               if (!chrome.runtime.lastError && res && res.question) {
-                resolve({ key: `llm-${dialogueState.asked.length}`, axis: "llm", label: "Ma réflexion", question: res.question });
+                resolve({
+                  key: `llm-${dialogueState.asked.length}`,
+                  axis: "llm",
+                  label: CoachI18n.t("llmAxisLabel"),
+                  question: res.question,
+                  level: depth,
+                  source: "llm",
+                });
               } else {
                 resolve(local());
               }
@@ -318,14 +370,23 @@
 
       const reentry = pendingReentry;
       pendingReentry = false;
+      // Plan « si…, alors… » formulé à l'onboarding : rappelé tel quel pendant
+      // 6 semaines (Gollwitzer ; Lally 2010 pour l'horizon), puis on s'efface.
+      const intentionAge = Date.now() - Date.parse(settings.intentionSetAt || "");
+      const intention =
+        settings.intentionPlan && Number.isFinite(intentionAge) && intentionAge < 42 * 24 * 3600 * 1000
+          ? settings.intentionPlan
+          : null;
       CoachMirror.showModal({
         promptText: text,
         scoreBefore: scores.total,
+        intention,
         branding: orgConfig && orgConfig.branding,
         // Ouverture de fil : promesse de tranquillité. Ré-entrée : honnêteté
         // sur la raison (3 décrochages), jamais de reproche.
         subtitle: reentry ? CoachI18n.t("modalSubReentry", scores.total) : undefined,
         promise: !reentry,
+        llmActive,
         onPause(m) {
           pauseCurrentConv();
           appendEvent(
@@ -337,6 +398,7 @@
               mirrorFeedback: "paused_thread",
               rounds: m.rounds,
               answersCount: m.answersCount,
+              rerolls: m.rerolls,
             })
           );
         },
@@ -349,6 +411,12 @@
           rememberText(finalText);
           const after = CoachScoring.score(finalText, recentPromptTexts);
           lastPrompt = { category: CoachScoring.categorize(finalText), scores: after };
+          // Lisibilité des modes (retour terrain) : dire in situ comment cet
+          // envoi sera compté, au moment exact où la catégorie se décide.
+          CoachMirror.flash(
+            CoachI18n.t("toastSentImproved", (orgConfig && orgConfig.branding && orgConfig.branding.name) || CoachI18n.t("brandDefault")),
+            orgConfig && orgConfig.branding && orgConfig.branding.color
+          );
           appendEvent(
             buildEvent(finalText, after, {
               intercepted: true,
@@ -358,6 +426,7 @@
               mirrorShown: true,
               rounds: m.rounds,
               answersCount: m.answersCount,
+              rerolls: m.rerolls,
               dialogue: m.answers && m.answers.length ? m.answers : null,
             }),
             () => CoachAdapter.submitText(finalText).then(() => armPostMirror())
@@ -366,6 +435,10 @@
         onSendAnyway(m) {
           rememberText(text);
           lastPrompt = { category: CoachScoring.categorize(text), scores };
+          CoachMirror.flash(
+            CoachI18n.t("toastSentDirect"),
+            orgConfig && orgConfig.branding && orgConfig.branding.color
+          );
           appendEvent(
             buildEvent(text, scores, {
               intercepted: true,
@@ -375,6 +448,7 @@
               mirrorShown: true,
               rounds: m.rounds,
               answersCount: m.answersCount,
+              rerolls: m.rerolls,
               dialogue: m.answers && m.answers.length ? m.answers : null,
             }),
             () => CoachAdapter.submitText(text).then(() => armPostMirror())
@@ -390,6 +464,7 @@
               mirrorShown: true,
               rounds: m.rounds,
               answersCount: m.answersCount,
+              rerolls: m.rerolls,
             })
           );
         },
@@ -400,6 +475,7 @@
     // Toast : au plus UN par fil, jamais sur un fil en pause, et jamais la
     // suggestion « trop court » sur une suite (usage normal du chat).
     onSubmit(text) {
+      if (!disclosureAccepted) return;
       const scores = CoachScoring.score(text, recentPromptTexts);
       const conv = CoachAdapter.conversationKey();
       const isNew = CoachAdapter.isNewConversation();
@@ -437,6 +513,7 @@
   // Sonde de santé : si l'adaptateur ne trouve plus le composeur, le popup
   // alerte et le badge passe en avertissement dans l'UI du chat.
   setTimeout(() => {
+    if (!disclosureAccepted) return; // inerte : pas même la sonde de santé
     adapterHealthy = CoachAdapter.healthy();
     chrome.storage.local.set({ [`health_${CoachAdapter.site}`]: { healthy: adapterHealthy, checkedAt: new Date().toISOString() } });
     refreshBadge();

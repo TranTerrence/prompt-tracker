@@ -3,7 +3,19 @@ import { notFound } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { averageFirstDraft, averageScore, fmt, fmtDate } from "@/lib/stats";
-import { OUTCOME_LABELS, type Profile, type PromptEvent } from "@/lib/types";
+import {
+  OUTCOME_LABELS,
+  POST_KEYS,
+  POST_KEY_LABELS,
+  type PostEvent,
+  type Profile,
+  type PromptEvent,
+} from "@/lib/types";
+
+type PostRow = Pick<
+  PostEvent,
+  "id" | "ts" | "site" | "post_key" | "answered" | "answer_words" | "answer"
+>;
 
 type EventRow = Pick<
   PromptEvent,
@@ -39,13 +51,28 @@ export default async function StudentPage({
     .maybeSingle<Pick<Profile, "id" | "email" | "display_name" | "role" | "disabled">>();
   if (!student) notFound();
 
-  const { data } = await supabase
-    .from("prompt_events")
-    .select("id, ts, site, scores, intercepted, outcome, score_before, score_after, text, dialogue, rounds")
-    .eq("user_id", id)
-    .order("ts", { ascending: false })
-    .limit(500);
+  const [{ data }, { data: postData }] = await Promise.all([
+    supabase
+      .from("prompt_events")
+      .select("id, ts, site, scores, intercepted, outcome, score_before, score_after, text, dialogue, rounds")
+      .eq("user_id", id)
+      .order("ts", { ascending: false })
+      .limit(500),
+    supabase
+      .from("post_events")
+      .select("id, ts, site, post_key, answered, answer_words, answer")
+      .eq("user_id", id)
+      .order("ts", { ascending: false })
+      .limit(500),
+  ]);
   const events = (data ?? []) as EventRow[];
+  const postEvents = (postData ?? []) as PostRow[];
+  const postAnswered = postEvents.filter((p) => p.answered).length;
+  const postByKey = POST_KEYS.map((key) => ({
+    key,
+    label: POST_KEY_LABELS[key],
+    count: postEvents.filter((p) => p.post_key === key).length,
+  }));
 
   const shared = events.filter((e) => e.text || (e.dialogue && e.dialogue.length));
   const interceptions = events.filter((e) => e.intercepted).slice(0, 25);
@@ -120,6 +147,77 @@ export default async function StudentPage({
                     {typeof e.score_before === "number" ? e.score_before : ":"}
                     {" → "}
                     {typeof e.score_after === "number" ? e.score_after : ":"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
+        <div className="border-b border-card-border px-5 py-4">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            Miroir d&apos;après
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Les réflexions posées après les réponses de l&apos;IA : reformuler,
+            vérifier, oser le désaccord. Le texte n&apos;apparaît que si
+            l&apos;étudiant a consenti à le partager.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-4 border-b border-card-border px-5 py-4 sm:grid-cols-4">
+          <div>
+            <p className="text-[13px] text-muted">Réflexions</p>
+            <p className="mt-1 font-display text-2xl font-medium tracking-tight tabular-nums">
+              {postEvents.length}
+            </p>
+            <p className="mt-0.5 text-xs text-muted">
+              dont {postAnswered} répondue{postAnswered > 1 ? "s" : ""}
+            </p>
+          </div>
+          {postByKey.map((k) => (
+            <div key={k.key}>
+              <p className="text-[13px] text-muted">{k.label}</p>
+              <p className="mt-1 font-display text-2xl font-medium tracking-tight tabular-nums">
+                {k.count}
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wider text-muted">
+                <th className="px-5 py-3 font-medium">Date</th>
+                <th className="px-5 py-3 font-medium">Type</th>
+                <th className="px-5 py-3 font-medium">Réponse</th>
+              </tr>
+            </thead>
+            <tbody>
+              {postEvents.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-5 py-8 text-center text-muted">
+                    Aucune réflexion pour le moment.
+                  </td>
+                </tr>
+              )}
+              {postEvents.slice(0, 20).map((p) => (
+                <tr key={p.id} className="border-t border-card-border">
+                  <td className="px-5 py-3 tabular-nums">{fmtDate(p.ts)}</td>
+                  <td className="px-5 py-3">{POST_KEY_LABELS[p.post_key] ?? p.post_key}</td>
+                  <td className="px-5 py-3">
+                    {p.answered ? (
+                      p.answer ? (
+                        <span className="whitespace-pre-wrap">{p.answer}</span>
+                      ) : (
+                        <span className="text-muted">
+                          répondue · contenu non partagé
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-muted">passée</span>
+                    )}
                   </td>
                 </tr>
               ))}

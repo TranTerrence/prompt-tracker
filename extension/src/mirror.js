@@ -84,6 +84,46 @@ const CoachMirror = (() => {
     if (typeof CoachMirror.onClose === "function") CoachMirror.onClose(reason);
   }
 
+  /* ---------- Flash : confirmation éphémère du mode d'envoi ---------- */
+
+  // Petit encart auto-dissipé (retour terrain, axe lisibilité : dire in situ
+  // comment l'envoi sera compté). Aucun bouton : informer, pas interrompre.
+  let flashHost = null;
+  let flashTimer = null;
+
+  function flash(message, accentColor) {
+    clearTimeout(flashTimer);
+    if (flashHost) flashHost.remove();
+    const accent = accentColor || CoachTheme.DEFAULT_ACCENT;
+    flashHost = document.createElement("div");
+    flashHost.id = "coach-ia-flash";
+    const shadow = flashHost.attachShadow({ mode: "open" });
+    shadow.innerHTML = `
+      <style>
+        :host { all: initial; }
+        .root { ${CoachTheme.vars(accent)} }
+        .pill { position: fixed; bottom: 24px; right: 24px; z-index: 2147483647;
+          max-width: min(340px, 86vw); padding: 10px 14px; border-radius: 12px;
+          background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+          border-left: 3px solid var(--accent);
+          font: 12.5px/1.45 var(--font-text); box-shadow: var(--shadow);
+          opacity: 0; transform: translateY(6px); transition: opacity .25s, transform .25s; }
+        .pill.visible { opacity: 1; transform: translateY(0); }
+      </style>
+      <div class="root"><div class="pill"></div></div>`;
+    shadow.querySelector(".pill").textContent = message;
+    document.documentElement.appendChild(flashHost);
+    requestAnimationFrame(() => shadow.querySelector(".pill").classList.add("visible"));
+    flashTimer = setTimeout(() => {
+      if (!flashHost) return;
+      flashHost.shadowRoot.querySelector(".pill").classList.remove("visible");
+      flashTimer = setTimeout(() => {
+        if (flashHost) flashHost.remove();
+        flashHost = null;
+      }, 300);
+    }, 4000);
+  }
+
   /* ---------- Miroir d'après : réflexion post-réponse ---------- */
 
   let postHost = null;
@@ -205,6 +245,8 @@ const CoachMirror = (() => {
       asked: [],
       current: null,
       previewFrozen: false, // édition manuelle de l'aperçu → on arrête de recompiler
+      rerolls: 0, // relances « autre question » sur toute la session
+      rerollsForCurrent: 0, // plafond par question (2) : borne le coût LLM
     };
 
     modalHost = document.createElement("div");
@@ -238,6 +280,8 @@ const CoachMirror = (() => {
         .closex:hover { color: var(--ink); }
         .sub { padding: 0 22px 12px; color: var(--muted); font-size: 12.5px; }
         .promise { padding: 0 22px 12px; color: var(--accent); font-size: 12px; font-style: italic; }
+        .intention { padding: 0 22px 12px; color: var(--muted); font-size: 12px; font-style: italic;
+          font-family: var(--font-display); }
         .pause-link { border: 0; background: none; color: var(--muted); font-size: 11.5px; cursor: pointer;
           text-decoration: underline; text-underline-offset: 2px; padding: 8px 0 0; align-self: center; }
         .pause-link:hover { color: var(--ink); }
@@ -247,6 +291,13 @@ const CoachMirror = (() => {
         .bubble { max-width: 86%; margin-bottom: 10px; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; }
         .bubble.coach { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 5px;
           font-family: var(--font-display); font-size: 14.5px; }
+        .bubble.replaced { opacity: .45; }
+        .llm-badge { display: block; font: 10px var(--font-text); color: var(--muted); margin-bottom: 3px;
+          text-transform: uppercase; letter-spacing: .06em; }
+        .llm-note { padding: 0 22px 10px; color: var(--muted); font-size: 11px;
+          display: flex; gap: 6px; align-items: baseline; }
+        .llm-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none;
+          position: relative; top: -1px; }
         .bubble.user { background: var(--accent); color: #FDFCF9; margin-left: auto; border-bottom-right-radius: 5px; }
         .bubble.skip { background: none; border: 1px dashed var(--border); color: var(--muted); font-style: italic; }
         .thinking { color: var(--muted); font-size: 12px; padding: 0 22px 6px; }
@@ -264,6 +315,10 @@ const CoachMirror = (() => {
         .skip-link { border: 0; background: none; color: var(--muted); font-size: 11.5px; cursor: pointer;
           text-decoration: underline; text-underline-offset: 2px; padding: 6px 0 0; }
         .skip-link:hover { color: var(--ink); }
+        .reroll-link { border: 0; background: none; color: var(--muted); font-size: 11.5px; cursor: pointer;
+          text-decoration: underline; text-underline-offset: 2px; padding: 6px 0 0; margin-left: 14px; }
+        .reroll-link:hover { color: var(--ink); }
+        .exhausted { padding: 6px 0 0; color: var(--muted); font-size: 11px; font-style: italic; }
 
         .preview-zone { padding: 12px 22px 18px; border-top: 1px solid var(--border); background: var(--soft); }
         .preview-head { display: flex; align-items: center; gap: 10px; font-size: 10.5px; color: var(--muted);
@@ -273,6 +328,10 @@ const CoachMirror = (() => {
         .recompile { display: none; border: 0; background: none; color: var(--accent); font-size: 11px;
           cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
         .preview-zone.frozen .recompile { display: inline; }
+        .method-link { margin-left: auto; color: var(--muted); text-decoration: none;
+          border: 1px solid var(--border); border-radius: 50%; width: 15px; height: 15px;
+          display: inline-flex; align-items: center; justify-content: center; font-size: 10px; }
+        .method-link:hover { color: var(--accent); border-color: var(--accent); }
         .preview { width: 100%; min-height: 72px; max-height: 150px; }
         .buttons { display: flex; gap: 10px; margin-top: 12px; }
         .send { flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--accent); background: var(--accent);
@@ -287,6 +346,8 @@ const CoachMirror = (() => {
           <div class="modal" role="dialog" aria-modal="true">
             <div class="head"><h1><span class="tick">🪞</span> </h1><button class="closex"></button></div>
             <div class="sub"></div>
+            <div class="llm-note" hidden><span class="llm-dot"></span><span class="llm-note-text"></span></div>
+            <div class="intention" hidden></div>
             <div class="promise" hidden></div>
             <div class="thread"></div>
             <div class="thinking" hidden>…</div>
@@ -295,12 +356,14 @@ const CoachMirror = (() => {
                 <textarea class="answer"></textarea>
                 <button class="reply"></button>
               </div>
-              <button class="skip-link"></button>
+              <button class="skip-link"></button><button class="reroll-link"></button>
+              <div class="exhausted" hidden></div>
             </div>
             <div class="preview-zone">
               <div class="preview-head">
                 <span class="preview-title"></span>
                 <button class="recompile"></button>
+                <a class="method-link" target="_blank" rel="noreferrer">?</a>
               </div>
               <textarea class="preview" spellcheck="false"></textarea>
               <div class="buttons">
@@ -320,6 +383,12 @@ const CoachMirror = (() => {
     el(".closex").title = t("modalCancelTitle");
     // Sous-titre : ré-entrée honnête si fournie, sinon standard + promesse.
     el(".sub").textContent = opts.subtitle || t("modalSub", opts.scoreBefore);
+    // Intention d'implémentation : le plan de l'utilisateur, tel quel,
+    // les premières semaines seulement (content.js décide de le fournir).
+    if (opts.intention) {
+      el(".intention").textContent = t("modalIntention", opts.intention);
+      el(".intention").hidden = false;
+    }
     if (opts.promise) {
       el(".promise").textContent = t("modalPromise");
       el(".promise").hidden = false;
@@ -328,9 +397,20 @@ const CoachMirror = (() => {
     el(".answer").placeholder = t("modalAnswerPlaceholder");
     el(".reply").textContent = t("modalReply");
     el(".skip-link").textContent = t("modalSkip");
+    el(".reroll-link").textContent = `↻ ${t("modalOtherQuestion")}`;
+    el(".reroll-link").title = t("modalOtherQuestionTitle");
+    // Transparence LLM : quand l'org a activé les questions IA (et que les
+    // consentements le permettent), on l'affiche, on ne le devine pas.
+    if (opts.llmActive) {
+      el(".llm-note-text").textContent = t("modalLlmNotice");
+      el(".llm-note").hidden = false;
+    }
     el(".recompile").textContent = t("modalRecompile");
     el(".send").textContent = t("modalSend");
     el(".anyway").textContent = t("modalSendAnyway");
+    // Transparence : le « ? » ouvre la page publique qui explique le barème.
+    el(".method-link").href = "https://track-prompt.vercel.app/methode";
+    el(".method-link").title = t("modalMethodTitle");
 
     const thread = el(".thread");
     const answerBox = el(".answer");
@@ -352,12 +432,19 @@ const CoachMirror = (() => {
       previewTitle.append(detail);
     }
 
-    function bubble(kind, text) {
+    function bubble(kind, text, badge) {
       const b = document.createElement("div");
       b.className = `bubble ${kind}`;
-      b.textContent = text;
+      if (badge) {
+        const tag = document.createElement("span");
+        tag.className = "llm-badge";
+        tag.textContent = badge;
+        b.appendChild(tag);
+      }
+      b.appendChild(document.createTextNode(text));
       thread.appendChild(b);
       thread.scrollTop = thread.scrollHeight;
+      return b;
     }
 
     function updatePreview() {
@@ -371,6 +458,7 @@ const CoachMirror = (() => {
       return {
         rounds: state.asked.length,
         answersCount: filled.length,
+        rerolls: state.rerolls,
         // Le raisonnement lui-même (paires question/réponse) : capturé en
         // local, transmis à l'org uniquement si l'utilisateur y a consenti.
         answers: filled.map((a) => ({ q: a.question, a: a.answer.trim(), axis: a.axis })),
@@ -378,18 +466,50 @@ const CoachMirror = (() => {
     }
 
     // Boucle infinie : demander la question suivante (jamais de fin imposée).
-    async function askNext() {
+    // extra transporte la relance ({ reroll, lastAxis, lastLevel, lastQuestion }).
+    async function askNext(extra = {}) {
       el(".thinking").hidden = false;
       let q;
       try {
-        q = await opts.ask({ answers: state.answers, asked: state.asked });
+        q = await opts.ask({ answers: state.answers, asked: state.asked, ...extra });
       } finally {
         el(".thinking").hidden = true;
       }
       state.current = q;
       state.asked.push(q.key);
-      bubble("coach", q.question);
+      if (!extra.reroll) state.rerollsForCurrent = 0;
+      // Le badge ne marque QUE les questions effectivement générées par le
+      // LLM : un repli local dans une session LLM reste sans badge.
+      bubble("coach", q.question, q.source === "llm" ? t("modalLlmBadge") : null);
+      // Banque locale épuisée (questions adaptées toutes posées) : la relance
+      // n'a plus de matière, sauf si le LLM peut toujours générer.
+      if (q.recycled && !opts.llmActive) {
+        el(".reroll-link").hidden = true;
+        const ex = el(".exhausted");
+        if (ex.hidden) {
+          ex.textContent = t("modalBankExhausted");
+          ex.hidden = false;
+        }
+      }
       answerBox.focus();
+    }
+
+    // « Autre question » (retour terrain) : la question écartée reste dans le
+    // fil, grisée (honnêteté), et sa clé reste brûlée. La suivante vise le
+    // même axe, un cran d'exigence au-dessus. Plafond : 2 relances par question.
+    function rerollQuestion() {
+      if (!state.current || state.rerollsForCurrent >= 2) return;
+      state.rerollsForCurrent++;
+      state.rerolls++;
+      const coaches = thread.querySelectorAll(".bubble.coach");
+      const last = coaches[coaches.length - 1];
+      if (last) last.classList.add("replaced");
+      askNext({
+        reroll: true,
+        lastAxis: state.current.axis,
+        lastLevel: state.current.level,
+        lastQuestion: state.current.question,
+      });
     }
 
     function submitAnswer(text) {
@@ -404,6 +524,7 @@ const CoachMirror = (() => {
 
     el(".reply").addEventListener("click", () => submitAnswer(answerBox.value));
     el(".skip-link").addEventListener("click", () => submitAnswer(""));
+    el(".reroll-link").addEventListener("click", rerollQuestion);
     answerBox.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -465,5 +586,5 @@ const CoachMirror = (() => {
     }
   }
 
-  return { show, hide: hideToast, showPost, closePost, showModal, closeModal, onFeedback: null, onClose: null };
+  return { show, hide: hideToast, flash, showPost, closePost, showModal, closeModal, onFeedback: null, onClose: null };
 })();

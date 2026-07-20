@@ -31,9 +31,11 @@ En mode organisation, seuls des **indicateurs** sont synchronisés (catégorie, 
 cd dashboard && cp .env.example .env.local  # renseigner les clés Supabase
 npm install && npm run dev                   # http://localhost:3000
 
-# Packager pour le Chrome Web Store :
-./scripts/package.sh                         # → dist/prompt-tracker-<version>.zip
+# Packager pour les stores (Chrome + Edge + Firefox, voir docs/PORTS.md) :
+./scripts/package.sh                         # → dist/prompt-tracker[-edge|-firefox]-<version>.zip
 ```
+
+Le portage Safari (macOS + iOS) vit dans `safari/` (projet Xcode généré, cf. [docs/PORTS.md](docs/PORTS.md)).
 
 Ajouter un site IA = un fichier `extension/src/adapters/<site>.js` (sélecteurs du composeur et du bouton d'envoi) + une entrée `content_scripts` dans le manifest : toute la mécanique est partagée par [`factory.js`](extension/src/adapters/factory.js).
 

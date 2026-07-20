@@ -30,7 +30,7 @@ export default async function AdminPage({
   const { groupe } = await searchParams;
   const supabase = await createClient();
 
-  const [profilesRes, groupsRes, eventsRes] = await Promise.all([
+  const [profilesRes, groupsRes, eventsRes, postEventsRes] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, email, display_name, role, disabled")
@@ -42,6 +42,11 @@ export default async function AdminPage({
       .eq("org_id", org.id)
       .order("ts", { ascending: false })
       .limit(10000),
+    supabase
+      .from("post_events")
+      .select("user_id, answered")
+      .eq("org_id", org.id)
+      .limit(10000),
   ]);
 
   const profiles = (profilesRes.data ?? []) as Pick<
@@ -50,6 +55,7 @@ export default async function AdminPage({
   >[];
   const groups = (groupsRes.data ?? []) as Pick<Group, "id" | "name">[];
   let events = (eventsRes.data ?? []) as EventRow[];
+  let postEvents = (postEventsRes.data ?? []) as { user_id: string; answered: boolean }[];
 
   // Filtre par groupe
   let memberIds: Set<string> | null = null;
@@ -60,12 +66,19 @@ export default async function AdminPage({
       .eq("group_id", groupe);
     memberIds = new Set((members ?? []).map((m) => m.user_id as string));
     events = events.filter((e) => memberIds!.has(e.user_id));
+    postEvents = postEvents.filter((p) => memberIds!.has(p.user_id));
   }
 
   // KPIs
   const { total, avg, avgFirstDraft, last7, prev7, progression, interceptRate, outcomes, avgGain, avgRounds } =
     computeAdminKpis(events);
   const outcomeTotal = outcomes.improved + outcomes.sent_anyway + outcomes.cancelled;
+
+  // Miroir d'après : chaque ligne est une question réflexive montrée après
+  // une réponse IA ; « answered » dit si l'étudiant y a effectivement répondu.
+  const postTotal = postEvents.length;
+  const postAnsweredRate =
+    postTotal > 0 ? postEvents.filter((p) => p.answered).length / postTotal : null;
 
   // Tableau par utilisateur
   const shownProfiles = memberIds
@@ -152,6 +165,15 @@ export default async function AdminPage({
           label="Tours de réflexion moyens"
           value={fmt(avgRounds)}
           sub="questions socratiques par prompt intercepté"
+        />
+        <Kpi
+          label="Réflexions d'après"
+          value={String(postTotal)}
+          sub={
+            postAnsweredRate === null
+              ? "miroir d'après : reformuler, vérifier, oser le désaccord"
+              : `${fmtPct(postAnsweredRate)} de réponses au miroir d'après`
+          }
         />
       </div>
 

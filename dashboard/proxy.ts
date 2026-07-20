@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/privacy", "/install", "/downloads"];
+const PUBLIC_PATHS = ["/login", "/privacy", "/install", "/downloads", "/methode"];
 
 export async function proxy(request: NextRequest) {
   // L'API v1 s'authentifie par clé d'organisation, pas par cookie : early

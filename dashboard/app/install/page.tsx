@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 const DIRECT_ZIP = "/downloads/prompt-tracker-latest.zip";
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 
 function Step({
   n,
@@ -67,10 +67,18 @@ export default function InstallPage() {
             </h1>
             <p className="text-muted">
               Prompt Tracker ajoute une pause réfléchie avant vos prompts sur
-              ChatGPT, Claude, Gemini, Mistral (Le Chat) et Grok. L&apos;analyse est 100 % locale : rien
-              ne quitte votre navigateur tant que vous ne rejoignez pas une
+              ChatGPT, Claude, Gemini, Mistral (Le Chat) et Grok. Rien
+              n&apos;est enregistré avant votre accord explicite au premier
+              lancement, l&apos;analyse est ensuite 100 % locale, et rien ne
+              quitte votre navigateur tant que vous ne rejoignez pas une
               organisation. La publication sur le Chrome Web Store arrive ; en
               attendant, l&apos;installation manuelle prend deux minutes.
+            </p>
+            <p className="text-sm text-muted">
+              Compatible avec Chrome et les navigateurs Chromium (Edge, Brave,
+              Arc) sur ordinateur. Pas de version iPhone, iPad ou Android à ce
+              stade : les navigateurs mobiles n&apos;acceptent pas les
+              extensions.
             </p>
           </div>
 
@@ -111,10 +119,13 @@ export default function InstallPage() {
               <p>
                 Cliquez sur « Charger l&apos;extension non empaquetée » et
                 sélectionnez le dossier décompressé à l&apos;étape 1. La page
-                de bienvenue s&apos;ouvre : choisissez votre profil
-                d&apos;usage, votre thème et votre niveau de friction.
-                Épinglez l&apos;icône via le menu extensions (puzzle) pour
-                garder les statistiques à portée de clic.
+                de bienvenue s&apos;ouvre : elle détaille les données
+                enregistrées et leur usage, et l&apos;extension reste inactive
+                tant que vous n&apos;avez pas cliqué « J&apos;accepte et
+                j&apos;active ». Choisissez ensuite votre profil d&apos;usage,
+                votre thème et votre niveau de friction. Épinglez l&apos;icône
+                via le menu extensions (puzzle) pour garder les statistiques à
+                portée de clic.
               </p>
             </Step>
 
@@ -131,10 +142,12 @@ export default function InstallPage() {
               <p>
                 Sans compte, tout reste sur votre ordinateur. Pour retrouver
                 votre progression ici, cliquez sur l&apos;icône de
-                l&apos;extension et connectez-vous avec le même compte que sur
-                ce site : seuls des indicateurs sont synchronisés, jamais le
-                texte de vos prompts (sauf si votre organisation l&apos;active
-                explicitement). Détails dans la{" "}
+                l&apos;extension, connectez-vous avec le même compte que sur
+                ce site et rejoignez votre classe : l&apos;extension vous
+                montre alors ce qui sera partagé (indicateurs et scores,
+                jamais aucun texte sans votre consentement séparé, catégorie
+                par catégorie) et attend votre confirmation. Conservation :
+                contenus 90 jours, indicateurs 12 mois. Détails dans la{" "}
                 <Link
                   href="/privacy"
                   className="font-medium text-accent hover:underline"

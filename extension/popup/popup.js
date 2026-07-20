@@ -2,6 +2,18 @@
 // Les stats détaillées vivent dans le dashboard web ; ici, l'essentiel.
 
 const DASHBOARD_URL = "https://track-prompt.vercel.app";
+
+// Garde-fou : une erreur d'init ne doit jamais laisser un popup vide et muet
+// (retour terrain). i18n peut être la cause : message bilingue en dur.
+window.addEventListener("error", (event) => {
+  const el = document.getElementById("fatal");
+  if (!el || !el.hidden) return;
+  el.textContent =
+    "Le popup a rencontré une erreur : " + event.message +
+    ". Recharge l'extension via chrome://extensions. / The popup hit an error, reload the extension from chrome://extensions.";
+  el.hidden = false;
+});
+
 const t = (...a) => CoachI18n.t(...a);
 
 /* ---------- i18n ---------- */
@@ -15,6 +27,25 @@ document.getElementById("open-dashboard").textContent = t("authDashboard");
 document.getElementById("auth-logout").textContent = t("authLogout");
 document.getElementById("export").textContent = t("popupExport");
 document.getElementById("reset").textContent = t("popupReset");
+document.getElementById("privacy-link").textContent = t("popupPrivacyLink");
+document.getElementById("method-link").textContent = t("popupMethodLink");
+document.getElementById("inert-text").textContent = t("popupInertBanner");
+document.getElementById("inert-cta").textContent = t("popupInertCta");
+
+/* ---------- Veille avant acceptation de la divulgation ---------- */
+
+// Tant que la divulgation (onboarding) n'a pas été acceptée, l'extension est
+// inerte : bandeau explicite, compte et réglages masqués, rien n'est capturé.
+chrome.storage.local.get("disclosure", (data) => {
+  const accepted = Boolean(data.disclosure && data.disclosure.accepted);
+  document.getElementById("inert-banner").hidden = accepted;
+  document.getElementById("auth").hidden = !accepted;
+  document.querySelector(".settings").hidden = !accepted;
+});
+
+document.getElementById("inert-cta").addEventListener("click", () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("onboarding/onboarding.html") });
+});
 
 /* ---------- Thème ---------- */
 
@@ -75,6 +106,10 @@ function showAuthState(session, profile, orgConfig, pendingCount) {
 document.getElementById("join-code").placeholder = t("joinCodePlaceholder");
 document.getElementById("join-submit").textContent = t("joinCta");
 document.getElementById("open-consent").textContent = t("popupConsentLink");
+document.getElementById("join-disc-title").textContent = t("joinDiscTitle");
+document.getElementById("join-disc-body").textContent = t("joinDiscBody");
+document.getElementById("join-disc-accept").textContent = t("joinDiscAccept");
+document.getElementById("join-disc-cancel").textContent = t("joinDiscCancel");
 
 const CONSENT_URL = chrome.runtime.getURL("consent/consent.html");
 document.getElementById("open-consent").addEventListener("click", () => {
@@ -87,15 +122,40 @@ function joinError(message) {
   el.hidden = !message;
 }
 
-document.getElementById("join-submit").addEventListener("click", async () => {
+// Jonction en deux temps (divulgation bien visible) : le premier clic déplie
+// ce que « rejoindre » partage avec l'organisation ; seul le bouton d'accord
+// déclenche réellement la jonction, et donc la synchronisation.
+document.getElementById("join-submit").addEventListener("click", () => {
+  joinError("");
+  if (!document.getElementById("join-code").value.trim()) return;
+  document.getElementById("join-disclosure").hidden = false;
+  document.getElementById("join-submit").disabled = true;
+});
+
+document.getElementById("join-disc-cancel").addEventListener("click", () => {
+  document.getElementById("join-disclosure").hidden = true;
+  document.getElementById("join-submit").disabled = false;
+});
+
+document.getElementById("join-disc-accept").addEventListener("click", async () => {
   joinError("");
   const code = document.getElementById("join-code").value.trim();
   if (!code) return;
   try {
     await CoachApi.joinGroup(code);
+    // L'accord donné ici couvre le socle d'indicateurs : c'est lui que la
+    // sync vérifie avant de pousser quoi que ce soit (baselineConsent).
+    await new Promise((r) =>
+      chrome.storage.local.set(
+        { baselineConsent: { accepted: true, version: 1, acceptedAt: new Date().toISOString() } },
+        r
+      )
+    );
+    document.getElementById("join-disclosure").hidden = true;
+    document.getElementById("join-submit").disabled = false;
     chrome.runtime.sendMessage({ type: "sync-now" }, () => refreshAuthUi());
     // Le consentement se présente immédiatement après l'adhésion : c'est
-    // l'utilisateur qui décide ce que l'organisation recevra.
+    // l'utilisateur qui décide ce que l'organisation recevra en plus du socle.
     chrome.tabs.create({ url: CONSENT_URL });
   } catch (e) {
     if (String(e.message).includes("invalid_code")) joinError(t("joinInvalid"));
@@ -178,10 +238,11 @@ function render(events, threshold) {
 
   // Série de jours où les premiers jets tiennent le seuil : on célèbre
   // l'autonomie, pas la dépendance au coaching.
-  const streak = CoachScoring.dayStreak(events, threshold);
+  const { streak, freezes } = CoachScoring.dayStreakInfo(events, threshold);
   const streakEl = document.getElementById("stat-mirror");
-  streakEl.textContent = streak ? `${streak} 🔥` : "–";
-  streakEl.parentElement.title = t("popupStreakTitle", streak);
+  streakEl.textContent = streak ? `${streak} 🔥${freezes ? ` +${freezes}🧊` : ""}` : "–";
+  streakEl.parentElement.title =
+    t("popupStreakTitle", streak) + (freezes ? ` ${t("popupStreakFreeze", freezes)}` : "");
 
   const rubricsEl = document.getElementById("rubrics");
   rubricsEl.textContent = "";
@@ -226,11 +287,13 @@ function render(events, threshold) {
   }
 }
 
+// Colonnes alignées sur le contrat d'intégration (docs/INTEGRATION.md) :
+// mêmes noms que l'API et l'export admin, un seul pipeline lit les trois.
 function toCsv(events) {
-  const header = ["date", "site", "categorie", "mots", "clarte", "contexte", "iteration", "critique", "total", "intercepte", "issue", "score_avant", "score_apres", "tours", "reponses", "miroir_affiche", "miroir_feedback", "texte"];
+  const header = ["client_event_id", "ts", "site", "category", "words", "score_clarte", "score_contexte", "score_iteration", "score_critique", "score_total", "intercepted", "outcome", "score_before", "score_after", "rounds", "answers_count", "mirror_shown", "mirror_feedback", "conv_key", "text"];
   const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const rows = events.map((e) =>
-    [e.ts, e.site, e.category, e.words, e.scores.clarte, e.scores.contexte, e.scores.iteration, e.scores.critique, e.scores.total, e.intercepted ?? false, e.outcome ?? "", e.scoreBefore ?? "", e.scoreAfter ?? "", e.rounds ?? 0, e.answersCount ?? 0, e.mirrorShown, e.mirrorFeedback ?? "", e.text ?? ""].map(escape).join(";")
+    [e.id, e.ts, e.site, e.category, e.words, e.scores.clarte, e.scores.contexte, e.scores.iteration, e.scores.critique, e.scores.total, e.intercepted ?? false, e.outcome ?? "", e.scoreBefore ?? "", e.scoreAfter ?? "", e.rounds ?? 0, e.answersCount ?? 0, e.mirrorShown, e.mirrorFeedback ?? "", e.conv ?? "", e.text ?? ""].map(escape).join(";")
   );
   return [header.join(";"), ...rows].join("\n");
 }

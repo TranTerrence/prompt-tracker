@@ -45,7 +45,7 @@ const CoachApi = (() => {
   }
 
   async function logout() {
-    await storage.remove(["session", "orgConfig", "profile"]);
+    await storage.remove(["session", "orgConfig", "profile", "baselineConsent"]);
   }
 
   // Renvoie une session valide (rafraîchie si besoin) ou null.
@@ -164,8 +164,17 @@ const CoachApi = (() => {
   async function syncEvents() {
     const session = await ensureSession();
     if (!session) return { pushed: 0, reason: "not_authenticated" };
-    const { events = [], profile, orgConfig, consents } = await storage.get(["events", "profile", "orgConfig", "consents"]);
+    const { events = [], profile, orgConfig, consents, baselineConsent } = await storage.get([
+      "events",
+      "profile",
+      "orgConfig",
+      "consents",
+      "baselineConsent",
+    ]);
     if (!profile || !profile.org_id) return { pushed: 0, reason: "no_org" };
+    // Divulgation à la jonction : sans l'accord explicite « rejoindre et
+    // partager ces indicateurs », rien ne quitte la machine, même le socle.
+    if (!baselineConsent || !baselineConsent.accepted) return { pushed: 0, reason: "no_baseline_consent" };
     const pending = events.filter((e) => !e.synced);
     if (!pending.length) return { pushed: 0 };
     const sendAllowed = buildSendAllowed(orgConfig, consents);
@@ -209,8 +218,15 @@ const CoachApi = (() => {
   async function syncPostEvents() {
     const session = await ensureSession();
     if (!session) return { pushed: 0, reason: "not_authenticated" };
-    const { postEvents = [], profile, orgConfig, consents } = await storage.get(["postEvents", "profile", "orgConfig", "consents"]);
+    const { postEvents = [], profile, orgConfig, consents, baselineConsent } = await storage.get([
+      "postEvents",
+      "profile",
+      "orgConfig",
+      "consents",
+      "baselineConsent",
+    ]);
     if (!profile || !profile.org_id) return { pushed: 0, reason: "no_org" };
+    if (!baselineConsent || !baselineConsent.accepted) return { pushed: 0, reason: "no_baseline_consent" };
     const pending = postEvents.filter((e) => !e.synced);
     if (!pending.length) return { pushed: 0 };
     const sendAllowed = buildSendAllowed(orgConfig, consents);
@@ -244,7 +260,7 @@ const CoachApi = (() => {
   // Prochaine question socratique générée par LLM à partir de tout le dialogue
   // (Edge Function). Timeout court : l'itération n'attend jamais le réseau :
   // repli sur la banque locale géré par l'appelant.
-  async function llmNextQuestion(prompt, dialogue = [], timeoutMs = 2000) {
+  async function llmNextQuestion(prompt, dialogue = [], opts = {}, timeoutMs = 2000) {
     const session = await ensureSession();
     if (!session) return null;
     const controller = new AbortController();
@@ -253,7 +269,9 @@ const CoachApi = (() => {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/socratic-llm`, {
         method: "POST",
         headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, dialogue }),
+        // opts : { lang, intent, rejected, askedQuestions, depth } : champs
+        // additifs, l'edge function reste compatible avec les anciens clients.
+        body: JSON.stringify({ prompt, dialogue, ...opts }),
         signal: controller.signal,
       });
       if (!res.ok) return null;

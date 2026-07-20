@@ -28,11 +28,14 @@
   <script src="../src/scoring.js"></script>
   <script src="../src/mirror.js"></script>
   <script>
-    // Modes : (défaut) modale d'interception ; ?post=1 : miroir d'après.
+    // Modes : (défaut) modale d'interception ; ?post=1 : miroir d'après ;
+    // ?llm=1 : questions simulées LLM (badge + notice + latence) ;
+    // ?exhaust=1 : banque quasi vide pour voir l'état épuisé.
     const prompt = "fais ma dissertation sur Candide pour demain";
     const scores = CoachScoring.score(prompt);
+    const params = new URLSearchParams(location.search);
 
-    if (new URLSearchParams(location.search).has("post")) {
+    if (params.has("post")) {
       document.querySelector(".hero h1").textContent = "Voici un plan de dissertation en trois parties…";
       CoachMirror.showPost({
         question: CoachScoring.postQuestion({ lang: "fr", count: 0 }).question,
@@ -41,16 +44,41 @@
         onSkip: () => {},
       });
     } else {
+      const llm = params.has("llm");
+      const localAsk = (state) => CoachScoring.nextQuestion({
+        originalPrompt: prompt, scores,
+        asked: params.has("exhaust")
+          ? [...state.asked, ...["clarte", "intention-2", "intention-3", "intention-5", "intention-4", "intention-6", "intention-7",
+              "delegation", "connaissance-2", "connaissance-3", "connaissance-4", "connaissance-5", "connaissance-6", "connaissance-7", "connaissance-8",
+              "hypothese-1", "hypothese-4", "hypothese-2", "hypothese-5", "hypothese-3", "hypothese-6", "hypothese-7",
+              "contexte", "contexte-2", "contexte-3", "contexte-4", "contexte-5", "contexte-6",
+              "critique", "critique-4", "critique-2", "critique-3", "critique-5", "critique-9", "critique-6", "critique-7", "critique-8",
+              "iteration", "appro-7", "appro-2", "appro-3", "appro-4", "appro-6", "appro-10", "appro-12", "appro-5", "appro-8", "appro-9", "appro-11", "appro-13"]]
+          : state.asked,
+        answeredCount: state.answers.length,
+        reroll: Boolean(state.reroll), lastAxis: state.lastAxis || null, lastLevel: state.lastLevel || null,
+        lang: "fr", profile: "student",
+      });
       CoachMirror.showModal({
         promptText: prompt,
         scoreBefore: scores.total,
         promise: true,
+        intention: "Si mon prompt est vague, alors je précise mon intention et mon contexte avant d'envoyer.",
         branding: null,
+        llmActive: llm,
         rescore: (t) => CoachScoring.score(CoachScoring.stripScaffolding(t)),
         compile: (o, a) => CoachScoring.compilePrompt(o, a, "fr"),
-        ask: (state) => Promise.resolve(CoachScoring.nextQuestion({
-          originalPrompt: prompt, scores, asked: state.asked, lang: "fr", profile: "student",
-        })),
+        ask: (state) => {
+          if (!llm) return Promise.resolve(localAsk(state));
+          // Simulation LLM : latence artificielle + une question « générée »
+          // (source: "llm") une fois sur deux, pour voir badge ET absence de badge.
+          const q = localAsk(state);
+          const simulated = state.asked.length % 2 === 0
+            ? { ...q, key: `llm-${state.asked.length}`, axis: "llm", label: "Ma réflexion",
+                question: `(IA) Sur Candide précisément, ${q.question.charAt(0).toLowerCase()}${q.question.slice(1)}`, source: "llm" }
+            : q;
+          return new Promise((r) => setTimeout(() => r(simulated), 600));
+        },
         onSend: () => {},
         onSendAnyway: () => {},
         onCancel: () => {},
@@ -58,11 +86,14 @@
       });
     }
 
-    // Pilotage par les tests : répondre à la question courante.
+    // Pilotage par les tests : répondre à la question courante, relancer.
     window.__answer = (text) => {
       const shadow = document.getElementById("coach-ia-modal").shadowRoot;
       shadow.querySelector(".answer").value = text;
       shadow.querySelector(".reply").click();
+    };
+    window.__reroll = () => {
+      document.getElementById("coach-ia-modal").shadowRoot.querySelector(".reroll-link").click();
     };
   </script>
 </body>

@@ -3,21 +3,36 @@
 // - toutes les 15 minutes : rafraîchit la config de l'organisation (branding, seuil...)
 // Les alarmes réveillent le worker même s'il a été déchargé par Chrome.
 
-importScripts("/src/supabase.js");
+// Chrome/Safari : service worker → importScripts. Firefox : event page (le
+// manifest Firefox charge src/supabase.js via background.scripts, cf. package.sh).
+if (typeof importScripts === "function") importScripts("/src/supabase.js");
 
 chrome.runtime.onInstalled.addListener((details) => {
   setupAlarms();
-  // Première installation : onboarding (promesse, thème, niveau de friction).
+  // Première installation : onboarding = divulgation des données + accord
+  // explicite. Tant qu'il n'est pas donné, l'extension est inerte.
   if (details.reason === "install") {
     chrome.tabs.create({ url: chrome.runtime.getURL("onboarding/onboarding.html") });
   }
 });
 chrome.runtime.onStartup.addListener(setupAlarms);
 
+// Les alarmes ne s'arment qu'après l'acceptation de la divulgation :
+// « inerte avant accord » vaut aussi pour le worker.
 function setupAlarms() {
-  chrome.alarms.create("sync-events", { periodInMinutes: 1 });
-  chrome.alarms.create("refresh-config", { periodInMinutes: 15 });
+  chrome.storage.local.get("disclosure", (data) => {
+    if (!data.disclosure || !data.disclosure.accepted) return;
+    chrome.alarms.create("sync-events", { periodInMinutes: 1 });
+    chrome.alarms.create("refresh-config", { periodInMinutes: 15 });
+  });
 }
+
+// L'acceptation dans l'onboarding arme les alarmes sans attendre un redémarrage.
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.disclosure && changes.disclosure.newValue && changes.disclosure.newValue.accepted) {
+    setupAlarms();
+  }
+});
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   try {
@@ -41,8 +56,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true; // réponse asynchrone
   }
   if (msg && msg.type === "llm-question") {
-    // Prochaine question du dialogue itératif, générée à partir de tout l'échange.
-    CoachApi.llmNextQuestion(msg.prompt, msg.dialogue || [])
+    // Prochaine question du dialogue itératif, générée à partir de tout
+    // l'échange. Les options pilotent la langue, l'exigence (depth) et la
+    // relance (intent/rejected) côté edge function.
+    CoachApi.llmNextQuestion(msg.prompt, msg.dialogue || [], {
+      lang: msg.lang,
+      intent: msg.intent,
+      rejected: msg.rejected,
+      askedQuestions: msg.askedQuestions,
+      depth: msg.depth,
+    })
       .then((question) => sendResponse({ question }))
       .catch(() => sendResponse({ question: null }));
     return true;
