@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Harnais consentement (dev)</title>
+</head>
+<body>
+  <script>
+    // Stub chrome.* : l'écran de consentement rend tout depuis le storage
+    // (orgConfig + consents). CoachApi n'est sollicité qu'au clic.
+    (function () {
+      const store = {
+        settings: { theme: "light" },
+        orgConfig: {
+          orgId: "demo",
+          role: "member",
+          branding: { name: "Ton établissement", color: null, logoUrl: null },
+          threshold: 40,
+          captureMode: "metadata",
+          interceptEnabled: true,
+          llmEnabled: false,
+          templates: {},
+          dataRequests: {
+            prompt_text: { requested: true, purpose: "Comprendre où les consignes des élèves manquent de contexte pour adapter les cours." },
+            socratic_dialogue: { requested: true, purpose: "Voir le raisonnement avant envoi pour accompagner la méthode, pas la note." },
+            post_reflection: { requested: true, purpose: "Suivre la reformulation après réponse, le cœur de l'esprit critique." },
+            conversation_history: { requested: false, purpose: null },
+          },
+        },
+        consents: {},
+      };
+      window.chrome = {
+        storage: {
+          local: {
+            get(keys, cb) {
+              const out = {};
+              for (const k of Array.isArray(keys) ? keys : [keys]) if (k in store) out[k] = store[k];
+              cb(out);
+            },
+            set(obj, cb) { Object.assign(store, obj); cb && cb(); },
+            remove(_k, cb) { cb && cb(); },
+          },
+          onChanged: { addListener() {} },
+        },
+        runtime: { getURL: (p) => p, lastError: null },
+        tabs: { create() {} },
+        i18n: { getUILanguage: () => "fr" },
+      };
+    })();
+  </script>
+  <script>
+    fetch("../consent/consent.html")
+      .then((r) => r.text())
+      .then((html) => {
+        html = html.replace("<head>", "<head><base href='../consent/'>");
+        document.open();
+        document.write(html);
+        document.close();
+      });
+  </script>
+</body>
+</html>

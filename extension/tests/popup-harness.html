@@ -59,6 +59,8 @@
 
       const store = {
         settings: { theme: "light", threshold: 40, interceptEnabled: true, captureMode: "metadata", profile: "student" },
+        // Divulgation acceptée : le popup montre l'état nominal (pas le bandeau de veille).
+        disclosure: { accepted: true, version: 1, acceptedAt: new Date(now - 20 * day).toISOString() },
         events,
       };
       window.chrome = {
