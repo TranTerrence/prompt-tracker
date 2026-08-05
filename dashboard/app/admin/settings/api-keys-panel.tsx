@@ -22,9 +22,19 @@ export default function ApiKeysPanel({ keys }: { keys: ApiKeyRow[] }) {
 
   return (
     <section className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
-      <h2 className="font-display text-lg font-semibold tracking-tight">
-        Clés API (accès machine)
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-semibold tracking-tight">
+          Clés API (accès machine)
+        </h2>
+        <a
+          href="/docs/api"
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-lg border border-card-border px-3 py-1.5 text-sm text-muted transition-colors hover:bg-soft hover:text-foreground"
+        >
+          Documentation API ↗
+        </a>
+      </div>
       <p className="mt-1.5 text-sm text-muted">
         Pour brancher votre SI sur <code className="rounded bg-soft px-1 py-0.5 text-xs">/api/v1</code>{" "}
         (événements, étudiants, groupes, progression). L&apos;API ne renvoie que
@@ -68,6 +78,19 @@ export default function ApiKeysPanel({ keys }: { keys: ApiKeyRow[] }) {
           <code className="mt-2 block break-all rounded-lg bg-background px-3 py-2 font-mono text-sm">
             {freshKey}
           </code>
+          <p className="mt-2 text-sm text-muted">
+            Transmettez-la à votre intégrateur avec la{" "}
+            <a
+              href="/docs/api"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-accent hover:underline"
+            >
+              documentation API
+            </a>
+            . Elle donne accès à toute l&apos;organisation : à garder dans un
+            secret côté serveur, jamais dans un navigateur.
+          </p>
         </div>
       )}
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}

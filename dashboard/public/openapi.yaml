@@ -1,0 +1,937 @@
+openapi: 3.1.0
+
+info:
+  title: API d'organisation Prompt Tracker
+  version: "1.0.0"
+  summary: >-
+    API REST machine-to-machine, en lecture seule, pour récupérer les données
+    de votre organisation (SI pédagogique, journal réflexif, entrepôt de
+    données, LMS).
+  description: |
+    Cette API expose les données produites par l'extension Prompt Tracker pour
+    **votre organisation uniquement**. Elle est en **lecture seule** : aucun
+    endpoint n'écrit, ne modifie ni ne supprime quoi que ce soit.
+
+    ## Les trois règles à connaître avant d'écrire une ligne de code
+
+    ### 1. Le consentement gouverne le contenu, à chaque appel
+
+    Les **indicateurs** (scores, catégories, issues, volumes, agrégats) sont
+    toujours disponibles : ils suffisent pour piloter.
+
+    Le **CONTENU** (`text`, `dialogue`, `answer`, `conv_key`) n'est renvoyé que
+    si l'utilisateur concerné y consent **au moment de l'appel**. Un champ non
+    consenti vaut `null` — ce n'est pas une erreur, votre code ne doit pas
+    traiter ce cas comme un échec.
+
+    La révocation est **rétroactive** : elle coupe aussi l'accès à l'historique
+    déjà stocké. Un événement que vous avez déjà ingéré avec son `text` peut
+    donc revenir avec `text: null` au passage suivant. Votre upsert doit écraser
+    le contenu par `null` dans ce cas, et non le conserver.
+
+    Quatre catégories de consentement existent : `prompt_text`,
+    `socratic_dialogue`, `post_reflection`, `conversation_history`. L'état
+    courant de chaque utilisateur est lisible sur `GET /students`.
+
+    ### 2. L'API est server-to-server. Jamais dans un navigateur.
+
+    Aucun en-tête CORS n'est renvoyé et aucune méthode `OPTIONS` n'est
+    implémentée : **un appel depuis un front web échouera**, par conception.
+    Une clé `pt_live_` donne accès à toutes les données de l'organisation ;
+    elle doit vivre exclusivement dans un secret côté serveur. Ne la placez
+    jamais dans du code client, une variable `NEXT_PUBLIC_*`, une URL ou un
+    dépôt.
+
+    ### 3. Les évolutions sont additives — écrivez des parseurs tolérants
+
+    De nouveaux champs et de nouvelles valeurs d'énumération (`site`,
+    `category` notamment) peuvent apparaître sans préavis. Ignorez les champs
+    que vous ne connaissez pas et traitez une valeur d'énumération inconnue
+    comme « autre ». Un changement cassant donnerait lieu à une `/api/v2`
+    annoncée, jamais à une modification silencieuse de `/api/v1`.
+
+    ## Démarrage rapide
+
+    ```bash
+    KEY="pt_live_…"
+    BASE="https://track-prompt.vercel.app/api/v1"
+
+    curl -s "$BASE/groups"             -H "Authorization: Bearer $KEY"
+    curl -s "$BASE/progress?from=2026-06-01" -H "Authorization: Bearer $KEY"
+    ```
+
+    ## Recette d'ingestion recommandée (cron 15 minutes)
+
+    1. Persistez un curseur `last_sync_ts` (initialement votre date de mise en
+       service).
+    2. Toutes les 15 minutes, appelez
+       `GET /events?since=<last_sync_ts moins 1 h>&limit=500`, puis suivez
+       `next_cursor` jusqu'à `null`. Le recouvrement d'une heure absorbe les
+       synchronisations tardives de l'extension (file hors-ligne des élèves).
+    3. Upsert dans votre table de staging avec **`id` comme clé
+       d'idempotence** : c'est l'identifiant serveur, stable.
+       `client_event_id` est l'idempotence interne extension → backend ;
+       gardez-le en colonne informative.
+    4. Avancez `last_sync_ts` au `ts` le plus récent reçu.
+    5. Même boucle pour `/post-events`. Pour les agrégats hebdomadaires,
+       `/progress` les fournit déjà calculés (complets même sans consentement).
+
+    ## Limites de débit
+
+    **60 requêtes par minute et par clé**, fenêtre fixe de 60 secondes. Un
+    dépassement renvoie `429 rate_limited` avec l'en-tête `Retry-After: 60`.
+    Il n'existe pas d'en-têtes `X-RateLimit-*` : dimensionnez votre client sur
+    cette limite plutôt que de la sonder.
+
+    ## Architecture (pour les curieux)
+
+    Les routes Next.js délèguent à des fonctions SQL `security definer` : la
+    vérification du hash de clé, les scopes, le rate limit et le filtre de
+    consentement vivent dans Postgres, au plus près de la donnée. Aucune clé
+    `service_role` n'est déployée.
+  contact:
+    name: Prompt Tracker
+    url: https://track-prompt.vercel.app
+  license:
+    name: Usage réservé aux organisations titulaires d'une clé API
+    url: https://track-prompt.vercel.app/privacy
+
+servers:
+  - url: https://track-prompt.vercel.app/api/v1
+    description: Production
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Annuaire
+    description: Groupes et étudiants de votre organisation.
+  - name: Événements
+    description: >-
+      Le flux brut, paginé par curseur keyset. C'est la source de vérité à
+      ingérer.
+  - name: Agrégats
+    description: >-
+      Indicateurs hebdomadaires déjà calculés, disponibles sans aucun
+      consentement.
+
+paths:
+  /groups:
+    get:
+      operationId: listGroups
+      tags: [Annuaire]
+      summary: Lister les groupes
+      description: >-
+        Tous les groupes (classes) de votre organisation, triés par nom.
+        Utilisez les `id` renvoyés pour filtrer les autres endpoints via
+        `group_id`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Liste des groupes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Group"
+              examples:
+                exemple:
+                  value:
+                    data:
+                      - id: 4f1a2b3c-0000-4000-8000-000000000001
+                        name: "BTS SIO — 1re année"
+                        member_count: 28
+        "401": { $ref: "#/components/responses/InvalidKey" }
+        "403": { $ref: "#/components/responses/ForbiddenScope" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s "https://track-prompt.vercel.app/api/v1/groups" \
+              -H "Authorization: Bearer $PROMPT_TRACKER_KEY"
+
+  /students:
+    get:
+      operationId: listStudents
+      tags: [Annuaire]
+      summary: Lister les étudiants
+      description: >-
+        L'annuaire de votre organisation, trié par email, avec l'état **courant**
+        des consentements de chacun. C'est ici que vous vérifiez pourquoi un
+        champ de contenu vous revient à `null`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: Annuaire des étudiants.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Student"
+              examples:
+                exemple:
+                  value:
+                    data:
+                      - id: 9c0d1e2f-0000-4000-8000-000000000002
+                        display_name: "Camille Durand"
+                        email: "camille.durand@exemple.fr"
+                        role: "student"
+                        disabled: false
+                        groups: [4f1a2b3c-0000-4000-8000-000000000001]
+                        consents:
+                          prompt_text: true
+                          socratic_dialogue: true
+                          post_reflection: false
+                          conversation_history: false
+        "401": { $ref: "#/components/responses/InvalidKey" }
+        "403": { $ref: "#/components/responses/ForbiddenScope" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s "https://track-prompt.vercel.app/api/v1/students?group_id=$GROUP" \
+              -H "Authorization: Bearer $PROMPT_TRACKER_KEY"
+
+  /events:
+    get:
+      operationId: listEvents
+      tags: [Événements]
+      summary: Lister les événements de prompts
+      description: |
+        Un enregistrement par prompt envoyé sur un site d'IA, du plus récent au
+        plus ancien (`ts desc, id desc`).
+
+        **Pagination keyset.** Répétez l'appel avec le `next_cursor` reçu
+        jusqu'à ce qu'il vaille `null`. Ne construisez jamais le curseur
+        vous-même : c'est un jeton opaque. Il n'est non-`null` que si la page
+        renvoyée est exactement pleine.
+
+        **La mesure d'apprentissage** recommandée est le « premier jet » :
+        `score_before` si `intercepted` vaut `true`, sinon `scores.total`.
+        C'est ce que l'étudiant produit seul, avant toute aide.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Since"
+        - $ref: "#/components/parameters/Until"
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Page d'événements.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, next_cursor]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PromptEvent"
+                  next_cursor:
+                    $ref: "#/components/schemas/NextCursor"
+              examples:
+                intercepte_et_ameliore:
+                  summary: Un prompt intercepté puis amélioré, contenu consenti
+                  value:
+                    data:
+                      - id: 1a2b3c4d-0000-4000-8000-000000000010
+                        client_event_id: "evt_01HZY8QK3M"
+                        user_id: 9c0d1e2f-0000-4000-8000-000000000002
+                        ts: "2026-07-15T09:32:11.482Z"
+                        site: "chatgpt"
+                        category: "rédaction"
+                        words: 47
+                        scores:
+                          clarte: 21
+                          contexte: 18
+                          iteration: 15
+                          critique: 14
+                          total: 68
+                        intercepted: true
+                        outcome: "improved"
+                        score_before: 34
+                        score_after: 68
+                        mirror_shown: true
+                        rounds: 3
+                        answers_count: 3
+                        text: "Rédige une note de synthèse sur…"
+                        dialogue:
+                          - q: "Pour qui écris-tu cette note ?"
+                            a: "Le conseil d'administration."
+                            axis: "contexte"
+                        conv_key: null
+                    next_cursor: null
+                sans_consentement:
+                  summary: Même structure, contenu non consenti (champs à null)
+                  value:
+                    data:
+                      - id: 1a2b3c4d-0000-4000-8000-000000000011
+                        client_event_id: "evt_01HZY8QK3N"
+                        user_id: 7b8c9d0e-0000-4000-8000-000000000003
+                        ts: "2026-07-15T09:12:03.100Z"
+                        site: "claude"
+                        category: "code"
+                        words: 12
+                        scores:
+                          clarte: 12
+                          contexte: 8
+                          iteration: 5
+                          critique: 4
+                          total: 29
+                        intercepted: true
+                        outcome: "sent_anyway"
+                        score_before: 29
+                        score_after: null
+                        mirror_shown: true
+                        rounds: 1
+                        answers_count: 0
+                        text: null
+                        dialogue: null
+                        conv_key: null
+                    next_cursor: "MjAyNi0wNy0xNVQwOToxMjowMy4xMDBafDFhMmIzYzRkLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAxMQ"
+        "401": { $ref: "#/components/responses/InvalidKey" }
+        "403": { $ref: "#/components/responses/ForbiddenScope" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+      x-codeSamples:
+        - lang: Shell
+          label: curl — première page
+          source: |
+            curl -s "https://track-prompt.vercel.app/api/v1/events?since=2026-07-01T00:00:00Z&limit=500" \
+              -H "Authorization: Bearer $PROMPT_TRACKER_KEY"
+        - lang: Shell
+          label: curl — boucle de pagination
+          source: |
+            BASE="https://track-prompt.vercel.app/api/v1"
+            CURSOR=""
+            while : ; do
+              PAGE=$(curl -s "$BASE/events?since=2026-07-01T00:00:00Z&limit=500&cursor=$CURSOR" \
+                -H "Authorization: Bearer $PROMPT_TRACKER_KEY")
+              echo "$PAGE" | jq -c '.data[]'
+              CURSOR=$(echo "$PAGE" | jq -r '.next_cursor // empty')
+              [ -z "$CURSOR" ] && break
+            done
+        - lang: JavaScript
+          label: Node — ingestion idempotente
+          source: |
+            const BASE = "https://track-prompt.vercel.app/api/v1";
+
+            async function* fetchEvents(since) {
+              let cursor = null;
+              do {
+                const url = new URL(`${BASE}/events`);
+                url.searchParams.set("since", since);
+                url.searchParams.set("limit", "500");
+                if (cursor) url.searchParams.set("cursor", cursor);
+
+                const res = await fetch(url, {
+                  headers: { Authorization: `Bearer ${process.env.PROMPT_TRACKER_KEY}` },
+                });
+                if (res.status === 429) {
+                  await new Promise((r) => setTimeout(r, Number(res.headers.get("retry-after") ?? 60) * 1000));
+                  continue;
+                }
+                if (!res.ok) throw new Error((await res.json()).error);
+
+                const page = await res.json();
+                yield* page.data;
+                cursor = page.next_cursor;
+              } while (cursor);
+            }
+
+            // `id` est la clé d'idempotence. Le contenu peut revenir à null
+            // après révocation : on écrase, on ne conserve pas.
+            for await (const event of fetchEvents("2026-07-01T00:00:00Z")) {
+              await db.upsert("prompt_events", event, { conflictTarget: "id" });
+            }
+
+  /post-events:
+    get:
+      operationId: listPostEvents
+      tags: [Événements]
+      summary: Lister les réflexions du miroir d'après
+      description: >-
+        Une ligne par question réflexive montrée **après** une réponse de l'IA,
+        du plus récent au plus ancien. Mêmes paramètres et même pagination que
+        `/events`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Since"
+        - $ref: "#/components/parameters/Until"
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Page de réflexions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, next_cursor]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PostEvent"
+                  next_cursor:
+                    $ref: "#/components/schemas/NextCursor"
+              examples:
+                exemple:
+                  value:
+                    data:
+                      - id: 5e6f7a8b-0000-4000-8000-000000000020
+                        client_event_id: "post_01HZY9AA12"
+                        user_id: 9c0d1e2f-0000-4000-8000-000000000002
+                        ts: "2026-07-15T09:35:44.010Z"
+                        site: "chatgpt"
+                        post_key: "explain"
+                        category: "rédaction"
+                        answered: true
+                        answer_words: 62
+                        answer: "En gros, le texte dit que…"
+                        conv_key: null
+                    next_cursor: null
+        "401": { $ref: "#/components/responses/InvalidKey" }
+        "403": { $ref: "#/components/responses/ForbiddenScope" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s "https://track-prompt.vercel.app/api/v1/post-events?limit=500" \
+              -H "Authorization: Bearer $PROMPT_TRACKER_KEY"
+
+  /progress:
+    get:
+      operationId: listProgress
+      tags: [Agrégats]
+      summary: Agrégats hebdomadaires par étudiant
+      description: >-
+        Une ligne par étudiant et par semaine, triée par `week` puis `user_id`.
+        Calculé **sans aucun contenu** : ces agrégats sont donc complets même
+        pour les utilisateurs qui n'ont accordé aucun consentement. Cet endpoint
+        n'est pas paginé et exige le scope `progress:read`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/UserId"
+        - name: from
+          in: query
+          required: false
+          description: Borne basse incluse, ISO 8601.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-06-01T00:00:00Z"
+        - name: to
+          in: query
+          required: false
+          description: Borne haute **exclue**, ISO 8601.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-09-01T00:00:00Z"
+      responses:
+        "200":
+          description: Agrégats hebdomadaires.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProgressRow"
+              examples:
+                exemple:
+                  value:
+                    data:
+                      - user_id: 9c0d1e2f-0000-4000-8000-000000000002
+                        week: "2026-07-13"
+                        events: 24
+                        avg_first_draft: 41.8
+                        avg_after: 63.2
+                        intercepted: 11
+                        improved: 8
+                        sent_anyway: 2
+                        cancelled: 1
+        "401": { $ref: "#/components/responses/InvalidKey" }
+        "403": { $ref: "#/components/responses/ForbiddenScope" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s "https://track-prompt.vercel.app/api/v1/progress?from=2026-06-01T00:00:00Z" \
+              -H "Authorization: Bearer $PROMPT_TRACKER_KEY"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Créez une clé dans le dashboard : **Paramètres → Clés API**. Elle n'est
+        affichée **qu'une seule fois** ; seul son empreinte SHA-256 est
+        conservée côté serveur. Une clé révoquée cesse de fonctionner
+        immédiatement.
+
+        ```
+        Authorization: Bearer pt_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        ```
+
+        Aucun autre mode de transmission n'est accepté : ni en-tête
+        personnalisé, ni paramètre d'URL.
+
+        **Scopes.** Chaque clé porte des scopes. `events:read` ouvre `/groups`,
+        `/students`, `/events` et `/post-events` ; `progress:read` ouvre
+        `/progress`. Les clés créées aujourd'hui reçoivent les deux.
+
+  parameters:
+    GroupId:
+      name: group_id
+      in: query
+      required: false
+      description: Restreint le résultat aux membres de ce groupe (voir `GET /groups`).
+      schema:
+        type: string
+        format: uuid
+    UserId:
+      name: user_id
+      in: query
+      required: false
+      description: Restreint le résultat à un étudiant (voir `GET /students`).
+      schema:
+        type: string
+        format: uuid
+    Since:
+      name: since
+      in: query
+      required: false
+      description: Borne basse **incluse** sur `ts`, ISO 8601.
+      schema:
+        type: string
+        format: date-time
+      example: "2026-07-01T00:00:00Z"
+    Until:
+      name: until
+      in: query
+      required: false
+      description: Borne haute **exclue** sur `ts`, ISO 8601.
+      schema:
+        type: string
+        format: date-time
+      example: "2026-08-01T00:00:00Z"
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: >-
+        Jeton opaque renvoyé dans `next_cursor`. À réinjecter tel quel pour
+        obtenir la page suivante. Sa structure interne n'est pas un contrat :
+        ne la décodez pas et ne la fabriquez pas. Un curseur illisible est
+        ignoré et la pagination repart du début.
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: >-
+        Nombre d'éléments par page. Borné côté serveur entre 1 et 500 : une
+        valeur hors bornes est ramenée dans l'intervalle, sans erreur.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 100
+
+  responses:
+    InvalidKey:
+      description: >-
+        Clé absente, inconnue ou révoquée. Vérifiez l'en-tête `Authorization`
+        et l'état de la clé dans le dashboard.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: invalid_key
+    ForbiddenScope:
+      description: >-
+        La clé est valide mais ne porte pas le scope exigé par cet endpoint.
+        Créez une nouvelle clé avec le scope manquant.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: forbidden_scope
+    RateLimited:
+      description: >-
+        Plus de 60 requêtes sur la fenêtre d'une minute pour cette clé.
+        Attendez la durée indiquée puis rejouez la requête à l'identique — les
+        endpoints sont en lecture seule, un rejeu est toujours sûr.
+      headers:
+        Retry-After:
+          description: Secondes à attendre avant de réessayer.
+          schema:
+            type: integer
+          example: 60
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: rate_limited
+    InternalError:
+      description: >-
+        Erreur inattendue côté serveur. Le détail n'est volontairement pas
+        exposé. Rejouez avec un back-off exponentiel ; si l'erreur persiste,
+        contactez-nous avec l'horodatage de l'appel.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: internal_error
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: >-
+            Code d'erreur stable, à tester dans votre code plutôt que le statut
+            HTTP seul.
+          enum: [invalid_key, forbidden_scope, rate_limited, internal_error]
+
+    NextCursor:
+      type: [string, "null"]
+      description: >-
+        Jeton à passer en `?cursor=` pour la page suivante, ou `null` quand la
+        pagination est terminée. Non-`null` uniquement si la page renvoyée est
+        exactement pleine — une dernière page pleine produit donc un curseur
+        dont la page suivante sera vide. Bouclez sur `next_cursor`, pas sur la
+        taille de `data`.
+
+    Group:
+      type: object
+      required: [id, name, member_count]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Nom du groupe (classe, promotion, cohorte).
+        member_count:
+          type: integer
+          description: Nombre de membres actuellement rattachés au groupe.
+
+    Student:
+      type: object
+      required: [id, display_name, email, role, disabled, groups, consents]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: >-
+            Correspond au `user_id` des événements et des agrégats.
+        display_name:
+          type: [string, "null"]
+        email:
+          type: [string, "null"]
+          format: email
+        role:
+          type: string
+          description: Rôle dans l'organisation.
+          examples: [student, teacher, admin]
+        disabled:
+          type: boolean
+          description: Compte désactivé — il n'émet plus d'événements.
+        groups:
+          type: array
+          description: Identifiants des groupes dont l'étudiant est membre.
+          items:
+            type: string
+            format: uuid
+        consents:
+          type: object
+          description: >-
+            État **courant** des consentements, par catégorie. Une catégorie
+            absente vaut « non accordé ». C'est cette table qui explique
+            pourquoi un champ de contenu revient à `null`.
+          additionalProperties:
+            type: boolean
+          propertyNames:
+            examples:
+              - prompt_text
+              - socratic_dialogue
+              - post_reflection
+              - conversation_history
+
+    Scores:
+      type: object
+      description: >-
+        Barème local, calculé sans aucun appel réseau et versionné : quatre
+        rubriques sur 25, total sur 100. Score du prompt **effectivement
+        envoyé**. Comparez vos courbes de progression à version de barème
+        constante ; la définition détaillée est publiée sur la page Méthode du
+        dashboard.
+      properties:
+        clarte:
+          type: integer
+          description: Clarté de la demande, sur 25.
+        contexte:
+          type: integer
+          description: Contexte fourni, sur 25.
+        iteration:
+          type: integer
+          description: Disposition à itérer, sur 25.
+        critique:
+          type: integer
+          description: Esprit critique, sur 25.
+        total:
+          type: integer
+          description: Total sur 100.
+
+    DialogueTurn:
+      type: object
+      description: Un tour du raisonnement socratique.
+      properties:
+        q:
+          type: string
+          description: Question posée à l'étudiant.
+        a:
+          type: string
+          description: Réponse de l'étudiant.
+        axis:
+          type: string
+          description: Rubrique visée par la question.
+
+    PromptEvent:
+      type: object
+      description: L'objet pivot — un prompt envoyé sur un site d'IA.
+      required:
+        [id, client_event_id, user_id, ts, site, category, words, scores,
+         intercepted, outcome, score_before, score_after, mirror_shown, rounds,
+         answers_count, text, dialogue, conv_key]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: >-
+            Identifiant serveur, stable. **Votre clé d'idempotence** à
+            l'ingestion.
+        client_event_id:
+          type: string
+          description: >-
+            Identifiant généré par l'extension (idempotence extension →
+            backend). Informatif : n'en faites pas votre clé.
+        user_id:
+          type: string
+          format: uuid
+        ts:
+          type: string
+          format: date-time
+          description: Moment de l'envoi du prompt.
+        site:
+          type: string
+          description: >-
+            Site d'IA sur lequel le prompt a été envoyé. **Liste extensible** :
+            traitez une valeur inconnue comme « autre ».
+          examples: [chatgpt, claude, gemini, mistral, grok]
+        category:
+          type: [string, "null"]
+          description: >-
+            Détection locale par mots-clés. **Liste extensible.**
+          examples:
+            [code, rédaction, résumé, traduction, analyse, brainstorming,
+             recherche, autre]
+        words:
+          type: [integer, "null"]
+          description: Nombre de mots du prompt.
+        scores:
+          $ref: "#/components/schemas/Scores"
+        intercepted:
+          type: boolean
+          description: >-
+            Le dialogue socratique s'est-il ouvert, c'est-à-dire le score du
+            premier jet est-il passé sous le seuil de l'organisation.
+        outcome:
+          type: [string, "null"]
+          description: |
+            Issue de l'événement. Personne ne choisit un « mode » : la
+            catégorisation est entièrement déterminée par l'interception et son
+            issue.
+
+            - `sent` — non intercepté : le premier jet passait le seuil. C'est
+              un **succès**, pas un défaut d'accompagnement.
+            - `improved` — intercepté, a travaillé avec le dialogue, a envoyé
+              la version améliorée.
+            - `sent_anyway` — intercepté, a décliné l'aide, a envoyé tel quel.
+            - `cancelled` — intercepté, n'a finalement rien envoyé.
+
+            Distinguez `sent` de `sent_anyway` dans vos agrégats : le premier
+            est un bon premier jet, le second un refus d'aide sur un premier
+            jet faible.
+          enum: [sent, improved, sent_anyway, cancelled, null]
+        score_before:
+          type: [integer, "null"]
+          description: >-
+            Le **PREMIER JET**, avant tout coaching. Rempli uniquement si
+            l'événement a été intercepté. La mesure d'apprentissage recommandée
+            est `score_before` si `intercepted`, sinon `scores.total`.
+        score_after:
+          type: [integer, "null"]
+          description: Score après amélioration, si `outcome` vaut `improved`.
+        mirror_shown:
+          type: [boolean, "null"]
+          description: Une suggestion ou le dialogue a été montré à l'étudiant.
+        rounds:
+          type: [integer, "null"]
+          description: Questions socratiques posées pendant l'interception.
+        answers_count:
+          type: [integer, "null"]
+          description: Réponses effectivement données par l'étudiant.
+        text:
+          type: [string, "null"]
+          description: >-
+            Le texte du prompt. **Soumis au consentement `prompt_text`** :
+            `null` si non consenti au moment de l'appel.
+        dialogue:
+          type: ["array", "null"]
+          description: >-
+            Les paires question/réponse du raisonnement socratique. **Soumis au
+            consentement `socratic_dialogue`.**
+          items:
+            $ref: "#/components/schemas/DialogueTurn"
+        conv_key:
+          type: [string, "null"]
+          description: >-
+            Clé de conversation : regroupe les prompts d'un même fil. **Soumise
+            au consentement `conversation_history`.**
+
+    PostEvent:
+      type: object
+      description: >-
+        Une question réflexive montrée après une réponse de l'IA — le « miroir
+        d'après ».
+      required:
+        [id, client_event_id, user_id, ts, site, post_key, category, answered,
+         answer_words, answer, conv_key]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifiant serveur, stable. Votre clé d'idempotence.
+        client_event_id:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        ts:
+          type: string
+          format: date-time
+        site:
+          type: string
+          examples: [chatgpt, claude, gemini, mistral, grok]
+        post_key:
+          type: [string, "null"]
+          description: |
+            Nature de la question réflexive posée.
+
+            - `explain` — reformuler la réponse avec ses mots.
+            - `verify` — vérifier un fait avancé par l'IA.
+            - `disagree` — oser exprimer un désaccord.
+          enum: [explain, verify, disagree, null]
+        category:
+          type: [string, "null"]
+          description: Catégorie du prompt d'origine.
+        answered:
+          type: [boolean, "null"]
+          description: L'étudiant a-t-il répondu à la question réflexive.
+        answer_words:
+          type: [integer, "null"]
+          description: Longueur de sa réponse, en mots.
+        answer:
+          type: [string, "null"]
+          description: >-
+            Sa réponse. **Soumise au consentement `post_reflection`.**
+        conv_key:
+          type: [string, "null"]
+          description: >-
+            **Soumise au consentement `conversation_history`.**
+
+    ProgressRow:
+      type: object
+      description: >-
+        Agrégat d'une semaine pour un étudiant. Calculé sans aucun contenu :
+        disponible intégralement quel que soit l'état des consentements.
+      required:
+        [user_id, week, events, avg_first_draft, avg_after, intercepted,
+         improved, sent_anyway, cancelled]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        week:
+          type: string
+          format: date
+          description: Lundi de la semaine considérée, au format `YYYY-MM-DD`.
+        events:
+          type: integer
+          description: Nombre d'événements sur la semaine.
+        avg_first_draft:
+          type: [number, "null"]
+          description: >-
+            **North Star** : moyenne des premiers jets, arrondie à une décimale.
+            Ce que l'étudiant produit seul, avant toute aide. C'est la courbe à
+            suivre pour mesurer un apprentissage.
+        avg_after:
+          type: [number, "null"]
+          description: >-
+            Moyenne des scores des prompts effectivement envoyés, arrondie à
+            une décimale.
+        intercepted:
+          type: integer
+          description: Événements ayant déclenché le dialogue socratique.
+        improved:
+          type: integer
+        sent_anyway:
+          type: integer
+        cancelled:
+          type: integer
