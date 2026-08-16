@@ -4,7 +4,19 @@
 // UI change, seul le fichier de config du site est à retoucher.
 
 function createCoachAdapter(config) {
-  const { site, composerSelectors, sendButtonSelectors, rootPaths = ["/"] } = config;
+  const {
+    site,
+    composerSelectors,
+    sendButtonSelectors,
+    rootPaths = ["/"],
+    // Mesures post-réponse. Tableaux VIDES tant que les sélecteurs d'un site
+    // n'ont pas été vérifiés à la main : des mesures nulles valent mieux que
+    // des mesures fausses, et rien d'autre n'en dépend (l'interception, la
+    // détection de fin et le miroir d'après n'ont jamais utilisé de sélecteur).
+    assistantSelectors = [],
+    assistantTextSelectors = [],
+    modelSelectors = [],
+  } = config;
 
   let hooks = { shouldIntercept: () => false, onIntercept: null, onSubmit: null };
   let bypassUntil = 0; // fenêtre pendant laquelle send() programmatique n'est pas ré-intercepté
@@ -195,49 +207,215 @@ function createCoachAdapter(config) {
     return rootPaths.some((root) => path === root || (root !== "/" && path.endsWith(root)));
   }
 
+  /* ---------- Lecture des surfaces de réponse ---------- */
+
+  // Premier sélecteur qui donne quelque chose (même règle que getComposer).
+  function queryAll(selectors) {
+    for (const sel of selectors) {
+      const nodes = document.querySelectorAll(sel);
+      if (nodes.length) return [...nodes];
+    }
+    return [];
+  }
+
+  function assistantCount() {
+    return queryAll(assistantSelectors).length;
+  }
+
+  function lastAssistantNode() {
+    const nodes = queryAll(assistantSelectors);
+    return nodes[nodes.length - 1] || null;
+  }
+
+  // Texte de la dernière réponse, pour être COMPTÉ puis oublié : il n'est ni
+  // stocké, ni transmis, ni conservé au-delà de l'appelant immédiat.
+  // On vise le sous-nœud de prose : le conteneur de tour inclut les libellés
+  // des boutons (Copier, Régénérer) et les puces de citation, qui gonfleraient
+  // le décompte sans rapport avec la réponse.
+  function readResponseText(preferred) {
+    const turn = preferred && preferred.isConnected ? preferred : lastAssistantNode();
+    if (!turn) return null;
+    for (const sel of assistantTextSelectors) {
+      const parts = turn.querySelectorAll(sel);
+      if (parts.length) return [...parts].map((p) => p.innerText || "").join("\n").trim();
+    }
+    return (turn.innerText || "").trim();
+  }
+
+  // Le libellé brut n'existe que dans cette fonction : il est normalisé à la
+  // source et n'est jamais retourné. Un GPT personnalisé porte le nom que son
+  // auteur lui a donné — le laisser franchir cette frontière réintroduirait du
+  // contenu utilisateur dans un champ censé être en liste blanche.
+  function readModelId() {
+    if (typeof CoachModels === "undefined") return null;
+    const nodes = queryAll(modelSelectors);
+    const el = nodes[nodes.length - 1];
+    if (!el) return null;
+    const raw =
+      el.getAttribute("data-message-model-slug") ||
+      el.getAttribute("data-model") ||
+      el.getAttribute("title") ||
+      el.getAttribute("aria-label") ||
+      el.innerText ||
+      "";
+    return CoachModels.normalize(site, raw);
+  }
+
+  /* ---------- Fin de réponse IA : un veilleur, plusieurs consommateurs ---------- */
+
   let responseWatch = null;
+  const responseListeners = [];
+
+  // Abonnement PERSISTANT, enregistré une fois au démarrage. Le veilleur reste
+  // unique (un seul MutationObserver, invariant historique) ; ce sont ses
+  // consommateurs qui sont multiples : les mesures, toujours actives, et le
+  // miroir d'après, optionnel. La porte de fonctionnalité vit donc chez le
+  // consommateur, plus sur l'armement.
+  function onResponse(listener) {
+    responseListeners.push(listener);
+  }
+
+  function emit(phase, ctx) {
+    for (const l of responseListeners) {
+      if (typeof l[phase] !== "function") continue;
+      // Un consommateur qui casse ne doit pas emporter les autres.
+      try {
+        l[phase](ctx);
+      } catch (err) {
+        console.debug("[coach-ia]", phase, err);
+      }
+    }
+  }
 
   // Détection générique de fin de réponse : après un envoi, le document mute
   // en continu pendant le streaming ; une phase d'activité soutenue suivie
-  // d'un long silence signifie que la réponse est complète. Aucun sélecteur
-  // par site (robuste aux refontes d'UI), au prix de quelques secondes de
-  // latence. Les mutations de nos propres surfaces (coach-ia) sont ignorées.
-  // Les seuils écartent le faux positif du simple affichage du message envoyé
-  // suivi du temps de réflexion du modèle (peu de mutations, puis silence).
-  function watchResponse({ onComplete, quietMs = 3000, minActivity = 12, minElapsedMs = 4000, maxWaitMs = 120000 }) {
+  // d'un long silence signifie que la réponse est complète. L'heuristique de
+  // FIN reste sans sélecteur (robuste aux refontes d'UI) ; seules les MESURES
+  // sont bornées au nœud de réponse. Les seuils écartent le faux positif du
+  // simple affichage du message envoyé suivi du temps de réflexion du modèle.
+  function armResponseWatch(meta = {}, opts = {}) {
+    const { quietMs = 3000, minActivity = 12, minElapsedMs = 4000, maxWaitMs = 120000 } = opts;
     cancelResponseWatch();
+
+    const ctx = {
+      eventId: meta.eventId || null,
+      sentAt: meta.sentAt || Date.now(),
+      // Rang du tour, lu AVANT que la réponse n'arrive.
+      turnIndex: assistantSelectors.length ? assistantCount() : null,
+      firstTokenAt: null,
+      lastActivityAt: null,
+      // Un onglet passé en arrière-plan gèle le rendu : les durées deviennent
+      // fausses de façon indétectable. On mémorise le fait pour les jeter.
+      hidden: document.visibilityState === "hidden",
+      reason: null,
+      chars: null,
+      words: null,
+      model: null,
+    };
+
     let activity = 0;
     let quietTimer = null;
-    const startedAt = Date.now();
+    let cachedAssistant = null;
+    let done = false;
 
-    const ours = (node) => {
+    const isOurs = (node) => {
       for (let n = node; n; n = n.parentNode) {
         if (n.id && String(n.id).startsWith("coach-ia")) return true;
       }
       return false;
     };
 
-    const finish = () => {
+    // Une mutation est « à nous » seulement si TOUS ses nœuds le sont : quand
+    // on insère notre propre toast dans document.body, la cible EST body, donc
+    // tester m.target seul ferait compter nos surfaces comme activité de page.
+    const ours = (m) => [m.target, ...m.addedNodes, ...m.removedNodes].every(isOurs);
+
+    // Appelé sur chaque mutation, et le streaming en produit des milliers :
+    // le nœud de réponse est mis en cache, closest() n'est le repli que la
+    // première fois et après un remontage.
+    const inAssistant = (m) => {
+      if (!assistantSelectors.length) return false;
+      const n = m.target.nodeType === 1 ? m.target : m.target.parentElement;
+      if (!n) return false;
+      if (cachedAssistant && cachedAssistant.isConnected && cachedAssistant.contains(n)) return true;
+      if (!n.closest) return false;
+      for (const sel of assistantSelectors) {
+        const hit = n.closest(sel);
+        if (hit) {
+          cachedAssistant = hit;
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") ctx.hidden = true;
+    };
+
+    const finish = (reason) => {
+      if (done) return;
+      done = true;
+      ctx.reason = reason;
+      const text = readResponseText(cachedAssistant);
+      if (text !== null) {
+        ctx.chars = text.length;
+        ctx.words = typeof CoachScoring !== "undefined" ? CoachScoring.wordCount(text) : null;
+      }
+      ctx.model = readModelId();
       cancelResponseWatch();
-      onComplete();
+      emit("onComplete", ctx);
     };
 
     const observer = new MutationObserver((mutations) => {
-      if (!mutations.some((m) => !ours(m.target))) return;
+      const relevant = mutations.filter((m) => !ours(m));
+      if (!relevant.length) return;
+      const now = Date.now();
+
+      if (relevant.some(inAssistant)) {
+        // Premier signe VISIBLE dans le nœud de réponse. Le squelette vide
+        // inséré avant le streaming ne compte pas : on exige du texte.
+        // textContent et non innerText : pas de reflow forcé, et on ne cherche
+        // ici qu'à savoir si quelque chose est apparu.
+        if (ctx.firstTokenAt === null) {
+          const node = cachedAssistant && cachedAssistant.isConnected ? cachedAssistant : lastAssistantNode();
+          if (node && (node.textContent || "").trim()) {
+            ctx.firstTokenAt = now;
+            emit("onFirstToken", ctx);
+          }
+        }
+        // Dernière activité RÉELLE : c'est elle qui borne la durée, et non
+        // l'instant de onComplete, qui arrive quietMs plus tard.
+        if (ctx.firstTokenAt !== null) ctx.lastActivityAt = now;
+      }
+
       activity++;
-      if (activity < minActivity || Date.now() - startedAt < minElapsedMs) return;
+      if (activity < minActivity) return;
       clearTimeout(quietTimer);
-      quietTimer = setTimeout(finish, quietMs);
+      // minElapsedMs REPORTE la conclusion, il ne l'empêche pas. Le tester ici
+      // pour sortir sans rien programmer condamnait les réponses courtes : une
+      // réponse terminée avant le seuil ne recevait plus aucune mutation, donc
+      // plus jamais de minuteur, et finissait en « timeout » 120 s plus tard
+      // alors qu'elle était complète.
+      const wait = Math.max(quietMs, minElapsedMs - (now - ctx.sentAt));
+      quietTimer = setTimeout(() => finish("complete"), wait);
     });
-    const deadline = setTimeout(cancelResponseWatch, maxWaitMs);
+
+    // Échéance dure : elle produit désormais un VERDICT ("timeout") au lieu de
+    // s'éteindre en silence, pour que la ligne retenue côté sync soit libérée.
+    const deadline = setTimeout(() => finish("timeout"), maxWaitMs);
+
     responseWatch = {
       observer,
       clear() {
         clearTimeout(quietTimer);
         clearTimeout(deadline);
+        document.removeEventListener("visibilitychange", onVisibility);
       },
     };
+    document.addEventListener("visibilitychange", onVisibility);
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    emit("onStart", ctx);
   }
 
   function cancelResponseWatch() {
@@ -247,5 +425,31 @@ function createCoachAdapter(config) {
     responseWatch = null;
   }
 
-  return { init, healthy, setComposerText, send, submitText, readComposerText, watchResponse, cancelResponseWatch, conversationKey, isNewConversation, site };
+  // Sonde étendue. healthy() reste booléen (le popup en dépend) : le composeur
+  // est VITAL, sans lui l'extension est morte. Les sélecteurs de mesure sont
+  // accessoires — sans eux les métriques sont nulles et le coaching continue.
+  // Deux niveaux d'alerte, pas un. null = « pas de sélecteur déclaré ».
+  function probe() {
+    return {
+      composer: Boolean(getComposer()),
+      assistant: assistantSelectors.length ? assistantCount() > 0 : null,
+      model: modelSelectors.length ? Boolean(readModelId()) : null,
+    };
+  }
+
+  return {
+    init,
+    healthy,
+    probe,
+    setComposerText,
+    send,
+    submitText,
+    readComposerText,
+    onResponse,
+    armResponseWatch,
+    cancelResponseWatch,
+    conversationKey,
+    isNewConversation,
+    site,
+  };
 }

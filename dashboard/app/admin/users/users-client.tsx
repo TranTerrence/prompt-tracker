@@ -19,6 +19,7 @@ import {
   setGroupCodeActive,
   setRole,
 } from "./actions";
+import InvitationsPanel, { type InvitationRow } from "./invitations-panel";
 
 type Message = { ok: boolean; message: string } | null;
 
@@ -30,6 +31,7 @@ export default function UsersClient({
   members,
   consents,
   dataRequests,
+  invitations,
   currentUserId,
 }: {
   profiles: Profile[];
@@ -37,6 +39,7 @@ export default function UsersClient({
   members: GroupMember[];
   consents: Consent[];
   dataRequests: OrgDataRequest[];
+  invitations: (InvitationRow & { group_id: string })[];
   currentUserId: string;
 }) {
   const [message, setMessage] = useState<Message>(null);
@@ -287,12 +290,24 @@ export default function UsersClient({
                   <button
                     disabled={pending || !group.join_code}
                     onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/join/${group.join_code}`
+                      );
+                      setMessage({ ok: true, message: "Lien d'invitation copié." });
+                    }}
+                    className="rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+                  >
+                    Copier le lien
+                  </button>
+                  <button
+                    disabled={pending || !group.join_code}
+                    onClick={() => {
                       navigator.clipboard.writeText(group.join_code ?? "");
                       setMessage({ ok: true, message: "Code copié." });
                     }}
                     className="rounded-lg border border-card-border px-2.5 py-1 text-xs text-muted transition-colors hover:bg-soft hover:text-foreground disabled:opacity-50"
                   >
-                    Copier
+                    Copier le code
                   </button>
                   <button
                     disabled={pending}
@@ -314,11 +329,19 @@ export default function UsersClient({
                     Régénérer
                   </button>
                 </div>
-                <p className="w-full text-xs text-muted">
-                  Les utilisateurs saisissent ce code dans l&apos;extension ou sur
-                  la page d&apos;attente pour rejoindre l&apos;organisation et ce
-                  groupe.
-                </p>
+                <div className="w-full space-y-1.5 text-xs text-muted">
+                  {group.join_code && group.join_code_active && (
+                    <p className="font-mono break-all text-foreground">
+                      /join/{group.join_code}
+                    </p>
+                  )}
+                  <p>
+                    Colle le lien dans un ENT ou un mail de rentrée : il montre
+                    la classe, guide l&apos;inscription puis l&apos;installation
+                    de l&apos;extension. Le code seul reste utilisable pour une
+                    saisie manuelle dans l&apos;extension.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -360,6 +383,14 @@ export default function UsersClient({
           <p className="mt-4 text-sm text-muted">Aucun groupe pour le moment.</p>
         )}
       </section>
+
+      {group && (
+        <InvitationsPanel
+          groupId={group.id}
+          groupName={group.name}
+          invitations={invitations.filter((i) => i.group_id === group.id)}
+        />
+      )}
     </div>
   );
 }

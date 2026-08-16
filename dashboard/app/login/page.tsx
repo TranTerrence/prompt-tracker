@@ -1,13 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const params = useSearchParams();
+  // Contexte d'invitation : la classe visée et la destination post-connexion.
+  // `join` sert de troisième porteur derrière le cookie httpOnly et le lien de
+  // confirmation d'e-mail — aucun des trois ne survit à tous les parcours.
+  const joinCode = params.get("join");
+  const next = params.get("next");
+  const [mode, setMode] = useState<"signin" | "signup">(
+    params.get("mode") === "signup" ? "signup" : "signin"
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +34,12 @@ export default function LoginPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
+          // Ramène directement sur la classe après confirmation d'e-mail : sans
+          // ça, le lien de confirmation atterrit sur la racine et le contexte
+          // d'invitation est perdu.
+          options: joinCode
+            ? { emailRedirectTo: `${window.location.origin}/join/${encodeURIComponent(joinCode)}` }
+            : undefined,
         });
         if (error) {
           setError(error.message);
@@ -33,7 +47,9 @@ export default function LoginPage() {
         }
         if (!data.session) {
           setInfo(
-            "Compte créé. Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi."
+            joinCode
+              ? "Compte créé. Confirme ton adresse depuis ta boîte mail : le lien te ramènera directement sur ta classe."
+              : "Compte créé. Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi."
           );
           setMode("signin");
           return;
@@ -61,6 +77,21 @@ export default function LoginPage() {
         setError("Connexion impossible, réessaie.");
         return;
       }
+      // Le contexte d'invitation prime sur le routage par rôle : quelqu'un qui
+      // vient d'un lien de classe doit revoir la divulgation et l'accepter,
+      // pas atterrir sur un tableau de bord vide.
+      if (joinCode) {
+        router.replace(`/join/${encodeURIComponent(joinCode)}`);
+        router.refresh();
+        return;
+      }
+      // `next` n'est suivi que s'il est relatif (pas de redirecteur ouvert).
+      if (next && next.startsWith("/") && !next.startsWith("//")) {
+        router.replace(next);
+        router.refresh();
+        return;
+      }
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("role, org_id")
@@ -199,5 +230,15 @@ export default function LoginPage() {
         </Link>
       </p>
     </main>
+  );
+}
+
+// useSearchParams exige une frontière Suspense : sans elle, toute la route
+// bascule en rendu client au build.
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className="flex-1" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

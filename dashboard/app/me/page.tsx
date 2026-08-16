@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { average, averageScore, averageFirstDraft, firstDraftOf, fmt, fmtDate, scoreOf, weekKey } from "@/lib/stats";
+import { average, averageScore, averageFirstDraft, computeResponseKpis, dayStreakInfo, firstDraftOf, fmt, fmtDate, fmtDuration, fmtPct, linkStateOf, scoreOf, weekKey } from "@/lib/stats";
+import ExtensionPanel from "./extension-panel";
 import {
   OUTCOME_LABELS,
   POST_KEYS,
@@ -13,7 +14,21 @@ import {
 
 type EventRow = Pick<
   PromptEvent,
-  "id" | "ts" | "scores" | "intercepted" | "outcome" | "score_before" | "score_after" | "site"
+  | "id"
+  | "ts"
+  | "scores"
+  | "intercepted"
+  | "outcome"
+  | "score_before"
+  | "score_after"
+  | "site"
+  // Mesures post-réponse. On n'expose PAS latency_ms ici : « ton IA a répondu
+  // en 3,2 s » n'apprend rien à un élève et invite à l'anxiété. Le temps de
+  // LECTURE, lui, est une prise de conscience utile.
+  | "model"
+  | "prompt_chars"
+  | "response_chars"
+  | "read_ms"
 > & { rounds: number | null };
 
 type PostRow = Pick<
@@ -140,13 +155,15 @@ function RubriqueBars({ values }: { values: { key: string; label: string; avg: n
 }
 
 export default async function MePage() {
-  const { userId } = await requireSession();
+  const { userId, org } = await requireSession();
   const supabase = await createClient();
 
-  const [{ data }, { data: postData }] = await Promise.all([
+  const [{ data }, { data: postData }, { data: profileData }] = await Promise.all([
     supabase
       .from("prompt_events")
-      .select("id, ts, scores, intercepted, outcome, score_before, score_after, site, rounds")
+      .select(
+        "id, ts, scores, intercepted, outcome, score_before, score_after, site, rounds, model, prompt_chars, response_chars, read_ms"
+      )
       .eq("user_id", userId)
       .order("ts", { ascending: false })
       .limit(5000),
@@ -156,9 +173,20 @@ export default async function MePage() {
       .eq("user_id", userId)
       .order("ts", { ascending: false })
       .limit(1000),
+    supabase
+      .from("profiles")
+      .select("baseline_consent_at")
+      .eq("id", userId)
+      .maybeSingle(),
   ]);
 
   const events = (data ?? []) as EventRow[];
+  // État réel de la remontée : sans accord de partage, cette page reste vide
+  // quoi que fasse l'étudiant. Il faut le lui dire, pas le laisser deviner.
+  const linkState = linkStateOf(
+    { baseline_consent_at: profileData?.baseline_consent_at ?? null },
+    events.length > 0 ? events[0].ts : null
+  );
   const postEvents = (postData ?? []) as PostRow[];
   const postAnswered = postEvents.filter((p) => p.answered).length;
   const postByKey = POST_KEYS.map((key) => ({
@@ -203,13 +231,25 @@ export default async function MePage() {
   // Historique des interceptions
   const interceptions = events.filter((e) => e.intercepted).slice(0, 50);
 
+  // Série de jours, avec le seuil de l'organisation (même règle que le popup).
+  const streak = dayStreakInfo(events, org.threshold);
+
+  // Mesures post-réponse. Seul le temps de LECTURE est restitué à l'élève :
+  // la latence du modèle ne lui apprend rien et invite à l'anxiété.
+  const readKpis = computeResponseKpis(events);
+
   return (
     <div className="space-y-10">
       <h1 className="font-display text-3xl font-semibold tracking-tight">
         Ma progression
       </h1>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <ExtensionPanel
+        state={linkState}
+        lastTs={events.length > 0 ? events[0].ts : null}
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
           <p className="text-[13px] text-muted">Premiers jets</p>
           <p className="mt-2 font-display text-3xl font-medium tracking-tight tabular-nums">
@@ -231,7 +271,57 @@ export default async function MePage() {
             {interceptions.length}
           </p>
         </div>
+        {/* La série était visible dans le popup mais pas ici, alors que c'est
+            l'indicateur d'autonomie que l'élève regarde en premier. */}
+        <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
+          <p className="text-[13px] text-muted">Série de jours</p>
+          <p className="mt-2 font-display text-3xl font-medium tracking-tight tabular-nums">
+            {streak.streak > 0 ? `${streak.streak} 🔥` : ":"}
+            {streak.freezes > 0 && (
+              <span className="text-xl"> +{streak.freezes}🧊</span>
+            )}
+          </p>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+            jours d&apos;affilée où tes premiers jets tiennent le seuil
+            {streak.freezes > 0 && ", et des gels en réserve pour un jour manqué"}
+          </p>
+        </div>
       </div>
+
+      {/* Temps de lecture : une prise de conscience, pas une note. Affiché
+          seulement s'il y a assez de mesures pour que la médiane veuille dire
+          quelque chose — un chiffre calculé sur trois points serait du bruit
+          présenté comme un constat. */}
+      {readKpis.medianReadMs !== null && readKpis.readCount >= 10 && (
+        <section className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            Ton temps de lecture
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed">
+            Entre la fin d&apos;une réponse et ton prompt suivant, tu prends en
+            général{" "}
+            <strong className="tabular-nums">
+              {fmtDuration(readKpis.medianReadMs)}
+            </strong>
+            .
+            {readKpis.quickReadRate !== null && (
+              <>
+                {" "}
+                Sur les réponses longues, tu enchaînes en moins de dix secondes{" "}
+                <strong className="tabular-nums">
+                  {fmtPct(readKpis.quickReadRate)}
+                </strong>{" "}
+                du temps.
+              </>
+            )}
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            Ce n&apos;est pas une note : lire vite peut vouloir dire que la
+            réponse était bonne et attendue. C&apos;est un repère à confronter à
+            ton propre ressenti — as-tu vraiment vérifié ce que tu as relancé ?
+          </p>
+        </section>
+      )}
 
       <section className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">

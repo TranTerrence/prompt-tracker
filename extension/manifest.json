@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "__MSG_appDesc__",
   "default_locale": "fr",
   "icons": {
@@ -29,6 +29,7 @@
         "src/scoring.js",
         "src/mirror.js",
         "src/badge.js",
+        "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/chatgpt.js",
         "src/content.js"
@@ -45,6 +46,7 @@
         "src/scoring.js",
         "src/mirror.js",
         "src/badge.js",
+        "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/claude.js",
         "src/content.js"
@@ -61,6 +63,7 @@
         "src/scoring.js",
         "src/mirror.js",
         "src/badge.js",
+        "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/gemini.js",
         "src/content.js"
@@ -77,6 +80,7 @@
         "src/scoring.js",
         "src/mirror.js",
         "src/badge.js",
+        "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/mistral.js",
         "src/content.js"
@@ -93,6 +97,7 @@
         "src/scoring.js",
         "src/mirror.js",
         "src/badge.js",
+        "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/grok.js",
         "src/content.js"

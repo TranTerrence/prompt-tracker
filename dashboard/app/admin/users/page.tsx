@@ -2,15 +2,16 @@ import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Consent, Group, GroupMember, OrgDataRequest, Profile } from "@/lib/types";
 import UsersClient from "./users-client";
+import type { InvitationRow } from "./invitations-panel";
 
 export default async function AdminUsersPage() {
   const { org, userId } = await requireAdmin();
   const supabase = await createClient();
 
-  const [profilesRes, groupsRes, requestsRes] = await Promise.all([
+  const [profilesRes, groupsRes, requestsRes, invitationsRes] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, org_id, role, email, display_name, disabled")
+      .select("id, org_id, role, email, display_name, disabled, baseline_consent_at")
       .eq("org_id", org.id)
       .order("email"),
     supabase
@@ -23,11 +24,19 @@ export default async function AdminUsersPage() {
       .select("org_id, category, requested, purpose")
       .eq("org_id", org.id)
       .eq("requested", true),
+    supabase
+      .from("group_invitations")
+      .select("id, group_id, email, display_name, expires_at, sent_at, accepted_at, revoked_at")
+      .eq("org_id", org.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const profiles = (profilesRes.data ?? []) as Profile[];
   const groups = (groupsRes.data ?? []) as Group[];
   const dataRequests = (requestsRes.data ?? []) as OrgDataRequest[];
+  const invitations = (invitationsRes.data ?? []) as (InvitationRow & {
+    group_id: string;
+  })[];
 
   let members: GroupMember[] = [];
   let consents: Consent[] = [];
@@ -56,6 +65,7 @@ export default async function AdminUsersPage() {
       members={members}
       consents={consents}
       dataRequests={dataRequests}
+      invitations={invitations}
       currentUserId={userId}
     />
   );

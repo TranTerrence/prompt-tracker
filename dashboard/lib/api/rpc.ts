@@ -32,10 +32,23 @@ export async function callApiRpc(
         ? 403
         : raw.includes("rate_limited")
           ? 429
-          : 500;
-    const message = ["invalid_key", "forbidden_scope", "rate_limited"].find((m) =>
-      raw.includes(m)
-    );
+          : // Arguments refusés par la RPC : c'est une erreur de l'appelant,
+            // pas une panne. Un 500 enverrait l'intégrateur chercher au
+            // mauvais endroit.
+            raw.includes("invalid_widget") || raw.includes("invalid_scope")
+            ? 400
+            : raw.includes("invalid_token") || raw.includes("expired_token")
+              ? 401
+              : 500;
+    const message = [
+      "invalid_key",
+      "forbidden_scope",
+      "rate_limited",
+      "invalid_widget",
+      "invalid_scope",
+      "invalid_token",
+      "expired_token",
+    ].find((m) => raw.includes(m));
     return { error: { status, message: message ?? "internal_error" } };
   }
   return { data: body };

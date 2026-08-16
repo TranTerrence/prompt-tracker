@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "dev"],
       "cwd": "dashboard",
       "port": 3000
+    },
+    {
+      "name": "harnais-extension",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4321"],
+      "cwd": "extension",
+      "port": 4321
     }
   ]
 }

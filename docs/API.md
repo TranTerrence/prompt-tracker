@@ -9,16 +9,24 @@ vérité du contrat.**
 | Spec OpenAPI 3.1 | https://track-prompt.vercel.app/openapi.yaml — dans le dépôt : [`dashboard/public/openapi.yaml`](../dashboard/public/openapi.yaml) |
 | Contrat d'intégration (gouvernance, canaux, CSV) | [INTEGRATION.md](INTEGRATION.md) |
 
-La spec décrit les cinq endpoints (`/groups`, `/students`, `/events`,
-`/post-events`, `/progress`), les schémas complets, la pagination keyset, les
-scopes, les quatre codes d'erreur et des exemples curl et Node.
+La spec décrit les six endpoints — cinq en lecture (`/groups`, `/students`,
+`/events`, `/post-events`, `/progress`) et `POST /embed-tokens` —, les schémas
+complets, la pagination keyset, les scopes, les codes d'erreur et des exemples
+curl et Node.
 
 ## Ce qu'il faut savoir avant de lire la spec
 
-- Base : `https://track-prompt.vercel.app/api/v1`, lecture seule, périmètre =
-  votre organisation.
+- Base : `https://track-prompt.vercel.app/api/v1`, périmètre = votre
+  organisation. Aucun endpoint ne modifie vos données ; le seul POST,
+  `/embed-tokens`, est sans état (il signe une capacité d'affichage).
 - Auth : `Authorization: Bearer pt_live_…` (dashboard, Paramètres → Clés API ;
   seul le hash est conservé, affichage unique). 60 requêtes/minute par clé.
+- Scopes cochés à la création : `events:read`, `progress:read`, `embed:mint`.
+  Ce dernier n'est **jamais** attribué d'office.
+- **Widgets embarqués** : `POST /embed-tokens` frappe un jeton court, à passer
+  à une iframe `/embed/<widget>`. Ces widgets n'exposent que des indicateurs —
+  jamais de contenu — et ne s'affichent que dans les origines déclarées par
+  l'organisation. Détail dans [INTEGRATION.md](INTEGRATION.md), canal 4.
 - **Consentement** : les indicateurs sont toujours disponibles ; le CONTENU
   (`text`, `dialogue`, `answer`, `conv_key`) n'est renvoyé que si l'utilisateur
   y consent **au moment de l'appel**. Une révocation coupe l'accès y compris à

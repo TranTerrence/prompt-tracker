@@ -17,7 +17,7 @@ Chaque prompt est scoré localement, ventilation affichée en direct (clarté, c
 
 🔒 **Données et confidentialité**
 Rien n'est enregistré tant que tu n'as pas accepté l'écran de divulgation affiché au premier lancement : l'extension reste inactive avant ton accord explicite.
-• **En local, après ton accord** : scores de qualité, catégorie, nombre de mots, site, date, issue (envoyé, amélioré, annulé), tes réponses au dialogue et tes réflexions d'après-réponse. Le texte complet de tes prompts n'est enregistré que si tu actives l'option dédiée. Tout reste sur ton ordinateur : pas de compte requis.
+• **En local, après ton accord** : scores de qualité, catégorie, nombre de mots, site, date, issue (envoyé, amélioré, annulé), tes réponses au dialogue et tes réflexions d'après-réponse, plus des mesures sur la réponse de l'IA — sa longueur, sa durée, le modèle utilisé et le temps que tu prends avant d'enchaîner. Le texte des réponses est compté puis oublié : jamais enregistré. Le texte complet de tes prompts n'est enregistré que si tu actives l'option dédiée. Tout reste sur ton ordinateur : pas de compte requis.
 • **Si tu rejoins une classe** (code fourni par ton école ou ton entreprise) : un second écran te dit exactement ce qui sera partagé (les indicateurs ci-dessus, jamais aucun texte) et tu confirmes d'un bouton. Ton email de compte t'identifie auprès de l'enseignant.
 • **Les contenus** (texte des prompts, dialogues, réflexions, fils de conversation) ne sont partagés que si ton organisation les demande avec un motif ET que tu consens, catégorie par catégorie. Interrupteurs désactivés par défaut, révocables à tout moment ; le serveur efface tout contenu non consenti dès réception.
 • **Questions IA sur mesure (option)** : si ton organisation l'active et que tu as consenti au partage de ton texte et de ton raisonnement, ton prompt transite par Anthropic pour générer la question suivante, sans être stocké.
@@ -43,13 +43,13 @@ Prompt Tracker analyse localement la qualité des prompts saisis sur les sites d
 - Hôte `https://gemini.google.com/*` : même usage sur Gemini.
 - Hôte `https://chat.mistral.ai/*` : même usage sur Mistral (Le Chat).
 - Hôte `https://grok.com/*` : même usage sur Grok.
-Le contenu du champ de saisie est analysé localement, avant envoi ; il n'est transmis à aucun serveur sans les consentements décrits ci-dessus.
+Le contenu du champ de saisie est analysé localement, avant envoi ; il n'est transmis à aucun serveur sans les consentements décrits ci-dessus. La zone de réponse est observée pour en mesurer la longueur et la durée et lire le nom du modèle : ce texte est compté puis oublié, il n'est ni stocké ni transmis.
 
 ## Onglet « Pratiques de confidentialité » (Console développeur) : checklist
 Types de données à déclarer :
 - [x] **Informations permettant d'identifier personnellement** : adresse email (création de compte optionnelle).
 - [x] **Informations d'authentification** : mot de passe (authentification du compte optionnel).
-- [x] **Activité de l'utilisateur** : indicateurs d'interaction avec les sites d'IA (scores de qualité, catégories, nombres de mots, issues, horodatages).
+- [x] **Activité de l'utilisateur** : indicateurs d'interaction avec les sites d'IA (scores de qualité, catégories, nombres de mots, issues, horodatages, longueur et durée des réponses, modèle utilisé, délai de lecture).
 - [x] **Contenu de sites web** : texte des prompts, dialogues socratiques, réflexions, collectés uniquement avec le consentement opt-in, catégorie par catégorie (à déclarer malgré tout).
 
 Certifications à cocher :

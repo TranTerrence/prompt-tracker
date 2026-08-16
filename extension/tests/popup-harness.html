@@ -63,6 +63,40 @@
         disclosure: { accepted: true, version: 1, acceptedAt: new Date(now - 20 * day).toISOString() },
         events,
       };
+
+      // ?pairing=waiting : demande d'appairage en cours. C'est l'état NOMINAL
+      // à la réouverture du popup (il se ferme dès que l'onglet d'approbation
+      // prend le focus), donc celui qu'il faut pouvoir regarder.
+      if (new URLSearchParams(location.search).get("pairing") === "waiting") {
+        store.pairing = {
+          deviceCode: "d".repeat(48),
+          userCode: "K7QM3XPA",
+          expiresAt: new Date(now + 9 * 60000).toISOString(),
+        };
+      }
+
+      // Scénarios de synchronisation bloquée : ?blocked=no_baseline_consent
+      // (le blocage silencieux corrigé), no_org, not_authenticated, error.
+      // Sans paramètre : état nominal, aucune bannière.
+      const blocked = new URLSearchParams(location.search).get("blocked");
+      if (blocked) {
+        const stale = events.slice(-14).map((e) => ({ ...e, synced: false }));
+        store.events = events.slice(0, -14).concat(stale);
+        store.session = { email: "lea@lycee-jean-moulin.fr", user_id: "demo", expires_at: now + 36e5 };
+        store.profile = { org_id: "demo-org", role: "member" };
+        store.orgConfig = { orgId: "demo-org", branding: { name: "Lycée Jean-Moulin" }, dataRequests: {} };
+        if (blocked === "no_org") { store.profile = null; store.orgConfig = null; }
+        if (blocked === "not_authenticated") { store.session = null; store.profile = null; store.orgConfig = null; }
+        store.syncStatus = {
+          at: now,
+          pending: stale.length,
+          oldestPendingTs: stale[0].ts,
+          reason: blocked === "error" ? null : blocked,
+          error: blocked === "error" ? "rest_401: JWT expired" : null,
+          pushed: 0,
+          lastOkAt: null,
+        };
+      }
       window.chrome = {
         storage: {
           local: {

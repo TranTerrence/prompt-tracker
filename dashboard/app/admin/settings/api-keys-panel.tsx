@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createApiKey, revokeApiKey } from "./api-keys-actions";
+import { AVAILABLE_SCOPES, DEFAULT_SCOPES } from "@/lib/api-scopes";
 
 export type ApiKeyRow = {
   id: string;
@@ -43,7 +44,7 @@ export default function ApiKeysPanel({ keys }: { keys: ApiKeyRow[] }) {
       </p>
 
       <form
-        className="mt-4 flex flex-wrap gap-2"
+        className="mt-4 space-y-4"
         action={(fd) =>
           startTransition(async () => {
             setError(null);
@@ -54,20 +55,46 @@ export default function ApiKeysPanel({ keys }: { keys: ApiKeyRow[] }) {
           })
         }
       >
-        <input
-          type="text"
-          name="name"
-          required
-          placeholder="Nom de la clé (ex. SI pédagogique)"
-          className="w-72 rounded-lg border border-card-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-accent"
-        />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
-        >
-          Créer une clé
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="text"
+            name="name"
+            required
+            placeholder="Nom de la clé (ex. SI pédagogique)"
+            className="w-72 rounded-lg border border-card-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-accent"
+          />
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+          >
+            Créer une clé
+          </button>
+        </div>
+
+        {/* Les permissions n'étaient pas choisissables : toute clé recevait le
+            défaut de la colonne. `embed:mint` reste décoché — une clé
+            d'ingestion n'a aucune raison de pouvoir frapper des jetons. */}
+        <fieldset className="space-y-2">
+          <legend className="text-sm text-muted">Permissions de cette clé</legend>
+          {AVAILABLE_SCOPES.map((scope) => (
+            <label key={scope.value} className="flex cursor-pointer items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                name="scopes"
+                value={scope.value}
+                defaultChecked={DEFAULT_SCOPES.includes(scope.value)}
+                className="mt-1 h-4 w-4 accent-[var(--accent)]"
+              />
+              <span>
+                <span className="font-medium">{scope.label}</span>
+                <span className="block font-mono text-xs text-muted">
+                  {scope.value} · {scope.description}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
       </form>
 
       {freshKey && (

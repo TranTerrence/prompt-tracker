@@ -10,6 +10,11 @@ VERSION="$(python3 -c "import json; print(json.load(open('$ROOT/extension/manife
 
 mkdir -p "$ROOT/dist"
 
+# --- Safari : la copie sous safari/ n'est pas empaquetée ici (elle passe par
+# Xcode), mais elle doit suivre le même code. La synchroniser AVANT de
+# packager évite qu'elle prenne un train de retard à chaque livraison. ---
+"$ROOT/scripts/sync-safari.sh"
+
 # --- Chrome (référence) ---
 OUT_CHROME="$ROOT/dist/prompt-tracker-$VERSION.zip"
 rm -f "$OUT_CHROME"

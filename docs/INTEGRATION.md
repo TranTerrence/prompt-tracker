@@ -1,4 +1,4 @@
-# Contrat d'intégration Prompt Tracker (v1.0)
+# Contrat d'intégration Prompt Tracker (v1.1)
 
 Comment brancher votre application (SI pédagogique, journal réflexif, entrepôt
 de données, LMS) sur les données produites par l'extension Prompt Tracker.
@@ -8,13 +8,18 @@ consentement ; les applications consomment. Aucune référence à une applicatio
 particulière n'existe dans le code du plugin : tout passe par la configuration
 d'organisation et par les canaux décrits ici.
 
-## Vue d'ensemble : trois canaux
+## Vue d'ensemble : quatre canaux
 
 | Canal | Pour qui | Latence | Mise en place |
 |---|---|---|---|
 | 1. API REST (pull) | Toute application serveur | Le rythme de votre cron (15 min recommandé) | Une clé d'API d'organisation |
 | 2. Export CSV | Analyses ponctuelles, tableurs | Manuelle | Aucune |
 | 3. Push vers votre endpoint | Besoin temps réel | Réservé à une v2 du contrat | Non implémenté |
+| 4. Widgets embarqués (iframe) | Afficher sans rien construire | Temps réel à chaque rendu | Une clé avec le scope `embed:mint` |
+
+Le canal 3 garde son numéro bien qu'il ne soit toujours pas implémenté : ce
+contrat est versionné et additif, renuméroter casserait les références
+existantes.
 
 ## Canal 1 : l'API REST (canal principal)
 
@@ -68,6 +73,38 @@ contenu par `null` dans ce cas (la révocation est rétroactive, voir plus bas).
 | `text` | string ou null | Le prompt. **Soumis à consentement** (`prompt_text`). |
 | `dialogue` | tableau ou null | Paires `{ q, a, axis }` du raisonnement socratique. **Soumis à consentement** (`socratic_dialogue`). |
 | `conv_key` | string ou null | Clé de conversation (regroupe les prompts d'un même fil). **Soumise à consentement** (`conversation_history`). |
+
+### Mesures post-réponse (extension ≥ 0.7.0)
+
+Des **indicateurs**, pas du contenu : le texte de la réponse de l'IA est compté
+au moment où il s'affiche, puis oublié. Rétention 12 mois, comme les scores.
+Ces champs ne sont pas exposés par l'API v1 pour l'instant.
+
+| Champ | Type | Sens |
+|---|---|---|
+| `prompt_chars` | int ou null | Longueur du prompt envoyé, en signes. |
+| `model` | string ou null | Identifiant **normalisé** contre une liste blanche (`gpt-5.1`, `sonnet-4.5`…). `autre` = libellé lu mais hors catalogue (modèle trop récent, ou agent personnalisé). `null` = non mesurable. Jamais le libellé brut lu dans la page. |
+| `model_catalog_version` | int ou null | Version du catalogue au moment de la mesure. Permet de distinguer après coup un retard de catalogue d'un vrai usage d'agent personnalisé. |
+| `response_chars` | int ou null | Longueur de la réponse. **Sous-estime fortement** quand la sortie part dans un panneau latéral (ChatGPT Canvas, Claude Artifacts). |
+| `response_words` | int ou null | Nombre de mots de la réponse. |
+| `latency_ms` | int ou null | Délai jusqu'au premier token **visible** (rendu DOM), pas la latence du modèle. |
+| `response_ms` | int ou null | Durée de génération : dernière activité moins premier token. ±1 s. |
+| `turn_index` | int ou null | Rang du tour dans la conversation, 0-based. |
+| `read_ms` | int ou null | Délai entre la fin d'une réponse et l'envoi du prompt suivant du même fil. La plus fiable des mesures de temps : elle ne dépend d'aucun sélecteur de site. |
+| `response_outcome` | enum ou null | `complete`, `timeout`, `hidden` (onglet en arrière-plan), `abandoned`, `not_sent`. |
+
+Trois précautions pour qui exploite ces champs :
+
+1. **Tout est nullable, et le null est fréquent.** Un site dont les repères
+   d'interface ne sont pas validés ne mesure rien (aujourd'hui : Mistral et
+   Grok). Traiter l'absence comme une donnée, jamais comme un zéro.
+2. **`latency_ms` et `response_ms` sont nuls si l'onglet est passé en
+   arrière-plan** (`response_outcome = "hidden"`) : le navigateur y gèle le
+   rendu, la durée mesurée deviendrait « temps passé ailleurs ». Les tailles,
+   elles, restent justes.
+3. **Aucune de ces durées n'est comparable entre sites** : elles mesurent des
+   pipelines de rendu différents. Seules les tendances intra-site et
+   intra-utilisateur sont honnêtes.
 
 La mesure d'apprentissage recommandée (le « premier jet ») :
 `score_before` si l'événement est intercepté, sinon `scores.total`. C'est ce
@@ -148,6 +185,48 @@ dates ISO 8601.
 - **Dashboard admin** (toute l'organisation, filtré par la même règle de
   consentement) : pages Export, un CSV `prompt_events` et un CSV `post_events`.
 
+## Canal 4 : widgets embarqués (iframe à jeton signé)
+
+Pour afficher la progression dans votre ENT sans construire de front. Quatre
+graphiques, aux couleurs de l'organisation :
+
+| Widget | Portée | Contenu |
+|---|---|---|
+| `class-progress` | `group`, `org` | Courbe des premiers jets par semaine |
+| `student-progress` | `student` | La même, pour un élève |
+| `outcome-mix` | `group`, `student`, `org` | Répartition `sent` / `improved` / `sent_anyway` / `cancelled` |
+| `rubric-averages` | `group`, `student`, `org` | Moyennes des quatre rubriques |
+
+**Garantie de non-fuite : ces widgets n'affichent que des indicateurs.** Aucun
+ne peut exposer `text`, `dialogue`, `answer` ni `conv_key`, quels que soient
+les consentements accordés. La règle de consentement du canal 1 ne s'applique
+donc pas ici — il n'y a rien à filtrer. C'est un choix de conception, pas une
+configuration : un widget embarqué chez un tiers ne peut pas devenir une fuite
+de contenu.
+
+Marche à suivre, à chaque rendu de page **côté serveur** :
+
+1. `POST /api/v1/embed-tokens` avec votre clé (scope `embed:mint`), le widget
+   et la portée. Réponse : `{ token, expires_at, url }`.
+2. `<iframe src="<url>" width="100%" height="320" style="border:0">`.
+
+Le jeton est un JWS HS256, valable 15 minutes par défaut (60 s à 1 h). Frappez-le
+à chaque rendu plutôt que de le mettre en cache : sa brièveté est ce qui borne
+l'impact d'une fuite. L'URL ne porte **qu'une capacité signée** — ni identifiant
+d'organisation, ni identifiant d'élève, ni adresse, ni nom de classe en clair.
+
+Deux verrous côté serveur :
+
+- **Origines déclarées.** Le widget n'est encadrable que par les origines
+  saisies dans Paramètres → Widgets embarquables (`frame-ancestors`). Liste
+  vide = affichable nulle part, y compris chez vous : l'échec est fermé.
+- **Révocation.** Révoquer la clé qui a frappé un jeton tue les widgets
+  correspondants au rendu suivant. Pour tout invalider d'un coup quelle que
+  soit la clé, renouvelez le secret de signature depuis le dashboard.
+
+Le scope `embed:mint` n'est jamais attribué d'office : les clés créées avant la
+v1.1 ne l'ont pas, créez-en une nouvelle.
+
 ## Canal 3 : push (v2, non implémenté)
 
 Une cible de synchronisation configurable par organisation (endpoint + clé)
@@ -156,6 +235,10 @@ apparaît. Elle n'existe pas aujourd'hui : n'attendez pas de webhook, tirez.
 
 ## Compatibilité et versionnement du contrat
 
+- Contrat v1.1 (16/08/2026) : ajout du canal 4 (widgets embarqués) et du scope
+  `embed:mint`. **Strictement additif** — aucun champ, aucune sémantique et
+  aucun numéro de canal existants n'ont changé. Un intégrateur v1.0 n'a rien à
+  faire.
 - Contrat v1.0 (20/07/2026). Les évolutions seront additives : nouveaux champs
   et nouvelles valeurs d'enum possibles (`site`, `category`, `mirror_feedback`
   notamment). Écrivez des parseurs tolérants : ignorez les champs inconnus,

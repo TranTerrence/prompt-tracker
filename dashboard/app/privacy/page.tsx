@@ -8,8 +8,8 @@ export const metadata: Metadata = {
     "Politique de confidentialité de Prompt Tracker : analyse locale des prompts, synchronisation limitée aux métadonnées, hébergement en Union européenne.",
 };
 
-const LAST_UPDATE = "16 juillet 2026";
-const LAST_UPDATE_EN = "July 16, 2026";
+const LAST_UPDATE = "16 août 2026";
+const LAST_UPDATE_EN = "August 16, 2026";
 
 function Section({
   title,
@@ -107,10 +107,26 @@ export default function PrivacyPage() {
               <li>issue (envoyé, amélioré, annulé) et tours de réflexion ;</li>
               <li>vos réponses au dialogue socratique et vos réflexions d&apos;après-réponse ;</li>
               <li>
+                des mesures sur la réponse de l&apos;IA : sa longueur (en signes
+                et en mots), sa durée de génération, le modèle utilisé et le
+                délai avant votre prompt suivant.{" "}
+                <strong className="text-foreground">
+                  Le texte de la réponse n&apos;est jamais enregistré
+                </strong>{" "}
+                : il est mesuré au moment où il s&apos;affiche, puis oublié ;
+              </li>
+              <li>
                 le texte complet de vos prompts, uniquement si vous activez
                 l&apos;option dédiée dans les réglages.
               </li>
             </ul>
+            <p className="leading-relaxed text-muted">
+              Le nom du modèle est normalisé contre une liste de modèles connus
+              avant d&apos;être enregistré. Un modèle hors de cette liste, ou un
+              assistant personnalisé dont le nom a été écrit par un utilisateur,
+              est enregistré comme « autre » : aucun libellé lu dans la page
+              n&apos;est conservé.
+            </p>
             <p className="leading-relaxed text-muted">
               Sans compte, aucune de ces données ne quitte votre machine. Vous
               pouvez les exporter (CSV) ou les effacer à tout moment depuis le
@@ -136,10 +152,14 @@ export default function PrivacyPage() {
               de votre organisation les{" "}
               <strong className="text-foreground">indicateurs</strong> suivants
               : scores de qualité, catégories de prompts, nombres de mots,
-              sites utilisés, issues (envoyé, amélioré, annulé) et dates.
-              Jamais aucun contenu. Ces indicateurs sont visibles par les
-              enseignants et administrateurs de votre organisation, dans le
-              seul but d&apos;un accompagnement pédagogique.
+              sites utilisés, issues (envoyé, amélioré, annulé) et dates, ainsi
+              que les mesures de réponse décrites au point 2 — longueur, durée,
+              modèle utilisé, délai de lecture.{" "}
+              <strong className="text-foreground">Jamais aucun contenu</strong>{" "}
+              : ni le texte de vos prompts, ni celui des réponses de l&apos;IA.
+              Ces indicateurs sont visibles par les enseignants et
+              administrateurs de votre organisation, dans le seul but d&apos;un
+              accompagnement pédagogique.
             </p>
           </Section>
 
@@ -198,10 +218,51 @@ export default function PrivacyPage() {
                 cascade de toutes vos données ;
               </li>
               <li>
+                <strong className="text-foreground">
+                  Invitations non acceptées
+                </strong>{" "}
+                (adresse e-mail saisie par un enseignant, nom d&apos;affichage
+                éventuel) : supprimées 90 jours après leur expiration. Une
+                invitation acceptée disparaît, elle aussi, avec le compte ;
+              </li>
+              <li>
+                <strong className="text-foreground">
+                  Demandes de liaison d&apos;extension
+                </strong>{" "}
+                : valables 10 minutes, purgées ensuite. Elles ne contiennent ni
+                votre adresse, ni le contenu de vos prompts — seulement un code
+                à usage unique et le nom de votre navigateur ;
+              </li>
+              <li>
                 vous pouvez effacer les contenus déjà partagés à tout moment,
-                sans attendre ces échéances.
+                sans attendre ces échéances, depuis{" "}
+                <strong className="text-foreground">
+                  Ma progression → Mes données partagées
+                </strong>{" "}
+                ou depuis l&apos;extension.
               </li>
             </ul>
+          </Section>
+
+          <Section title="7 bis. Widgets affichés par votre établissement">
+            <p className="leading-relaxed text-muted">
+              Votre établissement peut afficher des graphiques de progression
+              dans son propre environnement numérique (ENT, intranet), via des
+              cadres fournis par Prompt Tracker.{" "}
+              <strong className="text-foreground">
+                Ces graphiques n&apos;affichent que des indicateurs
+              </strong>{" "}
+              — courbes de scores, répartitions, moyennes par rubrique. Ils ne
+              peuvent en aucun cas exposer le texte d&apos;un prompt, un
+              dialogue socratique, une réflexion ou un fil de conversation, quels
+              que soient les consentements que vous avez accordés. Cette limite
+              est inscrite dans la conception du service, pas dans un réglage.
+            </p>
+            <p className="mt-3 leading-relaxed text-muted">
+              Ces cadres ne s&apos;affichent que sur les sites que votre
+              établissement a explicitement déclarés, et l&apos;autorisation qui
+              les fait fonctionner expire au bout de quinze minutes.
+            </p>
           </Section>
 
           <Section title="8. Hébergement et sous-traitants">
@@ -296,10 +357,25 @@ export default function PrivacyPage() {
               <li>outcome (sent, improved, cancelled) and reflection rounds;</li>
               <li>your answers to the Socratic dialogue and your post-response reflections;</li>
               <li>
+                measurements of the AI&apos;s answer: its length (in characters
+                and words), how long it took to generate, the model used, and
+                the delay before your next prompt.{" "}
+                <strong className="text-foreground">
+                  The text of the answer is never recorded
+                </strong>
+                : it is measured as it appears, then forgotten;
+              </li>
+              <li>
                 the full text of your prompts, only if you enable the dedicated
                 setting.
               </li>
             </ul>
+            <p className="leading-relaxed text-muted">
+              The model name is normalized against a list of known models before
+              being recorded. A model outside that list, or a custom assistant
+              whose name was written by a user, is recorded as &laquo; autre
+              &raquo; (other): no label read from the page is ever kept.
+            </p>
             <p className="leading-relaxed text-muted">
               Without an account, none of this data leaves your machine. You
               can export it (CSV) or erase it at any time from the extension
@@ -325,9 +401,13 @@ export default function PrivacyPage() {
               <strong className="text-foreground">indicators</strong> to your
               organization&apos;s dashboard: quality scores, prompt categories,
               word counts, sites used, outcomes (sent, improved, cancelled) and
-              dates. Never any content. These indicators are visible to your
-              organization&apos;s teachers and administrators, for the sole
-              purpose of pedagogical support.
+              dates, plus the response measurements described in section 2 —
+              length, duration, model used, reading delay.{" "}
+              <strong className="text-foreground">Never any content</strong>:
+              neither the text of your prompts, nor that of the AI&apos;s
+              answers. These indicators are visible to your organization&apos;s
+              teachers and administrators, for the sole purpose of pedagogical
+              support.
             </p>
           </Section>
 
@@ -383,10 +463,46 @@ export default function PrivacyPage() {
                 deleting your account cascades to all your data;
               </li>
               <li>
+                <strong className="text-foreground">Unaccepted invitations</strong>{" "}
+                (an email address entered by a teacher, and an optional display
+                name): deleted 90 days after they expire. An accepted invitation
+                is deleted along with the account;
+              </li>
+              <li>
+                <strong className="text-foreground">Extension link requests</strong>:
+                valid for 10 minutes, then purged. They contain neither your
+                address nor the content of your prompts — only a single-use code
+                and your browser&apos;s name;
+              </li>
+              <li>
                 you can erase already shared content at any time, without
-                waiting for these deadlines.
+                waiting for these deadlines, from{" "}
+                <strong className="text-foreground">
+                  My progress → My shared data
+                </strong>{" "}
+                or from the extension.
               </li>
             </ul>
+          </Section>
+
+          <Section title="7 bis. Widgets displayed by your institution">
+            <p className="leading-relaxed text-muted">
+              Your institution may display progress charts inside its own
+              digital environment (LMS, intranet), using frames provided by
+              Prompt Tracker.{" "}
+              <strong className="text-foreground">
+                These charts show indicators only
+              </strong>{" "}
+              — score curves, distributions, rubric averages. They cannot expose
+              the text of a prompt, a Socratic dialogue, a reflection or a
+              conversation thread, whatever consents you have granted. This
+              limit is built into the design of the service, not into a setting.
+            </p>
+            <p className="mt-3 leading-relaxed text-muted">
+              These frames only render on sites your institution has explicitly
+              declared, and the authorisation that makes them work expires after
+              fifteen minutes.
+            </p>
           </Section>
 
           <Section title="8. Hosting and sub-processors">

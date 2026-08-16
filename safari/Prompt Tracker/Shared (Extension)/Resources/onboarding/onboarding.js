@@ -133,7 +133,10 @@ document.getElementById("accept").addEventListener("click", () => {
   const plan = document.getElementById("setting-intention").value.trim();
   if (plan) saveSettings({ intentionPlan: plan, intentionSetAt: new Date().toISOString() });
   chrome.storage.local.set(
-    { disclosure: { accepted: true, version: 1, acceptedAt: new Date().toISOString() } },
+    // Version du texte de divulgation : à incrémenter dès que la liste de ce
+    // qui est enregistré change (miroir de popup/popup.js, qui affiche un avis
+    // non bloquant aux comptes restés sur une version antérieure).
+    { disclosure: { accepted: true, version: 2, acceptedAt: new Date().toISOString() } },
     showAccepted
   );
 });

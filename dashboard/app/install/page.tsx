@@ -138,16 +138,26 @@ export default function InstallPage() {
               </p>
             </Step>
 
-            <Step n={5} title="Synchroniser avec ce tableau de bord (optionnel)">
+            <Step n={5} title="Lier votre compte (optionnel)">
               <p>
                 Sans compte, tout reste sur votre ordinateur. Pour retrouver
-                votre progression ici, cliquez sur l&apos;icône de
-                l&apos;extension, connectez-vous avec le même compte que sur
-                ce site et rejoignez votre classe : l&apos;extension vous
-                montre alors ce qui sera partagé (indicateurs et scores,
-                jamais aucun texte sans votre consentement séparé, catégorie
-                par catégorie) et attend votre confirmation. Conservation :
-                contenus 90 jours, indicateurs 12 mois. Détails dans la{" "}
+                votre progression ici — et, si vous êtes étudiant, la partager
+                avec votre classe — cliquez sur l&apos;icône de l&apos;extension
+                puis{" "}
+                <span className="font-medium text-foreground">
+                  « Lier mon compte »
+                </span>
+                . Une page s&apos;ouvre sur ce site pour que vous autorisiez ce
+                navigateur : <strong>aucun mot de passe à ressaisir</strong>.
+              </p>
+              <p className="mt-2">
+                Si vous avez reçu un lien d&apos;invitation de votre
+                établissement, ouvrez-le d&apos;abord : il crée le compte et
+                rattache la classe en une fois. Ce qui est partagé vous est
+                montré avant que vous décidiez — des indicateurs et des scores,
+                jamais aucun texte sans un consentement séparé, catégorie par
+                catégorie. Conservation : contenus 90 jours, indicateurs 12
+                mois. Détails dans la{" "}
                 <Link
                   href="/privacy"
                   className="font-medium text-accent hover:underline"

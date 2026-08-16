@@ -18,18 +18,30 @@ MANIFEST="$EXT/manifest.json"
 VERSION="$(python3 -c "import json;print(json.load(open('$MANIFEST'))['version'])")"
 echo "── Prompt Tracker $VERSION — pré-vol Chrome Web Store ──"
 
-# 1. Version strictement supérieure au dernier paquet publié. Le Store refuse
-#    un envoi dont la version n'augmente pas ; c'est le rejet le plus bête.
-LAST="$(ls "$ROOT/dist"/prompt-tracker-[0-9]*.zip 2>/dev/null | sed 's/.*prompt-tracker-\(.*\)\.zip/\1/' | sort -V | tail -1)"
-if [ -n "$LAST" ]; then
-  if [ "$VERSION" = "$LAST" ]; then
-    fail "version $VERSION identique au dernier paquet — bumper manifest.json avant de packager"
-  elif [ "$(printf '%s\n%s\n' "$LAST" "$VERSION" | sort -V | tail -1)" != "$VERSION" ]; then
-    fail "version $VERSION < dernier paquet $LAST — le Store exige une version croissante"
+# 1. Version strictement supérieure au dernier paquet. Le Store refuse un envoi
+#    dont la version n'augmente pas ; c'est le rejet le plus bête.
+#
+#    On compare au plus haut paquet AUTRE que la version courante : dès que
+#    package.sh a tourné, dist/ contient forcément un zip à la version du
+#    manifest, et comparer à celui-là rendait ce contrôle toujours rouge après
+#    empaquetage — donc rouge au moment précis où on le lance vraiment, ce qui
+#    masquait les contrôles suivants.
+PREV="$(ls "$ROOT/dist"/prompt-tracker-[0-9]*.zip 2>/dev/null \
+        | sed 's/.*prompt-tracker-\(.*\)\.zip/\1/' \
+        | grep -vx "$VERSION" | sort -V | tail -1)"
+if [ -n "$PREV" ]; then
+  if [ "$(printf '%s\n%s\n' "$PREV" "$VERSION" | sort -V | tail -1)" != "$VERSION" ]; then
+    fail "version $VERSION < paquet existant $PREV — le Store exige une version croissante"
   else
-    ok "version $VERSION > $LAST"
+    ok "version $VERSION > $PREV"
   fi
+else
+  ok "version $VERSION (aucun paquet antérieur dans dist/)"
 fi
+# Rappel non bloquant : dist/ dit ce qui a été EMPAQUETÉ, pas ce qui a été
+# SOUMIS. Seul le Developer Dashboard fait foi.
+[ -f "$ROOT/dist/prompt-tracker-$VERSION.zip" ] && \
+  warn "un paquet $VERSION existe déjà dans dist/ — vérifier qu'il n'a pas déjà été soumis"
 
 # 2. Code distant : interdit en MV3. Tout script doit être dans le paquet.
 if grep -rn "chrome.scripting.executeScript\|document.createElement(['\"]script" "$EXT/src" "$EXT/popup" 2>/dev/null | grep -q "\.js:"; then
@@ -115,6 +127,17 @@ if [ -f "$ROOT/dist/prompt-tracker-$VERSION.zip" ]; then
   LEAK="$(unzip -l "$ROOT/dist/prompt-tracker-$VERSION.zip" | grep -cE "tests/|\.map$|\.DS_Store" || true)"
   [ "$LEAK" -gt 0 ] && fail "le zip contient des fichiers de dev (tests/, .map, .DS_Store)" \
                     || ok "zip propre"
+fi
+
+# 8. Copie Safari alignée. Elle n'entre pas dans le zip Chrome, mais la laisser
+#    dériver revient à publier deux produits différents sous le même nom — et
+#    c'est arrivé : sept fichiers d'écart, silencieusement.
+if [ -x "$ROOT/scripts/sync-safari.sh" ]; then
+  if "$ROOT/scripts/sync-safari.sh" --check >/dev/null 2>&1; then
+    ok "copie Safari alignée sur extension/"
+  else
+    fail "la copie Safari a dérivé — lancer ./scripts/sync-safari.sh"
+  fi
 fi
 
 echo "──"

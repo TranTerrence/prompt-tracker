@@ -14,4 +14,17 @@ const CoachAdapter = createCoachAdapter({
     "button[aria-label*='send' i]",
   ],
   rootPaths: ["/"],
+  // Mesures post-réponse. data-message-author-role est stable de longue date.
+  assistantSelectors: [
+    "[data-message-author-role='assistant']",
+    "article[data-testid^='conversation-turn']",
+  ],
+  assistantTextSelectors: [".markdown", ".prose"],
+  // data-message-model-slug porté par le message lui-même est la VÉRITÉ PAR
+  // TOUR : il ne bouge pas si l'utilisateur change de modèle après coup, alors
+  // que le sélecteur du bandeau, lui, ne dit que l'état courant.
+  modelSelectors: [
+    "[data-message-author-role='assistant'][data-message-model-slug]",
+    "[data-testid='model-switcher-dropdown-button']",
+  ],
 });

@@ -2,15 +2,26 @@ openapi: 3.1.0
 
 info:
   title: API d'organisation Prompt Tracker
-  version: "1.0.0"
+  version: "1.1.0"
   summary: >-
-    API REST machine-to-machine, en lecture seule, pour récupérer les données
-    de votre organisation (SI pédagogique, journal réflexif, entrepôt de
-    données, LMS).
+    API REST machine-to-machine pour récupérer les données de votre
+    organisation (SI pédagogique, journal réflexif, entrepôt de données, LMS),
+    et pour intégrer des widgets prêts à l'emploi.
   description: |
     Cette API expose les données produites par l'extension Prompt Tracker pour
-    **votre organisation uniquement**. Elle est en **lecture seule** : aucun
-    endpoint n'écrit, ne modifie ni ne supprime quoi que ce soit.
+    **votre organisation uniquement**. **Aucun endpoint ne modifie vos
+    données** : les six endpoints de lecture ne font que lire, et le seul POST,
+    `/embed-tokens`, est sans état — il signe une capacité d'affichage à durée
+    de vie courte et ne persiste rien.
+
+    ## Deux façons de consommer
+
+    - **Vous construisez votre propre interface** : les endpoints de lecture
+      (`/groups`, `/students`, `/events`, `/post-events`, `/progress`) vous
+      donnent la donnée brute, à agréger comme vous l'entendez.
+    - **Vous voulez juste afficher des graphiques** : `/embed-tokens` frappe un
+      jeton signé que vous passez à une iframe `/embed/<widget>`. Aucun code de
+      rendu à écrire. Voir « Widgets embarquables » plus bas.
 
     ## Les trois règles à connaître avant d'écrire une ligne de code
 
@@ -42,7 +53,44 @@ info:
     jamais dans du code client, une variable `NEXT_PUBLIC_*`, une URL ou un
     dépôt.
 
-    ### 3. Les évolutions sont additives — écrivez des parseurs tolérants
+    ### 3. Widgets embarquables (iframe à jeton signé)
+
+    Quatre graphiques prêts à l'emploi, aux couleurs de votre organisation, à
+    poser dans une `<iframe>` sans écrire une ligne de rendu :
+
+    | Widget | Portée acceptée | Contenu |
+    |---|---|---|
+    | `class-progress` | `group`, `org` | Courbe des premiers jets par semaine |
+    | `student-progress` | `student` | La même courbe, pour un élève |
+    | `outcome-mix` | `group`, `student`, `org` | Répartition des issues |
+    | `rubric-averages` | `group`, `student`, `org` | Moyennes clarté / contexte / itération / esprit critique |
+
+    **Garantie : ces widgets n'affichent QUE des indicateurs.** Aucun ne peut
+    exposer `text`, `dialogue`, `answer` ni `conv_key`, quels que soient les
+    consentements accordés. Un widget embarqué dans un ENT ne peut donc pas
+    faire fuiter le contenu d'un prompt.
+
+    **Marche à suivre**, à chaque rendu de page côté serveur :
+
+    1. `POST /embed-tokens` avec votre clé (scope `embed:mint`), le widget et
+       la portée. Vous recevez un jeton et une `url` prête à l'emploi.
+    2. Rendez `<iframe src="<url>" style="width:100%;border:0" height="320">`.
+
+    Frappez le jeton **à chaque rendu**, ne le mettez pas en cache : sa durée de
+    vie par défaut est de 15 minutes (60 s à 1 h configurables via `ttl`), ce
+    qui borne l'impact d'une fuite.
+
+    Ce que l'URL contient : **uniquement une capacité signée**. Ni identifiant
+    d'organisation, ni identifiant d'élève, ni adresse e-mail, ni nom de classe
+    n'y apparaissent en clair — la portée est *à l'intérieur* de la signature.
+
+    Deux verrous côté serveur : le widget ne s'affiche que dans une page servie
+    par une origine que vous avez déclarée dans **Paramètres → Widgets
+    embarquables** (sans déclaration, il ne s'affiche nulle part) ; et révoquer
+    la clé qui a frappé un jeton tue les widgets correspondants au rendu
+    suivant.
+
+    ### 4. Les évolutions sont additives — écrivez des parseurs tolérants
 
     De nouveaux champs et de nouvelles valeurs d'énumération (`site`,
     `category` notamment) peuvent apparaître sans préavis. Ignorez les champs
@@ -495,6 +543,145 @@ paths:
             curl -s "https://track-prompt.vercel.app/api/v1/progress?from=2026-06-01T00:00:00Z" \
               -H "Authorization: Bearer $PROMPT_TRACKER_KEY"
 
+  /embed-tokens:
+    post:
+      summary: Frapper un jeton d'affichage pour un widget embarquable
+      operationId: mintEmbedToken
+      description: |
+        Signe une capacité de LECTURE à durée de vie courte pour un widget et
+        une portée donnés. **Sans état** : rien n'est écrit en base, le jeton
+        n'est pas révocable individuellement — c'est sa brièveté qui le borne.
+
+        À appeler depuis votre serveur, à chaque rendu de page. La clé
+        `pt_live_` ne doit jamais atteindre un navigateur ; le jeton, lui, est
+        fait pour y aller.
+
+        Deux façons de tout invalider : révoquer la clé qui a frappé les jetons
+        (les widgets meurent au rendu suivant), ou renouveler le secret de
+        signature de l'organisation depuis le dashboard (tout meurt d'un coup).
+      tags: [Widgets]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [widget, scope]
+              properties:
+                widget:
+                  type: string
+                  enum: [class-progress, student-progress, outcome-mix, rubric-averages]
+                scope:
+                  type: object
+                  required: [type]
+                  properties:
+                    type:
+                      type: string
+                      enum: [group, student, org]
+                      description: >-
+                        `class-progress` refuse `student` ; `student-progress`
+                        n'accepte que `student`.
+                    id:
+                      # OpenAPI 3.1 suit JSON Schema : `nullable` n'existe plus,
+                      # la nullabilité se dit dans le type.
+                      type: [string, "null"]
+                      format: uuid
+                      description: >-
+                        Identifiant du groupe ou de l'étudiant. Doit appartenir
+                        à votre organisation, sinon `invalid_scope`. Inutile
+                        pour la portée `org`.
+                ttl:
+                  type: integer
+                  minimum: 60
+                  maximum: 3600
+                  default: 900
+                  description: Durée de vie en secondes. Bornée côté serveur.
+                theme:
+                  type: string
+                  enum: [auto, light, dark]
+                  default: auto
+                  description: >-
+                    `auto` suit `prefers-color-scheme` du site hôte. Figez-le
+                    si votre page n'a qu'un seul thème.
+                lang:
+                  type: string
+                  enum: [fr, en]
+                  default: fr
+            examples:
+              classe:
+                summary: Progression d'une classe, sur 15 minutes
+                value:
+                  widget: class-progress
+                  scope: { type: group, id: "0f9c2f7a-1d2e-4b3c-8a91-6e5d4c3b2a10" }
+                  ttl: 900
+      responses:
+        "200":
+          description: Jeton frappé
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, expires_at, url]
+                properties:
+                  token:
+                    type: string
+                    description: JWS compact HS256. Décodable pour inspecter `exp` et `w`.
+                  expires_at:
+                    type: string
+                    format: date-time
+                  url:
+                    type: string
+                    format: uri
+                    description: URL prête à poser dans un `<iframe src>`.
+              example:
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ii4uLiJ9.eyJ3IjoiY2xhc3MtcHJvZ3Jlc3MifQ.SIGNATURE
+                expires_at: "2026-08-16T10:15:00Z"
+                url: https://track-prompt.vercel.app/embed/class-progress?token=eyJhbGciOi...
+        "400":
+          description: >-
+            `invalid_widget` (widget inconnu) ou `invalid_scope` (portée
+            incompatible avec le widget, ou identifiant hors de votre
+            organisation).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example: { error: invalid_scope }
+        "401": { $ref: "#/components/responses/InvalidKey" }
+        "403": { $ref: "#/components/responses/ForbiddenScope" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+      x-codeSamples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -s -X POST "https://track-prompt.vercel.app/api/v1/embed-tokens" \
+              -H "Authorization: Bearer $PROMPT_TRACKER_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{"widget":"class-progress","scope":{"type":"group","id":"<group_id>"}}'
+        - lang: JavaScript
+          label: Node
+          source: |
+            // À exécuter côté SERVEUR, à chaque rendu de la page.
+            const res = await fetch(
+              "https://track-prompt.vercel.app/api/v1/embed-tokens",
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${process.env.PROMPT_TRACKER_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  widget: "class-progress",
+                  scope: { type: "group", id: groupId },
+                  ttl: 900,
+                }),
+              },
+            );
+            const { url } = await res.json();
+            // <iframe src={url} width="100%" height="320" style={{border:0}} />
+
 components:
   securitySchemes:
     bearerAuth:
@@ -513,9 +700,18 @@ components:
         Aucun autre mode de transmission n'est accepté : ni en-tête
         personnalisé, ni paramètre d'URL.
 
-        **Scopes.** Chaque clé porte des scopes. `events:read` ouvre `/groups`,
-        `/students`, `/events` et `/post-events` ; `progress:read` ouvre
-        `/progress`. Les clés créées aujourd'hui reçoivent les deux.
+        **Scopes.** Chaque clé porte des scopes, cochés à la création :
+
+        | Scope | Ouvre |
+        |---|---|
+        | `events:read` | `/groups`, `/students`, `/events`, `/post-events` |
+        | `progress:read` | `/progress` |
+        | `embed:mint` | `POST /embed-tokens` |
+
+        `embed:mint` n'est **jamais** attribué d'office, et les clés créées
+        avant l'introduction des widgets ne l'ont pas : créez-en une nouvelle
+        si vous intégrez des iframes. Une clé d'ingestion n'a aucune raison de
+        pouvoir frapper des jetons d'affichage.
 
   parameters:
     GroupId:
@@ -636,7 +832,16 @@ components:
           description: >-
             Code d'erreur stable, à tester dans votre code plutôt que le statut
             HTTP seul.
-          enum: [invalid_key, forbidden_scope, rate_limited, internal_error]
+          enum:
+            - invalid_key
+            - forbidden_scope
+            - rate_limited
+            - internal_error
+            # Ajoutés en 1.1 avec /embed-tokens. Additifs : un parseur écrit
+            # pour la 1.0 les traite comme des codes inconnus, ce que la règle
+            # de tolérance de cette API prévoit déjà.
+            - invalid_widget
+            - invalid_scope
 
     NextCursor:
       type: [string, "null"]

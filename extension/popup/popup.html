@@ -19,6 +19,9 @@
     </div>
     <p class="tagline" data-i18n="popupTagline"></p>
     <span id="health" class="health" hidden></span>
+    <!-- Alerte DOUCE, distincte de la panne dure ci-dessus : les mesures de
+         réponse sont indisponibles, mais le coaching fonctionne. -->
+    <span id="health-metrics" class="health health-soft" hidden></span>
   </header>
 
   <!-- Extension en veille : la divulgation des données n'a pas encore été
@@ -28,16 +31,55 @@
     <button id="inert-cta"></button>
   </section>
 
+  <!-- Nouveautés de la divulgation. NON BLOQUANT à dessein : les indicateurs
+       ajoutés en 0.7 servent la même finalité et sont de la même nature (aucun
+       contenu). Remettre les comptes existants en veille couperait des classes
+       en cours d'année ; on informe, on ne redemande pas d'accord. -->
+  <section id="disclosure-update" class="inert" hidden>
+    <p id="disclosure-update-text"></p>
+    <button id="disclosure-update-ok"></button>
+  </section>
+
+  <!-- Synchronisation bloquée : la raison est affichée avec l'action qui la
+       lève. Une sync qui ne part pas ne doit jamais être silencieuse. -->
+  <section id="sync-banner" class="sync-banner" hidden>
+    <p id="sync-banner-text"></p>
+    <p id="sync-banner-pending" class="muted" hidden></p>
+    <button id="sync-banner-cta"></button>
+  </section>
+
   <section id="auth" class="auth">
     <div id="auth-form">
-      <input type="email" id="auth-email" autocomplete="email" />
-      <input type="password" id="auth-password" autocomplete="current-password" />
+      <!-- Chemin principal : appairage par le web. Aucun mot de passe saisi
+           dans le popup, et une seule inscription à maintenir. -->
+      <p id="pair-intro" class="auth-hint"></p>
       <div class="auth-buttons">
-        <button id="auth-login"></button>
-        <button id="auth-signup" class="secondary"></button>
+        <button id="pair-start"></button>
       </div>
-      <p id="auth-error" class="auth-error" hidden></p>
-      <p class="auth-hint" data-i18n="authHint"></p>
+      <div id="pair-waiting" class="join-disclosure" hidden>
+        <h3 id="pair-code" class="pair-code"></h3>
+        <p id="pair-waiting-text"></p>
+        <div class="auth-buttons">
+          <button id="pair-reopen" class="secondary"></button>
+          <button id="pair-cancel" class="cancel"></button>
+        </div>
+      </div>
+      <p id="pair-error" class="auth-error" hidden></p>
+
+      <!-- Repli : connexion par mot de passe. Conservée pour permettre un test
+           complet sans quitter l'extension (relecture Web Store notamment). -->
+      <details id="auth-fallback">
+        <summary id="auth-fallback-summary"></summary>
+        <input type="email" id="auth-email" autocomplete="email" />
+        <input type="password" id="auth-password" autocomplete="current-password" />
+        <div class="auth-buttons">
+          <button id="auth-login"></button>
+          <button id="auth-signup" class="secondary"></button>
+        </div>
+        <p id="auth-error" class="auth-error" hidden></p>
+        <p id="pending-signup" class="auth-hint" hidden></p>
+        <p class="auth-hint" data-i18n="authHint"></p>
+      </details>
     </div>
     <div id="auth-connected" hidden>
       <p><span id="auth-user"></span> · <span id="auth-org" class="muted"></span></p>
@@ -94,6 +136,10 @@
     <p class="muted" id="eff-threshold" hidden></p>
     <label><input type="checkbox" id="setting-fulltext" /> <span data-i18n="popupFullText"></span></label>
   </section>
+
+  <!-- Couverture des mesures de réponse : le signal qui chute quand un
+       éditeur change son interface, avant qu'on s'en aperçoive autrement. -->
+  <p class="muted" id="coverage" hidden></p>
 
   <footer>
     <button id="export"></button>

@@ -17,6 +17,21 @@
   // Dernier prompt parti (pour choisir la question du miroir d'après).
   let lastPrompt = null;
 
+  // Fenêtre pendant laquelle un événement envoyé attend ses mesures avant de
+  // partir en sync. Un peu plus que le maxWaitMs du veilleur (120 s), pour
+  // laisser un dépassement de délai écrire son verdict. Le verrou est une
+  // DATE portée par l'événement, pas un minuteur : il survit à la fermeture de
+  // l'onglet, à l'éviction du service worker et au mode hors ligne.
+  const RESPONSE_HOLD_MS = 150000;
+
+  // Fin de la dernière réponse observée, pour mesurer readMs : le délai entre
+  // la fin d'une réponse et l'envoi du prompt suivant DANS LE MÊME FIL. C'est
+  // le signal de sur-dépendance : a-t-il lu la réponse, ou enchaîné ?
+  let lastResponseEnd = null; // { conv, at }
+
+  // Au-delà, ce n'est plus de la lecture mais une reprise de session.
+  const READ_MS_MAX = 30 * 60 * 1000;
+
   let adapterHealthy = null;
 
   // Repère visible dans l'UI du chat : l'extension est active (couleurs de l'org).
@@ -30,6 +45,9 @@
       healthy: adapterHealthy,
       threshold: currentThreshold(),
       interceptEnabled: effective("interceptEnabled"),
+      // L'org impose le réglage : l'interrupteur de la pastille reste visible
+      // mais inerte (le toggle local serait sans effet, cf. effective()).
+      lockedByOrg: Boolean(orgConfig && orgConfig.interceptEnabled !== undefined && orgConfig.interceptEnabled !== null),
     });
   }
 
@@ -45,7 +63,7 @@
   let consents = {};
 
   // Divulgation bien visible (onboarding) : tant que l'utilisateur n'a pas
-  // cliqué « J'accepte et j'active », l'extension est inerte — aucune capture,
+  // cliqué « J'accepte et j'active », l'extension est inerte : aucune capture,
   // même locale, aucun badge injecté dans la page.
   let disclosureAccepted = false;
 
@@ -145,56 +163,114 @@
   // « une fois par conversation » se tient en mémoire (session de page).
   let postShownOnRoot = false;
 
-  // Arme la détection de fin de réponse après chaque envoi. À la fin de la
-  // génération : une question réflexive (explain-back, vérification, désaccord),
-  // au maximum UNE par conversation, jamais bloquante (P4, P10).
-  function armPostMirror() {
-    if (!disclosureAccepted) return;
-    if (!effective("postMirrorEnabled")) return;
-    CoachAdapter.watchResponse({
-      onComplete() {
-        // La clé se lit à la FIN : une conversation neuve reçoit son id d'URL
-        // pendant la génération (chatgpt.com/ devient chatgpt.com/c/<id>).
-        const conv = CoachAdapter.conversationKey();
-        if (isPaused(conv)) return; // « laisse-moi » vaut pour toutes les surfaces du fil
-        const rootConv = CoachAdapter.isNewConversation();
-        if (rootConv && postShownOnRoot) return;
-        chrome.storage.local.get(["postConvs", "postCount"], (data) => {
-          const convs = data.postConvs || [];
-          if (!rootConv && convs.includes(conv)) return;
-          const count = data.postCount || 0;
-          const q = CoachScoring.postQuestion({
-            category: lastPrompt && lastPrompt.category,
-            scores: lastPrompt && lastPrompt.scores,
-            lang: CoachI18n.lang,
-            count,
-          });
-          if (rootConv) {
-            postShownOnRoot = true;
-            chrome.storage.local.set({ postCount: count + 1 });
-          } else {
-            chrome.storage.local.set({ postConvs: [...convs.slice(-199), conv], postCount: count + 1 });
-          }
-          CoachMirror.showPost({
-            question: q.question,
-            branding: orgConfig && orgConfig.branding,
-            onReply: (text) => appendPostEvent(q.key, text, true),
-            onSkip: () => appendPostEvent(q.key, "", false),
-          });
-        });
-      },
+  // Question réflexive de fin de génération (explain-back, vérification,
+  // désaccord), au maximum UNE par conversation, jamais bloquante (P4, P10).
+  function showPostMirror() {
+    // La clé se lit à la FIN : une conversation neuve reçoit son id d'URL
+    // pendant la génération (chatgpt.com/ devient chatgpt.com/c/<id>).
+    const conv = CoachAdapter.conversationKey();
+    if (isPaused(conv)) return; // « laisse-moi » vaut pour toutes les surfaces du fil
+    const rootConv = CoachAdapter.isNewConversation();
+    if (rootConv && postShownOnRoot) return;
+    chrome.storage.local.get(["postConvs", "postCount"], (data) => {
+      const convs = data.postConvs || [];
+      if (!rootConv && convs.includes(conv)) return;
+      const count = data.postCount || 0;
+      const q = CoachScoring.postQuestion({
+        category: lastPrompt && lastPrompt.category,
+        scores: lastPrompt && lastPrompt.scores,
+        lang: CoachI18n.lang,
+        count,
+      });
+      if (rootConv) {
+        postShownOnRoot = true;
+        chrome.storage.local.set({ postCount: count + 1 });
+      } else {
+        chrome.storage.local.set({ postConvs: [...convs.slice(-199), conv], postCount: count + 1 });
+      }
+      CoachMirror.showPost({
+        question: q.question,
+        branding: orgConfig && orgConfig.branding,
+        onReply: (text) => appendPostEvent(q.key, text, true),
+        onSkip: () => appendPostEvent(q.key, "", false),
+      });
+    });
+  }
+
+  /* ---------- Mesures post-réponse ---------- */
+
+  // Traduit le contexte du veilleur en champs d'événement.
+  function responseMetrics(ctx) {
+    // Un onglet passé en arrière-plan gèle le rendu : les durées mesurées
+    // deviennent « temps passé ailleurs », pas « durée de génération », et
+    // rien ne le signale. On les jette plutôt que de les inventer. Les
+    // TAILLES, elles, restent justes (le texte final est correct quand il
+    // finit par s'afficher) : l'asymétrie est voulue.
+    const timed = !ctx.hidden && ctx.firstTokenAt !== null;
+    const plausible = (n, max) => (Number.isFinite(n) && n >= 0 && n <= max ? n : null);
+    return {
+      responsePending: false,
+      responseOutcome: ctx.hidden ? "hidden" : ctx.reason,
+      responseChars: ctx.chars,
+      responseWords: ctx.words,
+      model: ctx.model,
+      modelCatalogVersion: ctx.model && typeof CoachModels !== "undefined" ? CoachModels.VERSION : null,
+      turnIndex: ctx.turnIndex,
+      latencyMs: timed ? plausible(ctx.firstTokenAt - ctx.sentAt, 600000) : null,
+      responseMs: timed && ctx.lastActivityAt ? plausible(ctx.lastActivityAt - ctx.firstTokenAt, 3600000) : null,
+    };
+  }
+
+  // Mesures : TOUJOURS actives. Ce sont des indicateurs du socle, au même
+  // titre que les scores — elles ne dépendent d'aucun réglage optionnel.
+  CoachAdapter.onResponse({
+    onComplete(ctx) {
+      // Seule une fin CONSTATÉE borne le temps de lecture : sur un dépassement
+      // de délai, on ne sait pas quand la réponse s'est terminée.
+      if (ctx.reason === "complete") {
+        lastResponseEnd = { conv: CoachAdapter.conversationKey(), at: Date.now() };
+      }
+      if (ctx.eventId) patchEvent(ctx.eventId, responseMetrics(ctx));
+    },
+  });
+
+  // Miroir d'après : optionnel. La porte de fonctionnalité vit ICI désormais,
+  // et non plus sur l'armement du veilleur, qui sert les deux consommateurs.
+  CoachAdapter.onResponse({
+    onComplete(ctx) {
+      if (!disclosureAccepted) return;
+      if (!effective("postMirrorEnabled")) return;
+      // Un dépassement de délai n'est pas une fin de réponse : ne jamais
+      // interrompre une génération encore en cours avec une question.
+      if (ctx.reason !== "complete") return;
+      showPostMirror();
+    },
+  });
+
+  // Après une injection : le veilleur n'est armé que si le prompt est
+  // RÉELLEMENT parti. Sinon on relâche le verrou immédiatement, sans quoi la
+  // ligne attendrait 150 s des mesures qui n'arriveront jamais.
+  function armAfterSend(eventId, sent) {
+    if (sent) CoachAdapter.armResponseWatch({ eventId, sentAt: Date.now() });
+    else patchEvent(eventId, { responsePending: false, responseOutcome: "not_sent" });
+  }
+
+  // Mutation d'un événement DÉJÀ stocké. Seul motif légitime : une donnée qui
+  // n'existe pas encore au moment de l'envoi (retour du miroir, mesures de
+  // réponse). Le service worker écrit le même tableau : on relit au plus près
+  // de l'écriture, et lui relit après son POST (cf. supabase.js).
+  function patchEvent(eventId, patch) {
+    chrome.storage.local.get("events", (data) => {
+      const events = data.events || [];
+      const ev = events.find((e) => e.id === eventId);
+      if (!ev) return;
+      Object.assign(ev, patch);
+      chrome.storage.local.set({ events });
     });
   }
 
   function markFeedback(eventId, feedback) {
-    chrome.storage.local.get("events", (data) => {
-      const events = data.events || [];
-      const ev = events.find((e) => e.id === eventId);
-      if (ev) {
-        ev.mirrorFeedback = feedback;
-        chrome.storage.local.set({ events });
-      }
-    });
+    patchEvent(eventId, { mirrorFeedback: feedback });
   }
 
   CoachMirror.onFeedback = () => pendingToastEventId && markFeedback(pendingToastEventId, "useful");
@@ -207,6 +283,26 @@
     pendingToastEventId = null;
   };
 
+  function readMsForCurrentSend() {
+    if (!lastResponseEnd) return null;
+    // Sur un fil neuf, la clé de conversation est encore une racine partagée
+    // par TOUS les nouveaux chats : impossible de rattacher honnêtement.
+    if (CoachAdapter.isNewConversation()) return null;
+    if (lastResponseEnd.conv !== CoachAdapter.conversationKey()) return null;
+    const delta = Date.now() - lastResponseEnd.at;
+    return delta >= 0 && delta <= READ_MS_MAX ? delta : null;
+  }
+
+  // Champs posés UNIQUEMENT sur les chemins d'envoi : un prompt annulé
+  // n'attend aucune réponse et ne doit être retenu ni mesuré.
+  function sendExtras() {
+    return {
+      responsePending: true,
+      responseDeadline: Date.now() + RESPONSE_HOLD_MS,
+      readMs: readMsForCurrentSend(),
+    };
+  }
+
   function buildEvent(text, scores, extra = {}) {
     const event = {
       id: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
@@ -217,7 +313,23 @@
       site: CoachAdapter.site,
       category: CoachScoring.categorize(text),
       words: CoachScoring.wordCount(text),
+      promptChars: text.length,
       scores,
+      // Mesures post-réponse : nulles à la création, remplies 5 à 60 s plus
+      // tard par le veilleur via patchEvent. responsePending retient la ligne
+      // côté sync — une ligne poussée ne peut JAMAIS être corrigée
+      // (Prefer: resolution=ignore-duplicates).
+      responsePending: false,
+      responseDeadline: null,
+      responseOutcome: null,
+      model: null,
+      modelCatalogVersion: null,
+      responseChars: null,
+      responseWords: null,
+      latencyMs: null,
+      responseMs: null,
+      turnIndex: null,
+      readMs: null,
       intercepted: false,
       outcome: null,
       scoreBefore: null,
@@ -313,21 +425,53 @@
       // sur la banque locale : l'itération n'attend jamais le réseau plus de 2 s).
       // Le prompt brut et le dialogue transitent par le serveur : cela exige
       // les consentements prompt_text ET socratic_dialogue (re-vérifié serveur).
+      // llmActive est transmis à la modale : notice et badge disent à
+      // l'utilisateur ce qui est généré par IA (transparence, retour terrain).
+      const llmActive = Boolean(
+        effective("llmEnabled") && consented("prompt_text") && consented("socratic_dialogue")
+      );
       function ask(dialogueState) {
+        // La relance (« autre question ») escalade l'exigence : un cran
+        // au-dessus de la question écartée, localement comme côté LLM.
+        const depth = Math.min(3, 1 + dialogueState.answers.length);
         const local = () =>
           CoachScoring.nextQuestion(
-            { originalPrompt: text, scores, asked: dialogueState.asked, lang: CoachI18n.lang, profile: effective("profile") },
+            {
+              originalPrompt: text,
+              scores,
+              asked: dialogueState.asked,
+              answeredCount: dialogueState.answers.length,
+              reroll: Boolean(dialogueState.reroll),
+              lastAxis: dialogueState.lastAxis || null,
+              lastLevel: dialogueState.lastLevel || null,
+              lang: CoachI18n.lang,
+              profile: effective("profile"),
+            },
             templates
           );
-        if (!effective("llmEnabled") || !consented("prompt_text") || !consented("socratic_dialogue")) {
-          return Promise.resolve(local());
-        }
+        if (!llmActive) return Promise.resolve(local());
         return new Promise((resolve) => {
           chrome.runtime.sendMessage(
-            { type: "llm-question", prompt: text, dialogue: dialogueState.answers.map((a) => ({ question: a.question, answer: a.answer })) },
+            {
+              type: "llm-question",
+              prompt: text,
+              dialogue: dialogueState.answers.map((a) => ({ question: a.question, answer: a.answer })),
+              lang: CoachI18n.lang,
+              intent: dialogueState.reroll ? "reroll" : "next",
+              rejected: dialogueState.reroll && dialogueState.lastQuestion ? [dialogueState.lastQuestion] : [],
+              askedQuestions: dialogueState.answers.slice(-3).map((a) => a.question),
+              depth,
+            },
             (res) => {
               if (!chrome.runtime.lastError && res && res.question) {
-                resolve({ key: `llm-${dialogueState.asked.length}`, axis: "llm", label: "Ma réflexion", question: res.question });
+                resolve({
+                  key: `llm-${dialogueState.asked.length}`,
+                  axis: "llm",
+                  label: CoachI18n.t("llmAxisLabel"),
+                  question: res.question,
+                  level: depth,
+                  source: "llm",
+                });
               } else {
                 resolve(local());
               }
@@ -354,6 +498,7 @@
         // sur la raison (3 décrochages), jamais de reproche.
         subtitle: reentry ? CoachI18n.t("modalSubReentry", scores.total) : undefined,
         promise: !reentry,
+        llmActive,
         onPause(m) {
           pauseCurrentConv();
           appendEvent(
@@ -365,6 +510,7 @@
               mirrorFeedback: "paused_thread",
               rounds: m.rounds,
               answersCount: m.answersCount,
+              rerolls: m.rerolls,
             })
           );
         },
@@ -377,35 +523,49 @@
           rememberText(finalText);
           const after = CoachScoring.score(finalText, recentPromptTexts);
           lastPrompt = { category: CoachScoring.categorize(finalText), scores: after };
-          appendEvent(
-            buildEvent(finalText, after, {
-              intercepted: true,
-              outcome: "improved",
-              scoreBefore: scores.total,
-              scoreAfter: after.total,
-              mirrorShown: true,
-              rounds: m.rounds,
-              answersCount: m.answersCount,
-              dialogue: m.answers && m.answers.length ? m.answers : null,
-            }),
-            () => CoachAdapter.submitText(finalText).then(() => armPostMirror())
+          // Lisibilité des modes (retour terrain) : dire in situ comment cet
+          // envoi sera compté, au moment exact où la catégorie se décide.
+          CoachMirror.flash(
+            CoachI18n.t("toastSentImproved", (orgConfig && orgConfig.branding && orgConfig.branding.name) || CoachI18n.t("brandDefault")),
+            orgConfig && orgConfig.branding && orgConfig.branding.color
+          );
+          const event = buildEvent(finalText, after, {
+            intercepted: true,
+            outcome: "improved",
+            scoreBefore: scores.total,
+            scoreAfter: after.total,
+            mirrorShown: true,
+            rounds: m.rounds,
+            answersCount: m.answersCount,
+            rerolls: m.rerolls,
+            dialogue: m.answers && m.answers.length ? m.answers : null,
+            ...sendExtras(),
+          });
+          appendEvent(event, () =>
+            CoachAdapter.submitText(finalText).then((ok) => armAfterSend(event.id, ok))
           );
         },
         onSendAnyway(m) {
           rememberText(text);
           lastPrompt = { category: CoachScoring.categorize(text), scores };
-          appendEvent(
-            buildEvent(text, scores, {
-              intercepted: true,
-              outcome: "sent_anyway",
-              scoreBefore: scores.total,
-              scoreAfter: scores.total,
-              mirrorShown: true,
-              rounds: m.rounds,
-              answersCount: m.answersCount,
-              dialogue: m.answers && m.answers.length ? m.answers : null,
-            }),
-            () => CoachAdapter.submitText(text).then(() => armPostMirror())
+          CoachMirror.flash(
+            CoachI18n.t("toastSentDirect"),
+            orgConfig && orgConfig.branding && orgConfig.branding.color
+          );
+          const event = buildEvent(text, scores, {
+            intercepted: true,
+            outcome: "sent_anyway",
+            scoreBefore: scores.total,
+            scoreAfter: scores.total,
+            mirrorShown: true,
+            rounds: m.rounds,
+            answersCount: m.answersCount,
+            rerolls: m.rerolls,
+            dialogue: m.answers && m.answers.length ? m.answers : null,
+            ...sendExtras(),
+          });
+          appendEvent(event, () =>
+            CoachAdapter.submitText(text).then((ok) => armAfterSend(event.id, ok))
           );
         },
         onCancel(m) {
@@ -418,6 +578,7 @@
               mirrorShown: true,
               rounds: m.rounds,
               answersCount: m.answersCount,
+              rerolls: m.rerolls,
             })
           );
         },
@@ -445,11 +606,16 @@
               followUp
             )
           : null;
-        const event = buildEvent(text, scores, { outcome: "sent", mirrorShown: Boolean(suggestion) });
+        const event = buildEvent(text, scores, {
+          outcome: "sent",
+          mirrorShown: Boolean(suggestion),
+          ...sendExtras(),
+        });
         rememberText(text);
         lastPrompt = { category: event.category, scores };
         appendEvent(event, () => {
-          armPostMirror();
+          // Chemin non intercepté : le site a déjà envoyé le prompt lui-même.
+          CoachAdapter.armResponseWatch({ eventId: event.id, sentAt: Date.now() });
           if (suggestion) {
             if (!isNew) {
               toastedConvs.add(conv);
@@ -468,7 +634,18 @@
   setTimeout(() => {
     if (!disclosureAccepted) return; // inerte : pas même la sonde de santé
     adapterHealthy = CoachAdapter.healthy();
-    chrome.storage.local.set({ [`health_${CoachAdapter.site}`]: { healthy: adapterHealthy, checkedAt: new Date().toISOString() } });
+    const p = CoachAdapter.probe();
+    chrome.storage.local.set({
+      [`health_${CoachAdapter.site}`]: {
+        healthy: adapterHealthy,
+        checkedAt: new Date().toISOString(),
+        // Sonde DOUCE, distincte de la panne dure : des sélecteurs de mesure
+        // absents rendent les métriques nulles, le coaching continue.
+        // null = aucun sélecteur déclaré pour ce site (Mistral, Grok).
+        assistant: p.assistant,
+        model: p.model,
+      },
+    });
     refreshBadge();
   }, 5000);
 })();

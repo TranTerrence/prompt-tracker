@@ -18,4 +18,11 @@ const CoachAdapter = createCoachAdapter({
     "button[type='submit'][aria-label*='submit' i]",
   ],
   rootPaths: ["/", "/chat"],
+  // Mesures post-réponse : NON SONDÉES. Tableaux vides à dessein — un mauvais
+  // sélecteur produirait des nombres plausibles mais faux, que personne ne
+  // remarquerait (contrairement à un composeur cassé, qui se voit tout de
+  // suite). Sonder la page, puis remplir ; d'ici là les mesures sont nulles.
+  assistantSelectors: [],
+  assistantTextSelectors: [],
+  modelSelectors: [],
 });

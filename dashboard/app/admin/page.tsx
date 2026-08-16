@@ -1,12 +1,30 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { averageFirstDraft, computeAdminKpis, fmt, fmtPct } from "@/lib/stats";
+import {
+  averageFirstDraft,
+  computeAdminKpis,
+  computeResponseKpis,
+  fmt,
+  fmtDuration,
+  fmtPct,
+} from "@/lib/stats";
 import type { Group, Profile, PromptEvent } from "@/lib/types";
 
 type EventRow = Pick<
   PromptEvent,
-  "user_id" | "ts" | "scores" | "intercepted" | "outcome" | "score_before" | "score_after"
+  | "user_id"
+  | "ts"
+  | "scores"
+  | "intercepted"
+  | "outcome"
+  | "score_before"
+  | "score_after"
+  | "site"
+  | "model"
+  | "prompt_chars"
+  | "response_chars"
+  | "read_ms"
 > & { rounds: number | null };
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -38,7 +56,9 @@ export default async function AdminPage({
     supabase.from("groups").select("id, name").eq("org_id", org.id).order("name"),
     supabase
       .from("prompt_events")
-      .select("user_id, ts, scores, intercepted, outcome, score_before, score_after, rounds")
+      .select(
+        "user_id, ts, scores, intercepted, outcome, score_before, score_after, rounds, site, model, prompt_chars, response_chars, read_ms"
+      )
       .eq("org_id", org.id)
       .order("ts", { ascending: false })
       .limit(10000),
@@ -73,6 +93,11 @@ export default async function AdminPage({
   const { total, avg, avgFirstDraft, last7, prev7, progression, interceptRate, outcomes, avgGain, avgRounds } =
     computeAdminKpis(events);
   const outcomeTotal = outcomes.improved + outcomes.sent_anyway + outcomes.cancelled;
+
+  // Mesures post-réponse. Tout y est nullable : un site dont les sélecteurs
+  // ne sont pas vérifiés ne mesure rien. `coverage` est le garde-fou — elle
+  // chute quand un éditeur change son UI, bien avant qu'on s'en aperçoive.
+  const resp = computeResponseKpis(events);
 
   // Miroir d'après : chaque ligne est une question réflexive montrée après
   // une réponse IA ; « answered » dit si l'étudiant y a effectivement répondu.
@@ -176,6 +201,76 @@ export default async function AdminPage({
           }
         />
       </div>
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-display text-xl font-semibold tracking-tight">
+            Usage des réponses
+          </h2>
+          <p className="text-xs text-muted">
+            {resp.coverage === null
+              ? "aucun envoi mesuré"
+              : `mesuré sur ${fmtPct(resp.coverage)} des ${resp.sent} envois`}
+          </p>
+        </div>
+
+        {resp.coverage !== null && resp.coverage < 0.5 && (
+          <p className="rounded-xl border border-card-border bg-card px-4 py-3 text-xs leading-relaxed text-muted">
+            Moins de la moitié des envois produisent une mesure. C&apos;est
+            normal sur les sites dont les repères d&apos;interface ne sont pas
+            encore validés (Mistral, Grok) ; ailleurs, cela signale
+            généralement qu&apos;un éditeur a modifié son interface.
+          </p>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Kpi
+            label="Temps de lecture médian"
+            value={fmtDuration(resp.medianReadMs)}
+            sub="entre la fin d'une réponse et le prompt suivant du même fil"
+          />
+          <Kpi
+            label="Réponses longues enchaînées"
+            value={fmtPct(resp.quickReadRate)}
+            sub="réponses de 600+ signes relancées en moins de 10 s : le signal de sur-dépendance"
+          />
+          <Kpi
+            label="Longueur moyenne des réponses"
+            value={resp.avgResponseChars === null ? ":" : `${Math.round(resp.avgResponseChars)}`}
+            sub="signes. Sous-estimé quand la sortie part dans un panneau latéral (Canvas, Artifacts)"
+          />
+          <Kpi
+            label="Facteur d'expansion"
+            value={resp.expansion === null ? ":" : `× ${fmt(resp.expansion, 0)}`}
+            sub="signes de réponse par signe de prompt"
+          />
+          <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card sm:col-span-2">
+            <p className="text-[13px] text-muted">Modèles utilisés</p>
+            {resp.models.length === 0 ? (
+              <p className="mt-2 font-display text-3xl font-medium tracking-tight">:</p>
+            ) : (
+              <ul className="mt-3 space-y-1.5">
+                {resp.models.slice(0, 6).map(({ model, n }) => (
+                  <li key={model} className="flex items-baseline justify-between gap-4 text-sm">
+                    <span className={model === "autre" ? "text-muted" : ""}>
+                      {model === "autre" ? "autre / non reconnu" : model}
+                    </span>
+                    <span className="tabular-nums text-muted">
+                      {n} · {fmtPct(n / resp.models.reduce((s, m) => s + m.n, 0))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              Le nom du modèle est normalisé contre une liste connue :
+              « autre » regroupe les modèles trop récents et les agents
+              personnalisés. Aucun libellé écrit par un utilisateur n&apos;est
+              conservé.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <section className="overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
         <div className="flex items-center justify-between border-b border-card-border px-5 py-4">

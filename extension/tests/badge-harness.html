@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Harnais pastille (dev)</title>
+  <style>
+    html { background: #e9e2d4; font: 14px/1.5 system-ui, sans-serif; color: #1B1815; }
+    body { margin: 48px auto; max-width: 620px; }
+    h1 { font-size: 18px; }
+    button { font: inherit; padding: 6px 12px; margin: 0 6px 8px 0; border-radius: 8px;
+      border: 1px solid #d8cfc0; background: #fff; cursor: pointer; }
+    pre { background: #fff; border: 1px solid #d8cfc0; border-radius: 8px; padding: 10px; }
+    ol { color: #4a443c; }
+  </style>
+</head>
+<body>
+  <h1>Pastille Prompt Tracker — interrupteur d'interception</h1>
+  <p>La pastille est en bas à droite. <code>chrome.storage.local</code> est simulé : l'état écrit
+     par l'interrupteur s'affiche ci-dessous, comme le ferait le popup.</p>
+  <p>
+    <button data-state="on">Interception active</button>
+    <button data-state="off">En veille</button>
+    <button data-state="locked">Verrouillé par l'org</button>
+    <button data-state="warn">Capture douteuse (ambre)</button>
+    <button data-theme>Basculer light / dark</button>
+  </p>
+  <ol>
+    <li>Cliquer l'interrupteur : la piste bascule, <code>settings</code> ci-dessous est mis à jour.</li>
+    <li>Le clic sur l'interrupteur ne doit <em>pas</em> replier la pastille ; le clic sur le reste, si.</li>
+    <li>Tab jusqu'à l'interrupteur (anneau de focus), puis Espace ou Entrée : même bascule.</li>
+    <li>En mode verrouillé : grisé, non cliquable, tooltip « géré par ton organisation ».</li>
+  </ol>
+  <pre id="store"></pre>
+
+  <script>
+    // Stub minimal de chrome.storage.local : le contrat que la pastille utilise.
+    (function () {
+      const store = { settings: { theme: "light", threshold: 40, interceptEnabled: true } };
+      window.__store = store;
+      window.chrome = {
+        storage: {
+          local: {
+            get(keys, cb) {
+              const out = {};
+              for (const k of Array.isArray(keys) ? keys : [keys]) if (k in store) out[k] = store[k];
+              cb(out);
+            },
+            set(obj, cb) {
+              Object.assign(store, obj);
+              document.getElementById("store").textContent = JSON.stringify(store.settings, null, 2);
+              cb && cb();
+            },
+          },
+          onChanged: { addListener() {} },
+        },
+        i18n: { getUILanguage: () => "fr" },
+      };
+    })();
+  </script>
+  <script src="../src/theme.js"></script>
+  <script src="../src/i18n.js"></script>
+  <script src="../src/badge.js"></script>
+  <script>
+    let theme = "light";
+    let state = {
+      branding: { name: "Prompt Tracker", color: null, logoUrl: null },
+      healthy: true,
+      threshold: 40,
+      interceptEnabled: true,
+      lockedByOrg: false,
+    };
+    const PRESETS = {
+      on: { healthy: true, interceptEnabled: true, lockedByOrg: false },
+      off: { healthy: true, interceptEnabled: false, lockedByOrg: false },
+      locked: { healthy: true, interceptEnabled: true, lockedByOrg: true },
+      warn: { healthy: false, interceptEnabled: true, lockedByOrg: false },
+    };
+    function paint() {
+      CoachTheme.set(theme);
+      CoachBadge.render(state);
+      document.getElementById("store").textContent = JSON.stringify(window.__store.settings, null, 2);
+    }
+    for (const btn of document.querySelectorAll("[data-state]")) {
+      btn.addEventListener("click", () => {
+        state = { ...state, ...PRESETS[btn.dataset.state] };
+        paint();
+      });
+    }
+    document.querySelector("[data-theme]").addEventListener("click", () => {
+      theme = theme === "light" ? "dark" : "light";
+      document.documentElement.style.background = theme === "dark" ? "#161311" : "#e9e2d4";
+      document.body.style.color = theme === "dark" ? "#F3EEE6" : "#1B1815";
+      paint();
+    });
+    paint();
+  </script>
+</body>
+</html>

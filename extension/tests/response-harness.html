@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Harnais mesures post-réponse (dev)</title>
+  <style>
+    html { background: #e9e2d4; font: 14px/1.5 system-ui, sans-serif; color: #1B1815; }
+    body { margin: 40px auto; max-width: 780px; }
+    h1 { font-size: 18px; }
+    #fakechat { border: 1px dashed #c9bfae; border-radius: 8px; padding: 10px; margin: 12px 0;
+      max-height: 120px; overflow: auto; background: #fffdf8; font-size: 12px; color: #6a6155; }
+    table { border-collapse: collapse; width: 100%; background: #fff;
+      border: 1px solid #d8cfc0; border-radius: 8px; overflow: hidden; }
+    td, th { text-align: left; padding: 6px 10px; border-bottom: 1px solid #eee5d6; vertical-align: top; }
+    th { background: #f6f1e6; font-weight: 600; }
+    .ok { color: #2f7d4f; font-weight: 600; }
+    .ko { color: #b3261e; font-weight: 600; }
+    tt { font-size: 12px; color: #4a443c; }
+    #summary { font-size: 16px; font-weight: 600; margin: 14px 0; }
+  </style>
+</head>
+<body>
+  <h1>Mesures post-réponse — cycle du veilleur</h1>
+  <p>Simule un faux fil de chat (sélecteurs ChatGPT) et vérifie ce que
+     <code>armResponseWatch</code> mesure. Aucune extension, aucun site réel :
+     seuls <code>scoring.js</code>, <code>models.js</code> et
+     <code>adapters/factory.js</code> sont chargés.</p>
+
+  <div id="fakechat"><em>faux fil de conversation</em></div>
+  <p id="summary">exécution…</p>
+  <table id="results">
+    <thead><tr><th>Scénario</th><th>Attendu</th><th>Obtenu</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="../src/scoring.js"></script>
+  <script src="../src/models.js"></script>
+  <script src="../src/adapters/factory.js"></script>
+  <script>
+  (async () => {
+    const chat = document.getElementById("fakechat");
+    const tbody = document.querySelector("#results tbody");
+    let pass = 0, fail = 0;
+
+    function check(scenario, expected, got, ok) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${scenario}</td><td><tt>${expected}</tt></td><td><tt>${got}</tt></td>`;
+      const verdict = document.createElement("td");
+      verdict.textContent = ok ? "OK" : "ÉCHEC";
+      verdict.className = ok ? "ok" : "ko";
+      tr.appendChild(verdict);
+      tbody.appendChild(tr);
+      ok ? pass++ : fail++;
+    }
+
+    // visibilityState est en lecture seule : on le rend pilotable.
+    let visibility = "visible";
+    Object.defineProperty(document, "visibilityState", { get: () => visibility, configurable: true });
+    const setHidden = () => {
+      visibility = "hidden";
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+
+    // Marges volontairement larges : dans un onglet en arrière-plan, le
+    // navigateur bride setTimeout (jusqu'à ~1 s). Des seuils serrés feraient
+    // échouer le harnais pour une raison qui n'a rien à voir avec le code.
+    // Marges volontairement larges : dans un onglet en arrière-plan, le
+    // navigateur bride setTimeout (jusqu'à ~1 s, parfois bien plus). Des seuils
+    // serrés feraient échouer le harnais pour une raison sans rapport.
+    const OPTS = { quietMs: 400, minActivity: 3, minElapsedMs: 60, maxWaitMs: 30000 };
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    // Macrotâche SANS minuteur : contrairement à setTimeout, MessageChannel
+    // n'est pas bridé quand l'onglet est en arrière-plan. C'est ce qui rend le
+    // streaming simulé rapide ici, tout en produisant bien une mutation par
+    // tour de boucle (MutationObserver regrouperait des mutations synchrones).
+    const tick = () =>
+      new Promise((r) => {
+        const ch = new MessageChannel();
+        ch.port1.onmessage = () => r();
+        ch.port2.postMessage(0);
+      });
+
+    function reset() {
+      visibility = "visible";
+      chat.innerHTML = "";
+    }
+
+    // Un tour assistant au format ChatGPT (les sélecteurs de l'adaptateur réel).
+    function addAssistantTurn() {
+      const turn = document.createElement("div");
+      turn.setAttribute("data-message-author-role", "assistant");
+      turn.setAttribute("data-message-model-slug", "gpt-5.1");
+      const md = document.createElement("div");
+      md.className = "markdown";
+      turn.appendChild(md);
+      chat.appendChild(turn);
+      return md;
+    }
+
+    // Streaming : des mutations successives, comme un vrai flux de tokens.
+    async function stream(md, chunks = 10) {
+      for (let i = 0; i < chunks; i++) {
+        md.appendChild(document.createTextNode("token de reponse "));
+        await tick();
+      }
+    }
+
+    // Un seul abonné, enregistré une fois : il route vers le test courant.
+    let resolveCurrent = null;
+    const adapter = createCoachAdapter({
+      site: "chatgpt",
+      composerSelectors: ["#nope"],
+      sendButtonSelectors: ["#nope"],
+      assistantSelectors: ["[data-message-author-role='assistant']"],
+      assistantTextSelectors: [".markdown"],
+      modelSelectors: ["[data-message-author-role='assistant'][data-message-model-slug]"],
+    });
+    adapter.onResponse({ onComplete: (ctx) => resolveCurrent && resolveCurrent(ctx) });
+
+    const blank = createCoachAdapter({
+      site: "mistral",
+      composerSelectors: ["#nope"],
+      sendButtonSelectors: ["#nope"],
+    });
+    let resolveBlank = null;
+    blank.onResponse({ onComplete: (ctx) => resolveBlank && resolveBlank(ctx) });
+
+    // Résout avec le contexte ET l'instant exact de la conclusion : c'est la
+    // comparaison entre les deux qui prouve que la fenêtre de silence est bien
+    // exclue de la durée mesurée.
+    function armed(a, setResolver, meta, opts) {
+      return new Promise((resolve) => {
+        setResolver((ctx) => resolve({ ctx, completedAt: Date.now() }));
+        a.armResponseWatch(meta, { ...OPTS, ...opts });
+      });
+    }
+
+    /* ---------- A. Nominal ---------- */
+    reset();
+    addAssistantTurn(); // un tour déjà présent → turnIndex attendu = 1
+    let run = armed(adapter, (r) => (resolveCurrent = r), { eventId: "evt-A", sentAt: Date.now() });
+    await sleep(30);
+    const mdA = addAssistantTurn();
+    await stream(mdA);
+    let { ctx, completedAt } = await run;
+
+    check("A — raison", "complete", ctx.reason, ctx.reason === "complete");
+    check("A — eventId conservé", "evt-A", ctx.eventId, ctx.eventId === "evt-A");
+    check("A — caractères comptés", "> 0", ctx.chars, ctx.chars > 0);
+    check("A — mots comptés", "> 0", ctx.words, ctx.words > 0);
+    check("A — modèle normalisé", "gpt-5.1", ctx.model, ctx.model === "gpt-5.1");
+    check("A — turnIndex (1 tour avant l'envoi)", "1", ctx.turnIndex, ctx.turnIndex === 1);
+    check("A — onglet resté visible", "false", ctx.hidden, ctx.hidden === false);
+
+    const latency = ctx.firstTokenAt - ctx.sentAt;
+    const duration = ctx.lastActivityAt - ctx.firstTokenAt;
+    check("A — latence mesurée", "≥ 0", latency, latency >= 0);
+    check("A — durée mesurée", "> 0 ms", duration, duration > 0);
+    // LE point du chronométrage : la fenêtre de silence est exclue de la
+    // durée. Sans ça, response_ms surestimerait de quietMs à chaque réponse.
+    const silence = completedAt - ctx.lastActivityAt;
+    check(
+      "A — silence exclu de la durée",
+      `silence ≥ ${OPTS.quietMs} ms, et durée < (fin − premier token)`,
+      `silence ${silence} ms, durée ${duration} ms, total ${completedAt - ctx.firstTokenAt} ms`,
+      silence >= OPTS.quietMs && duration < completedAt - ctx.firstTokenAt
+    );
+
+    /* ---------- B. Onglet en arrière-plan ---------- */
+    reset();
+    run = armed(adapter, (r) => (resolveCurrent = r), { eventId: "evt-B", sentAt: Date.now() });
+    await sleep(20);
+    const mdB = addAssistantTurn();
+    setHidden();
+    await stream(mdB);
+    ({ ctx } = await run);
+
+    check("B — marqué caché", "true", ctx.hidden, ctx.hidden === true);
+    check("B — tailles conservées malgré tout", "> 0", ctx.chars, ctx.chars > 0);
+
+    /* ---------- C. Aucun sélecteur déclaré (Mistral, Grok) ---------- */
+    reset();
+    run = armed(blank, (r) => (resolveBlank = r), { eventId: "evt-C", sentAt: Date.now() });
+    await sleep(20);
+    const mdC = addAssistantTurn();
+    await stream(mdC);
+    ({ ctx } = await run);
+
+    check("C — la fin est quand même détectée", "complete", ctx.reason, ctx.reason === "complete");
+    check("C — pas de taille", "null", String(ctx.chars), ctx.chars === null);
+    check("C — pas de modèle", "null", String(ctx.model), ctx.model === null);
+    check("C — pas de turnIndex", "null", String(ctx.turnIndex), ctx.turnIndex === null);
+    check("C — pas de premier token", "null", String(ctx.firstTokenAt), ctx.firstTokenAt === null);
+
+    /* ---------- D. Dépassement de délai ---------- */
+    reset();
+    run = armed(adapter, (r) => (resolveCurrent = r), { eventId: "evt-D", sentAt: Date.now() }, { maxWaitMs: 300 });
+    ({ ctx } = await run); // aucune mutation : seule l'échéance peut conclure
+    check("D — verdict de dépassement", "timeout", ctx.reason, ctx.reason === "timeout");
+    check("D — eventId conservé", "evt-D", ctx.eventId, ctx.eventId === "evt-D");
+
+    /* ---------- E. Nos propres surfaces ne comptent pas ---------- */
+    reset();
+    const ourNode = document.createElement("div");
+    ourNode.id = "coach-ia-toast";
+    document.body.appendChild(ourNode);
+
+    let fired = false;
+    run = armed(adapter, (r) => (resolveCurrent = r), { eventId: "evt-E", sentAt: Date.now() });
+    run.then(() => (fired = true));
+    for (let i = 0; i < 20; i++) {
+      ourNode.appendChild(document.createTextNode("bruit du coach "));
+      await tick();
+    }
+    // Bien au-delà de quietMs : si nos mutations comptaient, ce serait conclu.
+    await sleep(OPTS.quietMs * 3);
+    check("E — nos mutations n'achèvent rien", "pas encore conclu", fired ? "conclu" : "pas encore conclu", !fired);
+
+    // Le veilleur est-il encore vivant ? Une vraie réponse doit le conclure.
+    const mdE = addAssistantTurn();
+    await stream(mdE);
+    ({ ctx } = await run);
+    check("E — une vraie réponse conclut bien", "complete", ctx.reason, ctx.reason === "complete");
+    ourNode.remove();
+
+    /* ---------- F. Réponse COURTE, terminée avant minElapsedMs ----------
+       Le piège : si minElapsedMs empêchait de programmer le minuteur de
+       silence, une réponse déjà finie ne recevrait plus aucune mutation, donc
+       plus jamais de minuteur — et serait classée « timeout » alors qu'elle
+       est complète, en retenant l'événement pour rien. Le streaming par
+       macrotâche se termine en quelques millisecondes : c'est exactement ce
+       cas. maxWaitMs court : si le report est cassé, le test le dit vite. */
+    reset();
+    run = armed(
+      adapter,
+      (r) => (resolveCurrent = r),
+      { eventId: "evt-F", sentAt: Date.now() },
+      { minElapsedMs: 4000, maxWaitMs: 12000 }
+    );
+    const mdF = addAssistantTurn();
+    await stream(mdF, 4);
+    ({ ctx } = await run);
+
+    check("F — réponse courte : conclue, pas expirée", "complete", ctx.reason, ctx.reason === "complete");
+    check("F — mesurée quand même", "> 0", ctx.chars, ctx.chars > 0);
+
+    const el = document.getElementById("summary");
+    el.textContent = `${pass} OK · ${fail} échec${fail > 1 ? "s" : ""}`;
+    el.className = fail ? "ko" : "ok";
+    window.__harness = { pass, fail };
+  })();
+  </script>
+</body>
+</html>

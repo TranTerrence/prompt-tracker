@@ -17,7 +17,7 @@ Every prompt is scored locally, with a live breakdown (clarity, context, critica
 
 🔒 **Data and privacy**
 Nothing is recorded until you accept the disclosure screen shown on first launch: the extension stays inactive before your explicit consent.
-• **Locally, after your consent**: quality scores, category, word count, site, date, outcome (sent, improved, cancelled), your dialogue answers and post-response reflections. The full text of your prompts is only recorded if you enable the dedicated setting. Everything stays on your computer: no account required.
+• **Locally, after your consent**: quality scores, category, word count, site, date, outcome (sent, improved, cancelled), your dialogue answers and post-response reflections, plus measurements of the AI's answer — its length, its duration, the model used, and how long you take before sending the next prompt. The text of those answers is counted then forgotten: never recorded. The full text of your prompts is only recorded if you enable the dedicated setting. Everything stays on your computer: no account required.
 • **If you join a class** (code provided by your school or company): a second screen tells you exactly what will be shared (the indicators above, never any text) and you confirm with a button. Your account email identifies you to the teacher.
 • **Content** (prompt text, dialogues, reflections, conversation threads) is shared only if your organization requests it with a stated purpose AND you consent, category by category. Toggles off by default, revocable at any time; the server erases any non-consented content upon receipt.
 • **Tailored AI questions (optional)**: if your organization enables it and you consented to sharing your text and reasoning, your prompt transits through Anthropic to generate the next question, without being stored.
@@ -43,13 +43,13 @@ Prompt Tracker locally analyzes the quality of prompts typed on AI sites (ChatGP
 - Host `https://gemini.google.com/*`: same use on Gemini.
 - Host `https://chat.mistral.ai/*`: same use on Mistral (Le Chat).
 - Host `https://grok.com/*`: same use on Grok.
-The input field content is analyzed locally, before sending; it is not transmitted to any server without the consents described above.
+The input field content is analyzed locally, before sending; it is not transmitted to any server without the consents described above. The response area is observed to measure its length and duration and to read the model name: that text is counted then forgotten, neither stored nor transmitted.
 
 ## "Privacy practices" tab (Developer Console): checklist
 Data types to declare:
 - [x] **Personally identifiable information**: email address (optional account creation).
 - [x] **Authentication information**: password (optional account authentication).
-- [x] **User activity**: interaction indicators on AI sites (quality scores, categories, word counts, outcomes, timestamps).
+- [x] **User activity**: interaction indicators on AI sites (quality scores, categories, word counts, outcomes, timestamps, response length and duration, model used, reading delay).
 - [x] **Website content**: prompt text, Socratic dialogues, reflections, collected only with opt-in, category-by-category consent (must still be declared).
 
 Certifications to check:

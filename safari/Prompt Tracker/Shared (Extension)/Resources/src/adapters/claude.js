@@ -18,4 +18,17 @@ const CoachAdapter = createCoachAdapter({
     "button[type='submit']",
   ],
   rootPaths: ["/", "/new", "/chats"],
+  // Mesures post-réponse. À VÉRIFIER EN DIRECT : les classes utilitaires
+  // Tailwind de Claude changent souvent. Si aucun sélecteur ne correspond, les
+  // mesures sont nulles et le reste du coaching est intact.
+  assistantSelectors: [
+    "[data-testid='assistant-message']",
+    "div.font-claude-response",
+    "div.font-claude-message",
+  ],
+  assistantTextSelectors: [".prose", "[class*='prose']"],
+  modelSelectors: [
+    "[data-testid='model-selector-dropdown']",
+    "button[aria-haspopup='menu'][aria-label*='model' i]",
+  ],
 });

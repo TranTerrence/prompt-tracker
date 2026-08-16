@@ -12,6 +12,10 @@ const CoachI18n = (() => {
       badgeWatch: (name) => `${name} actif : interception désactivée, tes prompts sont seulement analysés localement.`,
       badgeBroken: (name) => `${name}. Attention, l'UI du site a peut-être changé, la capture est à vérifier.`,
       badgeStandby: "(veille)",
+      badgeToggleLabel: "Interception socratique",
+      badgeToggleOn: "Interception active — clique pour mettre en veille",
+      badgeToggleOff: "En veille — clique pour réactiver l'interception",
+      badgeToggleLocked: "Réglage géré par ton organisation",
       // Toast
       toastTitle: "Miroir socratique",
       toastUseful: "👍 Utile",
@@ -36,6 +40,12 @@ const CoachI18n = (() => {
       modalReply: "Répondre",
       modalSkip: "Passer cette question",
       modalSkipped: "(question passée)",
+      modalOtherQuestion: "Autre question",
+      modalOtherQuestionTitle: "Reformuler ou approfondir : une question différente, un cran plus exigeante.",
+      modalBankExhausted: "Toutes les questions adaptées à ce prompt ont été posées. Réponds ou envoie quand tu es prêt.",
+      modalLlmBadge: "Question générée par IA",
+      modalLlmNotice: "Questions sur mesure par IA : ton prompt et tes réponses transitent par le serveur (selon tes consentements), sans être stockés. En cas de lenteur, repli automatique sur la banque locale.",
+      llmAxisLabel: "Ma réflexion",
       modalPreviewHead: "Prompt qui sera envoyé : score",
       rubClarte: "Clarté",
       rubContexte: "Contexte",
@@ -70,6 +80,9 @@ const CoachI18n = (() => {
       popupResetConfirm: "Effacer toutes les données locales ?",
       popupEmpty: "Aucun prompt capté pour l'instant. Utilise ChatGPT, Claude, Gemini, Mistral ou Grok, je te suis. 🙂",
       popupHealthBroken: (sites) => `⚠️ Capture peut-être cassée sur : ${sites} (UI modifiée)`,
+      // Alerte douce : le coaching marche, seules les mesures manquent.
+      popupHealthMetrics: (sites) => `Mesures de réponse indisponibles sur : ${sites}. Le coaching fonctionne normalement.`,
+      popupCoverage: (pct) => `${pct} % des envois récents ont produit une mesure de réponse`,
       authEmail: "Email",
       authPassword: "Mot de passe",
       authLogin: "Se connecter",
@@ -87,17 +100,24 @@ const CoachI18n = (() => {
       // Divulgation à la jonction : rejoindre = partager les indicateurs.
       joinDiscTitle: "Avant de rejoindre",
       joinDiscBody:
-        "Rejoindre une classe, c'est partager avec ton organisation : tes scores de qualité, catégories de prompts, nombres de mots, sites utilisés, issues (envoyé, amélioré, annulé) et dates. Jamais aucun texte sans ton accord séparé, catégorie par catégorie, à l'écran suivant. Ton email de compte t'identifie auprès de l'enseignant. Conservation : contenu 90 jours max, indicateurs 12 mois.",
+        "Rejoindre une classe, c'est partager avec ton organisation : tes scores de qualité, catégories de prompts, nombres de mots, sites utilisés, issues (envoyé, amélioré, annulé) et dates, ainsi que la longueur et la durée des réponses de l'IA, le modèle utilisé et ton temps de lecture — jamais le texte de ces réponses. Jamais aucun texte sans ton accord séparé, catégorie par catégorie, à l'écran suivant. Ton email de compte t'identifie auprès de l'enseignant. Conservation : contenu 90 jours max, indicateurs 12 mois.",
       joinDiscAccept: "Rejoindre et partager ces indicateurs",
       joinDiscCancel: "Annuler",
       popupInertBanner: "Prompt Tracker est en veille : rien n'est enregistré tant que tu n'as pas accepté la divulgation des données.",
       popupInertCta: "Voir et activer",
+      disclosureUpdate:
+        "Nouveau en 0.7 : l'extension mesure aussi la réponse de l'IA — sa longueur, sa durée, le modèle utilisé et le temps que tu prends avant d'enchaîner. Le texte des réponses est compté puis oublié, jamais enregistré ni transmis.",
+      disclosureUpdateOk: "J'ai compris",
       popupPrivacyLink: "Politique de confidentialité",
+      popupMethodLink: "Comment le score et les modes sont calculés",
+      modalMethodTitle: "Comment ce score est calculé (ouvre la page méthode)",
+      toastSentImproved: (brand) => `Envoyé après ta réflexion avec ${brand} : compté « avec accompagnement ».`,
+      toastSentDirect: "Envoyé tel quel : compté « direct, aide déclinée ».",
       // Consentement
       consentTitle: (org) => `Tes données partagées avec ${org}`,
       consentSubtitle: "C'est toi qui décides, catégorie par catégorie. Modifiable à tout moment.",
       consentBaseline:
-        "Toujours partagé avec ton organisation : scores de qualité, catégories de prompts, nombres de mots, sites utilisés, issues (envoyé, amélioré, annulé) et dates, jamais aucun contenu. C'est ce qui alimente ta courbe de progression.",
+        "Toujours partagé avec ton organisation : scores de qualité, catégories de prompts, nombres de mots, sites utilisés, issues (envoyé, amélioré, annulé) et dates, plus la longueur et la durée des réponses de l'IA, le modèle utilisé et ton temps de lecture. Jamais aucun contenu : le texte des réponses est compté, jamais enregistré. C'est ce qui alimente ta courbe de progression.",
       consentBaselineRetention:
         "Conservation : les contenus partagés sont effacés au bout de 90 jours, les indicateurs au bout de 12 mois. Tu peux tout effacer avant, à tout moment.",
       consentLlmNote:
@@ -122,7 +142,37 @@ const CoachI18n = (() => {
       authConnected: "connecté",
       authPending: (n) => `${n} événement(s) en attente de synchronisation`,
       authSynced: "Tout est synchronisé ✓",
+      // Bannière de synchronisation bloquée : dire ce qui manque, et donner
+      // l'action qui le lève. Jamais d'échec muet.
+      syncBlockedBaseline:
+        "Rien n'est encore partagé avec ton organisation : il manque ton accord pour envoyer tes indicateurs (scores, catégories, compteurs). Aucun texte de prompt n'est concerné ici.",
+      syncCtaBaseline: "Accepter et activer le partage",
+      syncBlockedNoOrg:
+        "Ton compte n'est rattaché à aucune classe. Saisis le code que t'a donné ton enseignant pour que ta progression lui remonte.",
+      syncCtaNoOrg: "Rejoindre ma classe",
+      syncBlockedNoAuth:
+        "Tu n'es pas connecté : ta progression reste sur cet ordinateur et ne remonte pas à ta classe.",
+      syncCtaNoAuth: "Lier mon compte",
+      syncBlockedError: (msg) => `La synchronisation a échoué : ${msg}. Nouvel essai automatique dans une minute.`,
+      syncPending: (n) => `${n} événement(s) en attente.`,
+      syncPendingSince: (n, date) => `${n} événement(s) en attente depuis le ${date}.`,
+      // Appairage : le compte se lie depuis le web, où l'utilisateur est déjà
+      // connecté. Aucun mot de passe n'est saisi dans le popup.
+      pairIntro:
+        "Lie ton compte pour retrouver ta progression sur le web et la partager avec ta classe. Sans compte, tout reste sur cet ordinateur.",
+      pairStart: "Lier mon compte",
+      pairWaiting:
+        "Vérifie que ce code est bien celui affiché dans l'onglet qui vient de s'ouvrir, puis autorise. La liaison se fait ensuite toute seule.",
+      pairReopen: "Rouvrir la page",
+      pairCancel: "Annuler",
+      pairExpired: "Demande expirée ou déjà utilisée. Relance « Lier mon compte ».",
+      pairFailed: "La liaison a échoué. Réessaie dans un instant.",
+      pairRetrying: "Connexion au serveur difficile, nouvel essai en cours…",
+      authFallback: "Se connecter avec un mot de passe",
+      authPendingSignup: (email) =>
+        `Compte créé pour ${email}. Confirme ton adresse depuis ta boîte mail, puis connecte-toi ici.`,
       authDashboard: "📊 Ouvrir le dashboard",
+      authDashboardHint: "Le dashboard s'ouvre avec les mêmes identifiants (email et mot de passe) que l'extension.",
       authLogout: "Déconnexion",
       // Onboarding
       obTitle: "Bienvenue dans Prompt Tracker",
@@ -138,7 +188,7 @@ const CoachI18n = (() => {
       obDiscTitle: "Tes données : ce que l'extension enregistre, et pourquoi",
       obDiscCollectTitle: "Ce qui est enregistré",
       obDiscCollect:
-        "Sur ChatGPT, Claude, Gemini, Mistral et Grok, l'extension enregistre pour chaque prompt : des scores de qualité, la catégorie, le nombre de mots, le site, la date, l'issue (envoyé, amélioré, annulé), tes réponses au dialogue socratique et tes réflexions d'après-réponse. Le texte complet de tes prompts n'est enregistré que si tu actives l'option dédiée dans les réglages.",
+        "Sur ChatGPT, Claude, Gemini, Mistral et Grok, l'extension enregistre pour chaque prompt : des scores de qualité, la catégorie, le nombre de mots, le site, la date, l'issue (envoyé, amélioré, annulé), tes réponses au dialogue socratique et tes réflexions d'après-réponse. Elle mesure aussi la réponse de l'IA — sa longueur, sa durée de génération, le modèle utilisé et le temps que tu prends avant d'enchaîner. Le texte de ces réponses est compté puis oublié : il n'est jamais enregistré. Le texte complet de tes prompts, lui, n'est enregistré que si tu actives l'option dédiée dans les réglages.",
       obDiscPurposeTitle: "Pourquoi",
       obDiscPurpose:
         "Uniquement pour te montrer ta progression (miroir socratique, premiers jets, séries) et, si tu choisis de rejoindre une classe, la partager avec ton enseignant.",
@@ -175,6 +225,10 @@ const CoachI18n = (() => {
       badgeWatch: (name) => `${name} active: interception off, your prompts are only analyzed locally.`,
       badgeBroken: (name) => `${name}. Warning, the site UI may have changed, capture needs checking.`,
       badgeStandby: "(standby)",
+      badgeToggleLabel: "Socratic interception",
+      badgeToggleOn: "Interception on — click to put on standby",
+      badgeToggleOff: "On standby — click to turn interception back on",
+      badgeToggleLocked: "Setting managed by your organization",
       toastTitle: "Socratic mirror",
       toastUseful: "👍 Helpful",
       toastPause: "Not in this thread",
@@ -196,6 +250,12 @@ const CoachI18n = (() => {
       modalReply: "Answer",
       modalSkip: "Skip this question",
       modalSkipped: "(question skipped)",
+      modalOtherQuestion: "Another question",
+      modalOtherQuestionTitle: "Rephrase or go deeper: a different, more demanding question.",
+      modalBankExhausted: "Every question suited to this prompt has been asked. Answer or send when you're ready.",
+      modalLlmBadge: "AI-generated question",
+      modalLlmNotice: "AI-tailored questions: your prompt and answers transit through the server (per your consents), without being stored. If slow, automatic fallback to the local bank.",
+      llmAxisLabel: "My reflection",
       modalPreviewHead: "Prompt that will be sent: score",
       rubClarte: "Clarity",
       rubContexte: "Context",
@@ -228,6 +288,9 @@ const CoachI18n = (() => {
       popupResetConfirm: "Clear all local data?",
       popupEmpty: "No prompts captured yet. Use ChatGPT, Claude, Gemini, Mistral or Grok, I've got you. 🙂",
       popupHealthBroken: (sites) => `⚠️ Capture may be broken on: ${sites} (UI changed)`,
+      // Soft warning: coaching works, only the measurements are missing.
+      popupHealthMetrics: (sites) => `Response measurements unavailable on: ${sites}. Coaching works as usual.`,
+      popupCoverage: (pct) => `${pct}% of recent sends produced a response measurement`,
       authEmail: "Email",
       authPassword: "Password",
       authLogin: "Sign in",
@@ -244,16 +307,23 @@ const CoachI18n = (() => {
       popupConsentLink: "🔒 My shared data",
       joinDiscTitle: "Before you join",
       joinDiscBody:
-        "Joining a class means sharing with your organization: your quality scores, prompt categories, word counts, sites used, outcomes (sent, improved, cancelled) and dates. Never any text without your separate, category-by-category consent on the next screen. Your account email identifies you to the teacher. Retention: content 90 days max, indicators 12 months.",
+        "Joining a class means sharing with your organization: your quality scores, prompt categories, word counts, sites used, outcomes (sent, improved, cancelled) and dates, plus the length and duration of the AI's answers, the model used and your reading time — never the text of those answers. Never any text without your separate, category-by-category consent on the next screen. Your account email identifies you to the teacher. Retention: content 90 days max, indicators 12 months.",
       joinDiscAccept: "Join and share these indicators",
       joinDiscCancel: "Cancel",
       popupInertBanner: "Prompt Tracker is on standby: nothing is recorded until you accept the data disclosure.",
       popupInertCta: "Review and enable",
+      disclosureUpdate:
+        "New in 0.7: the extension also measures the AI's answer — its length, how long it took, the model used, and how long you take before sending the next prompt. The text of those answers is counted then forgotten, never recorded or transmitted.",
+      disclosureUpdateOk: "Got it",
       popupPrivacyLink: "Privacy policy",
+      popupMethodLink: "How the score and modes are computed",
+      modalMethodTitle: "How this score is computed (opens the method page)",
+      toastSentImproved: (brand) => `Sent after your work with ${brand}: counted as "coached".`,
+      toastSentDirect: 'Sent as is: counted as "direct, help declined".',
       consentTitle: (org) => `Your data shared with ${org}`,
       consentSubtitle: "You decide, category by category. Changeable at any time.",
       consentBaseline:
-        "Always shared with your organization: quality scores, prompt categories, word counts, sites used, outcomes (sent, improved, cancelled) and dates, never any content. This is what feeds your progress curve.",
+        "Always shared with your organization: quality scores, prompt categories, word counts, sites used, outcomes (sent, improved, cancelled) and dates, plus the length and duration of the AI's answers, the model used and your reading time. Never any content: the text of the answers is counted, never recorded. This is what feeds your progress curve.",
       consentBaselineRetention:
         "Retention: shared content is erased after 90 days, indicators after 12 months. You can erase everything sooner, at any time.",
       consentLlmNote:
@@ -278,7 +348,33 @@ const CoachI18n = (() => {
       authConnected: "signed in",
       authPending: (n) => `${n} event(s) awaiting sync`,
       authSynced: "Everything is synced ✓",
+      syncBlockedBaseline:
+        "Nothing is shared with your organisation yet: your agreement is missing to send your indicators (scores, categories, counters). No prompt text is involved here.",
+      syncCtaBaseline: "Accept and enable sharing",
+      syncBlockedNoOrg:
+        "Your account isn't linked to any class. Enter the code your teacher gave you so your progress reaches them.",
+      syncCtaNoOrg: "Join my class",
+      syncBlockedNoAuth:
+        "You're not signed in: your progress stays on this computer and doesn't reach your class.",
+      syncCtaNoAuth: "Link my account",
+      syncBlockedError: (msg) => `Sync failed: ${msg}. Automatic retry in one minute.`,
+      syncPending: (n) => `${n} event(s) pending.`,
+      syncPendingSince: (n, date) => `${n} event(s) pending since ${date}.`,
+      pairIntro:
+        "Link your account to find your progress on the web and share it with your class. Without an account, everything stays on this computer.",
+      pairStart: "Link my account",
+      pairWaiting:
+        "Check that this code matches the one in the tab that just opened, then authorise. Linking then happens on its own.",
+      pairReopen: "Reopen the page",
+      pairCancel: "Cancel",
+      pairExpired: "Request expired or already used. Start « Link my account » again.",
+      pairFailed: "Linking failed. Try again in a moment.",
+      pairRetrying: "Trouble reaching the server, retrying…",
+      authFallback: "Sign in with a password",
+      authPendingSignup: (email) =>
+        `Account created for ${email}. Confirm your address from your inbox, then sign in here.`,
       authDashboard: "📊 Open dashboard",
+      authDashboardHint: "The dashboard uses the same email and password as the extension.",
       authLogout: "Sign out",
       obTitle: "Welcome to Prompt Tracker",
       obSubtitle: "The guardrail for your prompting: a little friction, a lot of thinking.",
@@ -291,7 +387,7 @@ const CoachI18n = (() => {
       obDiscTitle: "Your data: what the extension records, and why",
       obDiscCollectTitle: "What is recorded",
       obDiscCollect:
-        "On ChatGPT, Claude, Gemini, Mistral and Grok, the extension records for each prompt: quality scores, the category, the word count, the site, the date, the outcome (sent, improved, cancelled), your answers to the Socratic dialogue and your post-response reflections. The full text of your prompts is only recorded if you enable the dedicated setting.",
+        "On ChatGPT, Claude, Gemini, Mistral and Grok, the extension records for each prompt: quality scores, the category, the word count, the site, the date, the outcome (sent, improved, cancelled), your answers to the Socratic dialogue and your post-response reflections. It also measures the AI's answer — its length, how long it took to generate, the model used, and how long you take before sending the next prompt. The text of those answers is counted then forgotten: it is never recorded. The full text of your prompts is only recorded if you enable the dedicated setting.",
       obDiscPurposeTitle: "Why",
       obDiscPurpose:
         "Solely to show you your progress (Socratic mirror, first drafts, streaks) and, if you choose to join a class, to share it with your teacher.",

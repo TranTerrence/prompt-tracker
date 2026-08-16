@@ -17,4 +17,9 @@ const CoachAdapter = createCoachAdapter({
     "button.send-button",
   ],
   rootPaths: ["/", "/app"],
+  // Mesures post-réponse. Les noms d'éléments Angular sont raisonnablement
+  // stables ; le sélecteur de modèle, basé sur des classes, ne l'est pas.
+  assistantSelectors: ["model-response", "message-content.model-response-text"],
+  assistantTextSelectors: [".markdown", "message-content"],
+  modelSelectors: ["bard-mode-switcher button", "[class*='mode-switch'] button"],
 });

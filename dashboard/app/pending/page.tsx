@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { readJoinCode } from "@/lib/join";
 import JoinForm from "./join-form";
 
 function HourglassIcon() {
@@ -34,6 +35,14 @@ export default async function PendingPage() {
 
   // Si le compte a été rattaché entre-temps, on renvoie vers l'accueil.
   if (profile?.org_id) redirect("/");
+
+  // Couture critique du parcours d'invitation : requireSession() envoie ici
+  // dès que org_id est nul, y compris au retour d'une confirmation d'e-mail.
+  // Sans cette relecture du cookie, l'élève venu d'un lien /join/<CODE>
+  // perdrait sa classe et retomberait sur la saisie manuelle — exactement le
+  // parcours que le lien supprime.
+  const pendingCode = await readJoinCode();
+  if (pendingCode) redirect(`/join/${encodeURIComponent(pendingCode)}`);
 
   return (
     <main className="flex flex-1 items-center justify-center p-6">

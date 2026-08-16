@@ -25,6 +25,12 @@ export type Profile = {
   email: string | null;
   display_name: string | null;
   disabled: boolean;
+  /**
+   * Accord de partage du socle d'indicateurs avec l'organisation. Écrit
+   * uniquement par les RPC de jonction (migration 0017). NULL = l'extension
+   * ne pousse rien, quel que soit le reste de la configuration.
+   */
+  baseline_consent_at: string | null;
 };
 
 export type Group = {
@@ -103,6 +109,22 @@ export type PromptEvent = {
   text: string | null;
   dialogue: { q: string; a: string; axis?: string }[] | null;
   conv_key: string | null;
+  // Mesures post-réponse (extension ≥ 0.7.0). Ce sont des INDICATEURS : le
+  // texte de la réponse de l'IA n'est jamais stocké, seulement compté.
+  // Tout est nullable — un site sans sélecteur vérifié ne mesure rien, et un
+  // onglet passé en arrière-plan invalide les durées (mais pas les tailles).
+  prompt_chars: number | null;
+  // Identifiant normalisé contre une liste blanche, "autre" si hors
+  // catalogue, null si non mesurable. Jamais un libellé lu dans la page.
+  model: string | null;
+  model_catalog_version: number | null;
+  response_chars: number | null;
+  response_words: number | null;
+  latency_ms: number | null;
+  response_ms: number | null;
+  turn_index: number | null;
+  read_ms: number | null;
+  response_outcome: "complete" | "timeout" | "hidden" | "abandoned" | "not_sent" | null;
 };
 
 export type PostEvent = {

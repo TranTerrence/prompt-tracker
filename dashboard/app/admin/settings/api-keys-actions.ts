@@ -4,6 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { SCOPE_VALUES } from "@/lib/api-scopes";
 
 type CreateResult =
   | { ok: true; key: string; prefix: string }
@@ -15,6 +16,17 @@ export async function createApiKey(formData: FormData): Promise<CreateResult> {
   const { org, userId } = await requireAdmin();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, message: "Donne un nom à la clé (ex. « SI pédagogique »)." };
+
+  // Les scopes n'étaient jamais écrits : toute clé héritait du défaut de la
+  // colonne, et il n'existait aucune interface pour les choisir. La liste est
+  // filtrée contre la liste blanche — un scope arbitraire posté à la main ne
+  // doit pas atterrir en base.
+  const scopes = formData
+    .getAll("scopes")
+    .map(String)
+    .filter((s) => SCOPE_VALUES.includes(s));
+  if (scopes.length === 0)
+    return { ok: false, message: "Choisis au moins une permission." };
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const bytes = randomBytes(32);
@@ -29,6 +41,7 @@ export async function createApiKey(formData: FormData): Promise<CreateResult> {
     name,
     key_hash: createHash("sha256").update(key).digest("hex"),
     key_prefix: prefix,
+    scopes,
     created_by: userId,
   });
   if (error) return { ok: false, message: error.message };

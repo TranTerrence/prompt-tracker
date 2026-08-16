@@ -43,21 +43,57 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === "refresh-config") await CoachApi.refreshOrgConfig();
   } catch (e) {
     // Hors-ligne ou non connecté : on réessaiera à la prochaine alarme.
+    // L'échec est déjà consigné dans syncStatus par CoachApi (mode visible).
     console.debug("[coach-ia] sync différée:", e.message);
+  } finally {
+    await refreshActionBadge();
   }
 });
+
+// Une file qui grossit sans repartir doit se voir sans ouvrir le popup. Le
+// seuil évite d'alarmer sur un simple passage hors-ligne : c'est la STAGNATION
+// qu'on signale, pas un retard. `action` est déjà déclaré, aucune permission
+// nouvelle n'est requise.
+const BADGE_PENDING_THRESHOLD = 20;
+
+async function refreshActionBadge() {
+  const { syncStatus } = await new Promise((r) => chrome.storage.local.get("syncStatus", r));
+  const stuck =
+    syncStatus &&
+    (syncStatus.reason || syncStatus.error) &&
+    syncStatus.pending > BADGE_PENDING_THRESHOLD;
+  await chrome.action.setBadgeText({ text: stuck ? "!" : "" });
+  if (stuck) await chrome.action.setBadgeBackgroundColor({ color: "#c97b2d" });
+}
 
 // Le popup (après login) ou le content script peuvent demander une action immédiate.
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === "sync-now") {
-    Promise.all([CoachApi.refreshOrgConfig(), CoachApi.syncEvents(), CoachApi.syncPostEvents()])
-      .then(([config, sync, postSync]) => sendResponse({ ok: true, config, sync, postSync }))
-      .catch((e) => sendResponse({ ok: false, error: e.message }));
+    // refreshOrgConfig d'abord, en séquence : c'est lui qui redescend
+    // baseline_consent_at du serveur, et syncEvents le lit juste après. En
+    // parallèle, une jonction faite sur le web ne serait prise en compte qu'au
+    // cycle suivant.
+    CoachApi.refreshOrgConfig()
+      .then((config) =>
+        CoachApi.syncEvents().then((sync) =>
+          CoachApi.syncPostEvents().then((postSync) => ({ ok: true, config, sync, postSync }))
+        )
+      )
+      .catch((e) => ({ ok: false, error: e.message }))
+      .then((res) => refreshActionBadge().then(() => sendResponse(res)));
     return true; // réponse asynchrone
   }
   if (msg && msg.type === "llm-question") {
-    // Prochaine question du dialogue itératif, générée à partir de tout l'échange.
-    CoachApi.llmNextQuestion(msg.prompt, msg.dialogue || [])
+    // Prochaine question du dialogue itératif, générée à partir de tout
+    // l'échange. Les options pilotent la langue, l'exigence (depth) et la
+    // relance (intent/rejected) côté edge function.
+    CoachApi.llmNextQuestion(msg.prompt, msg.dialogue || [], {
+      lang: msg.lang,
+      intent: msg.intent,
+      rejected: msg.rejected,
+      askedQuestions: msg.askedQuestions,
+      depth: msg.depth,
+    })
       .then((question) => sendResponse({ question }))
       .catch(() => sendResponse({ question: null }));
     return true;
