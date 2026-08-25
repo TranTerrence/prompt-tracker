@@ -83,7 +83,11 @@ contenu par `null` dans ce cas (la révocation est rétroactive, voir plus bas).
 
 Des **indicateurs**, pas du contenu : le texte de la réponse de l'IA est compté
 au moment où il s'affiche, puis oublié. Rétention 12 mois, comme les scores.
-Ces champs ne sont pas exposés par l'API v1 pour l'instant.
+Depuis la migration 0025, l'API v1 (`GET /events`) expose `model`,
+`model_catalog_version`, `response_words`, `latency_ms`, `response_ms`,
+`read_ms`, `turn_index` et `response_outcome` — ajout additif, aucun champ
+existant ne change. `prompt_chars` et `response_chars` restent internes
+(`words` suffit aux consommateurs).
 
 | Champ | Type | Sens |
 |---|---|---|

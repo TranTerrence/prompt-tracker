@@ -953,7 +953,9 @@ components:
       required:
         [id, client_event_id, user_id, ts, site, category, words, scores,
          intercepted, outcome, score_before, score_after, mirror_shown, rounds,
-         answers_count, text, dialogue, conv_key]
+         answers_count, model, model_catalog_version, response_words,
+         latency_ms, response_ms, read_ms, turn_index, response_outcome,
+         text, dialogue, conv_key]
       properties:
         id:
           type: string
@@ -1032,6 +1034,43 @@ components:
         answers_count:
           type: [integer, "null"]
           description: Réponses effectivement données par l'étudiant.
+        model:
+          type: [string, "null"]
+          description: >-
+            Identifiant du modèle, **normalisé** contre une liste blanche
+            (`gpt-5.1`, `sonnet-4.5`…). `autre` = libellé lu mais hors
+            catalogue. `null` = non mesurable. Jamais le libellé brut. Un
+            indicateur, pas du contenu — hors consentement (0021, 0025).
+        model_catalog_version:
+          type: [integer, "null"]
+          description: Version du catalogue de modèles au moment de la mesure.
+        response_words:
+          type: [integer, "null"]
+          description: >-
+            Nombre de mots de la réponse de l'IA. Sous-estime quand la sortie
+            part dans un panneau latéral (Canvas, Artifacts).
+        latency_ms:
+          type: [integer, "null"]
+          description: >-
+            Délai jusqu'au premier token **visible** (rendu DOM). Nul si
+            l'onglet est passé en arrière-plan.
+        response_ms:
+          type: [integer, "null"]
+          description: Durée de génération, ±1 s. Non comparable entre sites.
+        read_ms:
+          type: [integer, "null"]
+          description: >-
+            Délai entre la fin d'une réponse et le prompt suivant du même fil.
+            La plus fiable des mesures de temps.
+        turn_index:
+          type: [integer, "null"]
+          description: Rang du tour dans la conversation, 0-based.
+        response_outcome:
+          type: [string, "null"]
+          description: >-
+            `complete`, `timeout`, `hidden` (onglet en arrière-plan),
+            `abandoned`, `not_sent`.
+          enum: [complete, timeout, hidden, abandoned, not_sent, null]
         text:
           type: [string, "null"]
           description: >-
