@@ -13,8 +13,8 @@ fichier **dans le même commit**.
 ## Objectif unique (single purpose)
 
 > Prompt Tracker aide l'utilisateur à améliorer la qualité de ses prompts sur
-> les interfaces de chat IA, en le faisant réfléchir avant l'envoi et en lui
-> restituant l'effet obtenu.
+> les interfaces de chat IA : il le fait réfléchir avant l'envoi — au besoin en
+> lui montrant des prompts éprouvés — et lui restitue l'effet obtenu.
 
 Une seule phrase, un seul verbe. Toute fonctionnalité qui ne se rattache pas à
 cette phrase doit être retirée ou la phrase réécrite — le Store rejette les
@@ -26,6 +26,22 @@ extensions « couteau suisse ».
 > finalité — montrer à l'utilisateur ce que ses prompts produisent — d'où la
 > reformulation autour de « améliorer la qualité de ses prompts », qui couvre
 > les deux moments sans devenir une liste de fonctionnalités.
+
+> **Amendée en 0.8.0, et la tension mérite d'être nommée.** La bibliothèque de
+> prompts publiée par un établissement pose une vraie question : montrer un
+> prompt tout fait ne « fait pas réfléchir », cela dispenserait plutôt de le
+> faire. Ce qui la garde dans l'objectif unique est sa POSITION, pas son
+> intention : elle n'existe qu'à l'intérieur du dialogue d'interception, repliée
+> par défaut, et un prompt choisi atterrit dans le même aperçu éditable, re-scoré
+> à chaque frappe, que l'utilisateur doit toujours valider lui-même. Elle ne
+> court-circuite ni l'interception ni l'envoi : c'est un point de départ à
+> adapter, pas un raccourci. D'où l'incise « au besoin en lui montrant des
+> prompts éprouvés », qui la rattache au moment d'avant-envoi sans faire de la
+> phrase une liste de fonctionnalités.
+>
+> Si un jour la bibliothèque devient accessible AILLEURS que dans le dialogue —
+> depuis la popup, depuis un bouton sur la page — cet argument tombe, et c'est
+> la fonctionnalité qui doit partir, pas la phrase qu'il faut rallonger.
 
 ## Justification des permissions
 
@@ -63,7 +79,8 @@ Cocher exactement ceci — et rien de plus :
 | Informations personnelles identifiables | **Oui** — email | Identifie l'élève auprès de son enseignant, uniquement après avoir rejoint une classe |
 | Activité de l'utilisateur | **Oui** | Scores, catégorie, nombre de mots, issue, plus les mesures de réponse (longueur, durée de génération, modèle utilisé, délai avant le prompt suivant) — le cœur du tableau de bord |
 | Contenu du site web | **Oui** | Le texte du prompt, **seulement** si l'utilisateur active l'option et consent catégorie par catégorie |
-| Santé, financier, authentification, localisation, communications personnelles | **Non** | — |
+| Informations d'authentification | **Oui** — mot de passe | Le popup conserve un formulaire e-mail / mot de passe, replié sous « Se connecter avec un mot de passe ». Il appelle `token?grant_type=password` et transmet donc un mot de passe. Google range cela dans « Authentication information ». |
+| Santé, financier, localisation, communications personnelles | **Non** | — |
 
 **Le texte de la réponse de l'IA n'est pas collecté.** Il est lu dans la page
 pour être compté (nombre de signes, nombre de mots) puis immédiatement oublié :
@@ -115,6 +132,30 @@ divulgation n'est pas accepté.
 > Un formulaire e-mail / mot de passe reste disponible dans le popup, replié
 > sous « Se connecter avec un mot de passe », pour tester sans quitter
 > l'extension. Compte de démonstration : <À FOURNIR AVANT ENVOI>.
+>
+> **À propos de la permission d'hôte facultative `https://*/*` (nouveauté 0.8.0).**
+> Elle n'est **jamais accordée à l'installation** : vous pouvez le constater sur
+> `chrome://extensions` → Détails → « Accès au site », qui reste vide après une
+> installation neuve. L'extension ne demande jamais `https://*/*` : le seul
+> appel à `chrome.permissions.request` se trouve dans `popup/popup.js`
+> (fonction du bouton « Activer la bibliothèque ») et passe l'**origine exacte**
+> publiée par l'établissement de l'utilisateur, jamais un motif large.
+>
+> Cette fonction est **invisible sans compte de classe**, et c'est voulu : la
+> carte d'activation ne s'affiche que si l'organisation de l'utilisateur a
+> renseigné une adresse de bibliothèque. Sans compte, il n'y a donc rien à voir,
+> et aucune requête n'est jamais émise. Le chemin complet est lisible dans le
+> code, en trois fichiers :
+>
+> - `src/supabase.js` → `refreshOrgConfig()` : redescend `library_url` depuis la
+>   configuration de l'organisation ;
+> - `popup/popup.js` → `renderLibraryOffer()` puis le clic sur
+>   `#library-enable` : demande la permission sur cette seule origine ;
+> - `src/background.js` → `loadLibrary()` : lit l'adresse en
+>   `credentials: "omit"`, **sans en-tête d'authentification et sans aucun
+>   paramètre dérivé du compte**. C'est une lecture, jamais un envoi : aucune
+>   donnée de l'utilisateur ne part vers cet hôte. La réponse est bornée
+>   (256 Ko, 200 entrées), affichée en `textContent` et jamais évaluée.
 
 ⚠️ Remplacer `<À FOURNIR AVANT ENVOI>` par un vrai compte de démonstration, ou
 supprimer la phrase. Un relecteur bloqué sur un login rejette sans appel.
@@ -164,18 +205,18 @@ supprimer la phrase. Un relecteur bloqué sur un login rejette sans appel.
   ouverture du popup, sans repasser l'extension en veille. Même finalité,
   mêmes catégories de données ; couper des classes en cours d'année serait
   disproportionné.
-- ⚠️ **À trancher avant l'envoi : la ligne « authentification : Non » du tableau
-  de divulgation.** Le chemin principal ne saisit plus aucun identifiant dans
-  l'extension (l'appairage se fait sur le web), mais le repli replié sous
-  « Se connecter avec un mot de passe » en saisit toujours un et le transmet à
-  Supabase. Google range mots de passe et identifiants dans « Authentication
-  information ». Deux sorties cohérentes, au choix :
-  1. cocher « Oui » pour cette catégorie, en justifiant par le repli ;
-  2. retirer le formulaire de repli du popup et laisser l'appairage seul — la
-     déclaration « Non » devient alors incontestable, au prix d'un relecteur
-     qui doit passer par le web pour tester la fonction classe.
-  Ne pas laisser « Non » avec le formulaire en place : une divulgation
-  inexacte est un motif de retrait après publication, pas seulement de rejet.
+- ✅ **Tranché le 25/08/2026 : « authentification » passe à Oui.** Le tableau
+  ci-dessus déclarait « Non » alors que `store/description-fr.md` cochait
+  « Oui » — deux fichiers, deux déclarations opposées, dont une fausse. Le
+  formulaire de repli existe toujours (`popup/popup.html`, `#auth-password`) et
+  `CoachApi.login()` appelle `token?grant_type=password` : un mot de passe est
+  bien transmis. C'est donc « Oui », et les deux fichiers le disent maintenant.
+  L'autre sortie reste ouverte pour une version future : retirer le formulaire
+  de repli et ne garder que l'appairage par le web, ce qui rendrait « Non »
+  incontestable — au prix d'un relecteur obligé de passer par le web pour
+  tester la fonction classe. Ne jamais revenir à « Non » tant que le formulaire
+  est dans le paquet : une divulgation inexacte est un motif de RETRAIT après
+  publication, pas seulement de rejet.
 
 ## Marques citées
 

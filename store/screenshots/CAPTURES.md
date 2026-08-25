@@ -1,4 +1,17 @@
-# Captures Web Store v0.6.0 (1280×800, thème clair)
+# Captures Web Store (1280×800, thème clair)
+
+> **À REFAIRE POUR LA 0.8.0 — bloquant.** Le dialogue socratique a changé
+> d'aspect : il rend désormais la main par un bloc de clôture (« Tu as couvert
+> l'essentiel… ») au lieu d'enchaîner les questions sans fin, et il peut porter
+> un bloc « Partir d'un prompt qui a fonctionné ». Les captures 2 et 3
+> ci-dessous datent du 13/07 et montrent l'ancienne modale : les envoyer
+> telles quelles, c'est une fiche qui ne correspond pas au paquet, motif de
+> rejet n°1. Le dossier contient aussi 8 fichiers alors que la fiche n'en
+> accepte que 5 — choisir, et supprimer le reste.
+>
+> Ces captures ne peuvent pas être produites depuis un harnais de
+> développement : ce serait une maquette, pas l'extension à l'œuvre. Elles
+> demandent une installation réelle sur un profil Chrome vierge.
 
 Les captures 1 et 6 sont celles que le reviewer « Purple Nickel » cherche :
 la divulgation au premier lancement et le consentement granulaire.

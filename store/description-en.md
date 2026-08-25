@@ -7,7 +7,10 @@ A thoughtful pause before your AI prompts: local Socratic dialogue on ChatGPT, C
 Like the apps that help you unglue from your phone, **Prompt Tracker** adds a little friction, and a lot of thinking, before your AI prompts.
 
 🪞 **The Socratic mirror**
-When your request is too vague ("do my homework"), sending is held BEFORE it reaches the AI. A dialogue opens, one question at a time: what have you tried? what's your hypothesis? how will you verify? Iterate as long as you like, then YOU always decide: send your version enriched with your reasoning, or your original request as is.
+When your request is too vague ("do my homework"), sending is held BEFORE it reaches the AI. A dialogue opens, one question at a time: what have you tried? what's your hypothesis? how will you verify? Once you have covered the essentials, the dialogue hands back on its own — it does not chain endless questions at you — and you can always ask for one more. YOU always decide: send your version enriched with your reasoning, or your original request as is.
+
+📚 **Your school's library (optional)**
+If your institution publishes a selection of prompts, it appears collapsed inside the dialogue: "start from a prompt that worked". The extension only READS the page your school publishes — without sending your account, your prompts or any identifier — and asks your permission to reach it at the moment you enable it. You may decline: nothing else changes.
 
 🪞 **The second look**
 Once the AI's answer arrives, a discreet invitation (never blocking, at most once per conversation): restate the gist in your own words, pick what you'll verify elsewhere. That's where critical thinking is built.
@@ -32,7 +35,9 @@ Who is it for?
 Works on ChatGPT, Claude, Gemini, Mistral (Le Chat) and Grok, with Chrome and Chromium browsers on desktop. No iPhone/iPad or Android version at this stage (mobile browsers do not accept extensions).
 
 ## Single purpose
-Prompt Tracker locally analyzes the quality of prompts typed on AI sites (ChatGPT, Claude, Gemini, Mistral, Grok), offers an optional reflection dialogue before sending, and measures the user's progress.
+Prompt Tracker helps the user improve the quality of their prompts on AI chat interfaces (ChatGPT, Claude, Gemini, Mistral, Grok): it makes them think before sending — showing proven prompts where useful — and reflects back the effect obtained.
+
+> This sentence must stay **identical** to the one in `store/SUBMISSION.md`. Two different wordings in two files is a divergence that ends up in the form.
 
 ## Permissions justification
 - `storage`: keep settings (theme, threshold, profile), the disclosure acceptance and prompt indicators (scores, categories) locally, only after the disclosure screen is accepted.
@@ -43,6 +48,7 @@ Prompt Tracker locally analyzes the quality of prompts typed on AI sites (ChatGP
 - Host `https://gemini.google.com/*`: same use on Gemini.
 - Host `https://chat.mistral.ai/*`: same use on Mistral (Le Chat).
 - Host `https://grok.com/*`: same use on Grok.
+- **Optional** host `https://*/*`: **never granted at install**. An institution may publish a prompt library at its own address, which the extension cannot know in advance. Permission is therefore requested at runtime, for the **single origin** configured by the user's institution, and only after an explicit click from them. It is a read without identity: no cookie, no token, no parameter derived from the account. Declining degrades no other feature.
 The input field content is analyzed locally, before sending; it is not transmitted to any server without the consents described above. The response area is observed to measure its length and duration and to read the model name: that text is counted then forgotten, neither stored nor transmitted.
 
 ## "Privacy practices" tab (Developer Console): checklist

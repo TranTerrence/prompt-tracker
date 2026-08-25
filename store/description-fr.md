@@ -7,7 +7,10 @@ Une pause réfléchie avant tes prompts IA : dialogue socratique local sur ChatG
 Comme les applications qui t'aident à décrocher de ton téléphone, **Prompt Tracker** ajoute un peu de friction, et beaucoup de réflexion, avant tes prompts IA.
 
 🪞 **Le miroir socratique**
-Quand ta demande est trop vague (« fais mes devoirs »), l'envoi est retenu AVANT d'atteindre l'IA. Un dialogue s'ouvre, une question à la fois : qu'as-tu déjà tenté ? quelle est ton hypothèse ? comment vérifieras-tu ? Tu itères aussi longtemps que tu veux, puis c'est TOUJOURS toi qui décides : envoyer ta version enrichie de ta réflexion, ou ta demande initiale telle quelle.
+Quand ta demande est trop vague (« fais mes devoirs »), l'envoi est retenu AVANT d'atteindre l'IA. Un dialogue s'ouvre, une question à la fois : qu'as-tu déjà tenté ? quelle est ton hypothèse ? comment vérifieras-tu ? Quand tu as couvert l'essentiel, le dialogue te rend la main de lui-même — il ne t'enchaîne pas des questions sans fin —, et tu peux toujours en demander une de plus. C'est TOUJOURS toi qui décides : envoyer ta version enrichie de ta réflexion, ou ta demande initiale telle quelle.
+
+📚 **La bibliothèque de ton école (optionnel)**
+Si ton établissement publie une sélection de prompts, elle apparaît repliée dans le dialogue : « partir d'un prompt qui a fonctionné ». L'extension se contente de LIRE la page publiée par ton école — sans envoyer ton compte, tes prompts ni aucun identifiant — et te demande l'autorisation d'y accéder au moment où tu l'actives. Tu peux refuser : rien d'autre ne change.
 
 🪞 **Le miroir d'après**
 Une fois la réponse de l'IA reçue, une invitation discrète (jamais bloquante, une fois par conversation au maximum) : reformule l'essentiel avec tes mots, choisis ce que tu vérifieras ailleurs. C'est là que l'esprit critique se construit.
@@ -32,7 +35,9 @@ Pour qui ?
 Fonctionne sur ChatGPT, Claude, Gemini, Mistral (Le Chat) et Grok, avec Chrome et les navigateurs Chromium sur ordinateur. Pas de version iPhone/iPad ou Android à ce stade (les navigateurs mobiles n'acceptent pas les extensions).
 
 ## Single purpose (déclaration Google)
-Prompt Tracker analyse localement la qualité des prompts saisis sur les sites d'IA (ChatGPT, Claude, Gemini, Mistral, Grok), propose un dialogue de réflexion optionnel avant l'envoi et mesure la progression de l'utilisateur.
+Prompt Tracker aide l'utilisateur à améliorer la qualité de ses prompts sur les interfaces de chat IA (ChatGPT, Claude, Gemini, Mistral, Grok) : il le fait réfléchir avant l'envoi — au besoin en lui montrant des prompts éprouvés — et lui restitue l'effet obtenu.
+
+> Cette phrase doit rester **identique** à celle de `store/SUBMISSION.md`. Deux formulations différentes dans deux fichiers, c'est une divergence qui finit dans le formulaire.
 
 ## Justification des permissions
 - `storage` : conserver localement les réglages (thème, seuil, profil), l'accord de divulgation et les indicateurs de prompts (scores, catégories), uniquement après acceptation de l'écran de divulgation.
@@ -43,6 +48,7 @@ Prompt Tracker analyse localement la qualité des prompts saisis sur les sites d
 - Hôte `https://gemini.google.com/*` : même usage sur Gemini.
 - Hôte `https://chat.mistral.ai/*` : même usage sur Mistral (Le Chat).
 - Hôte `https://grok.com/*` : même usage sur Grok.
+- Hôte **facultatif** `https://*/*` : **jamais accordé à l'installation**. Un établissement peut publier une bibliothèque de prompts à sa propre adresse, que l'extension ne peut pas connaître à l'avance. L'autorisation est donc demandée à l'exécution, sur la **seule origine** configurée par l'établissement de l'utilisateur, et uniquement après un clic explicite de celui-ci. Il s'agit d'une lecture sans identité : aucun cookie, aucun jeton, aucun paramètre tiré du compte. Refuser ne dégrade aucune autre fonction.
 Le contenu du champ de saisie est analysé localement, avant envoi ; il n'est transmis à aucun serveur sans les consentements décrits ci-dessus. La zone de réponse est observée pour en mesurer la longueur et la durée et lire le nom du modèle : ce texte est compté puis oublié, il n'est ni stocké ni transmis.
 
 ## Onglet « Pratiques de confidentialité » (Console développeur) : checklist
