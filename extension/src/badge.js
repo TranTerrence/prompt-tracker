@@ -20,7 +20,8 @@ const CoachBadge = (() => {
   }
 
   function render(state) {
-    // state: { branding: {name, color, logoUrl}, healthy: bool|null, threshold, interceptEnabled, lockedByOrg }
+    // state: { branding: {name, color, logoUrl}, healthy: bool|null, threshold,
+    //   interceptEnabled, lockedByOrg, showScore (défaut true) }
     const accent = (state.branding && state.branding.color) || CoachTheme.DEFAULT_ACCENT;
 
     if (!host || !document.contains(host)) {
@@ -86,7 +87,12 @@ const CoachBadge = (() => {
         ? CoachI18n.t("badgeBroken", name)
         : state.interceptEnabled === false
           ? CoachI18n.t("badgeWatch", name)
-          : CoachI18n.t("badgeActive", name, state.threshold ?? 40);
+          : state.showScore === false
+            // Réglage d'organisation : l'infobulle décrit le COMPORTEMENT
+            // (« un prompt trop vague ouvre le dialogue ») au lieu de citer
+            // un seuil sur cent, qui est un score déguisé.
+            ? CoachI18n.t("badgeActiveNoScore", name)
+            : CoachI18n.t("badgeActive", name, state.threshold ?? 40);
 
     badge.textContent = "";
     const dot = document.createElement("span");

@@ -11,7 +11,7 @@
 
 ## Comment ça marche
 1. Tu écris ton prompt sur **ChatGPT, Claude ou Gemini**, comme d'habitude.
-2. Chaque prompt est **scoré localement** (clarté, contexte, itération, esprit critique). Sous le seuil, l'envoi est **retenu** : aucun crédit consommé et le miroir socratique s'ouvre : une question à la fois (ton hypothèse ? ce que tu sais déjà ? comment tu vérifieras ?), aussi longtemps que tu veux.
+2. Chaque prompt est **scoré localement** (clarté, contexte, itération, esprit critique) dans **la langue où il est écrit**, FR ou EN. Sous le seuil, l'envoi est **retenu** : aucun crédit consommé et le miroir socratique s'ouvre : une question à la fois (ton hypothèse ? ce que tu sais déjà ? comment tu vérifieras ?). Le dialogue **rend la main** quand chaque axe faible a reçu une réponse ; tu peux en demander une de plus, et c'est toujours toi qui décides d'envoyer.
 3. Tu envoies **ta version enrichie de ta réflexion**, ou ta demande initiale telle quelle. Toujours ton choix.
 
 ## Architecture

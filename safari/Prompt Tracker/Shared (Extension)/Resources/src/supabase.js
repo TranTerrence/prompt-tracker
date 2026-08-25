@@ -19,7 +19,16 @@ const CoachApi = (() => {
       body: JSON.stringify(body),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.msg || data.error_description || data.error || `HTTP ${res.status}`);
+    if (!res.ok) {
+      // Le STATUT compte : 400/401 est un refus définitif du jeton, un 5xx ou
+      // une coupure réseau sont passagers. Sans lui, l'appelant ne peut pas
+      // distinguer « reconnecte-toi » de « réessaie plus tard », et c'est
+      // exactement ce qui a produit la boucle infinie corrigée plus bas.
+      const err = new Error(data.msg || data.error_description || data.error || `HTTP ${res.status}`);
+      err.status = res.status;
+      err.code = data.error_code || data.error || null;
+      throw err;
+    }
     return data;
   }
 
@@ -31,7 +40,13 @@ const CoachApi = (() => {
       user_id: data.user && data.user.id,
       email: data.user && data.user.email,
     };
-    return storage.set({ session }).then(() => session);
+    // Toute authentification réussie efface le marqueur d'expiration : c'est
+    // le seul endroit où l'on redevient connecté, quel que soit le chemin
+    // (mot de passe, inscription, appairage, rafraîchissement).
+    return storage
+      .set({ session })
+      .then(() => storage.remove("sessionExpired"))
+      .then(() => session);
   }
 
   async function login(email, password) {
@@ -137,18 +152,60 @@ const CoachApi = (() => {
   async function logout() {
     await storage.remove([
       "session", "orgConfig", "profile", "baselineConsent", "syncStatus", "pendingSignup", "pairing",
+      "sessionExpired", "promptLibrary",
     ]);
   }
 
+  // Attente croissante après un échec PASSAGER : 1 min, 5, 15, puis 1 h.
+  // L'alarme de synchronisation bat toutes les minutes ; sans ce frein, une
+  // coupure réseau d'une nuit produit des centaines de requêtes inutiles.
+  const REFRESH_BACKOFF_MS = [60000, 300000, 900000, 3600000];
+
+  // Un refus 400/401 sur un refresh token est DÉFINITIF : Supabase l'a révoqué
+  // ou déjà consommé, le represénter ne le ressuscitera pas. Tout le reste —
+  // coupure réseau (TypeError, sans statut), 5xx, 429 — est passager et ne doit
+  // SURTOUT PAS déconnecter quelqu'un dont le wifi a hoqueté.
+  function isDefinitiveAuthFailure(e) {
+    return Boolean(e && (e.status === 400 || e.status === 401));
+  }
+
   // Renvoie une session valide (rafraîchie si besoin) ou null.
+  //
+  // DÉFAUT CORRIGÉ, ne pas revenir en arrière : cette fonction retournait null
+  // sans jamais purger la session morte. `expires_at` restait dans le passé,
+  // donc chaque tick d'alarme retentait le même jeton révoqué, échouait, et
+  // recommençait — indéfiniment. Mesuré en production le 25/08/2026 : 1134
+  // requêtes `token?grant_type=refresh_token` en HTTP 400 sur 24 h, une par
+  // minute, sans interruption, pour une installation qui ne synchronisait plus
+  // rien. Purger est ce qui arrête la boucle ET ce qui rend le problème
+  // visible : la bannière du popup propose alors la reconnexion.
   async function ensureSession() {
     const { session } = await storage.get("session");
     if (!session) return null;
     if (Date.now() < session.expires_at - 60000) return session;
+    // Échec passager précédent : on attend l'échéance au lieu de marteler.
+    if (session.retryAfter && Date.now() < session.retryAfter) return null;
+
     try {
-      return await saveSession(await authRequest("token?grant_type=refresh_token", { refresh_token: session.refresh_token }));
-    } catch {
-      return null; // refresh token invalide → reconnexion nécessaire
+      return await saveSession(
+        await authRequest("token?grant_type=refresh_token", { refresh_token: session.refresh_token })
+      );
+    } catch (e) {
+      if (isDefinitiveAuthFailure(e)) {
+        // Le jeton est mort. On efface la session et on POSE un marqueur : sans
+        // lui, le popup retomberait sur « pas connecté », qui est le mode
+        // nominal d'un usage 100 % local et n'affiche donc aucune bannière.
+        // Quelqu'un qui ÉTAIT connecté doit l'apprendre, pas glisser en silence.
+        await storage.remove("session");
+        await storage.set({ sessionExpired: { at: Date.now(), reason: e.code || "invalid_grant" } });
+        return null;
+      }
+      const failures = (session.refreshFailures || 0) + 1;
+      const wait = REFRESH_BACKOFF_MS[Math.min(failures - 1, REFRESH_BACKOFF_MS.length - 1)];
+      await storage.set({
+        session: { ...session, refreshFailures: failures, retryAfter: Date.now() + wait },
+      });
+      return null;
     }
   }
 
@@ -210,7 +267,7 @@ const CoachApi = (() => {
     const session = await ensureSession();
     if (!session) return null;
     const profiles = await rest(
-      `profiles?id=eq.${session.user_id}&select=org_id,role,disabled,baseline_consent_at,organizations(name,brand_name,brand_color,logo_url,threshold,capture_mode,llm_enabled,intercept_enabled)`
+      `profiles?id=eq.${session.user_id}&select=org_id,role,disabled,baseline_consent_at,organizations(name,brand_name,brand_color,logo_url,threshold,capture_mode,llm_enabled,intercept_enabled,show_score,library_url)`
     );
     const profile = profiles[0];
     // Le consentement socle est un fait d'organisation : il vient du serveur,
@@ -245,6 +302,14 @@ const CoachApi = (() => {
       captureMode: org.capture_mode,
       interceptEnabled: org.intercept_enabled,
       llmEnabled: org.llm_enabled,
+      // Affichage du score : l'organisation peut le couper pour tous ses
+      // membres. Rien ne change côté mesure ni côté API — c'est l'écran qui
+      // se tait. Un serveur qui n'a pas encore la colonne renvoie undefined :
+      // le défaut « on affiche » vaut alors, ce qui est le comportement
+      // historique et le seul sûr pour les organisations existantes.
+      showScore: org.show_score !== false,
+      // URL de la bibliothèque de prompts publiée par l'organisation, ou null.
+      libraryUrl: org.library_url || null,
       templates,
       dataRequests,
     };
@@ -330,8 +395,13 @@ const CoachApi = (() => {
   async function syncEvents() {
     const session = await ensureSession();
     if (!session) {
-      await recordSync({ reason: "not_authenticated" });
-      return { pushed: 0, reason: "not_authenticated" };
+      // « Jamais connecté » et « session expirée » appellent des messages
+      // différents : le premier est le mode nominal d'un usage local, le
+      // second est une régression que l'utilisateur doit voir.
+      const { sessionExpired } = await storage.get("sessionExpired");
+      const reason = sessionExpired ? "session_expired" : "not_authenticated";
+      await recordSync({ reason });
+      return { pushed: 0, reason };
     }
     const { events = [], profile, orgConfig, consents, baselineConsent } = await storage.get([
       "events",
@@ -433,8 +503,13 @@ const CoachApi = (() => {
   async function syncPostEvents() {
     const session = await ensureSession();
     if (!session) {
-      await recordSync({ reason: "not_authenticated" });
-      return { pushed: 0, reason: "not_authenticated" };
+      // « Jamais connecté » et « session expirée » appellent des messages
+      // différents : le premier est le mode nominal d'un usage local, le
+      // second est une régression que l'utilisateur doit voir.
+      const { sessionExpired } = await storage.get("sessionExpired");
+      const reason = sessionExpired ? "session_expired" : "not_authenticated";
+      await recordSync({ reason });
+      return { pushed: 0, reason };
     }
     const { postEvents = [], profile, orgConfig, consents, baselineConsent } = await storage.get([
       "postEvents",

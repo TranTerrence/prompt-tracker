@@ -68,6 +68,9 @@
       threshold: 40,
       interceptEnabled: true,
       lockedByOrg: false,
+      // ?noscore=1 : organisation qui masque tout le chiffré. L'infobulle doit
+      // décrire le comportement sans citer de seuil sur cent.
+      showScore: !new URLSearchParams(location.search).has("noscore"),
     };
     const PRESETS = {
       on: { healthy: true, interceptEnabled: true, lockedByOrg: false },

@@ -1,0 +1,792 @@
+{
+  "_comment": "GÉNÉRÉ par scripts/export-question-bank.mjs depuis extension/src/scoring.js. Ne pas éditer à la main : la banque de référence est celle de l'extension.",
+  "axes": [
+    {
+      "key": "intention",
+      "label": "Ce que je veux obtenir"
+    },
+    {
+      "key": "connaissance",
+      "label": "Ce que je sais déjà ou ai tenté"
+    },
+    {
+      "key": "hypothese",
+      "label": "Ma tentative"
+    },
+    {
+      "key": "contexte",
+      "label": "Mon contexte"
+    },
+    {
+      "key": "critique",
+      "label": "Comment je vérifierai"
+    },
+    {
+      "key": "approfondissement",
+      "label": "Ma réflexion"
+    }
+  ],
+  "questions": [
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "clarte",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Tu veux obtenir quoi, exactement : un texte, un plan, une explication, du code ?",
+      "question_en": "What do you want to get, exactly: a text, a plan, an explanation, some code?"
+    },
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "intention-code",
+      "level": 1,
+      "cats": [
+        "code"
+      ],
+      "profiles": null,
+      "question_fr": "Ton code doit faire quoi, exactement ?",
+      "question_en": "What exactly should your code do?"
+    },
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "intention-redaction",
+      "level": 1,
+      "cats": [
+        "rédaction"
+      ],
+      "profiles": null,
+      "question_fr": "Ton texte doit produire quel effet sur celui qui le lit : convaincre, informer, rassurer ?",
+      "question_en": "What effect should your text have on the person reading it: convince, inform, reassure?"
+    },
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "intention-resume",
+      "level": 1,
+      "cats": [
+        "résumé"
+      ],
+      "profiles": null,
+      "question_fr": "Ce résumé va te servir à quoi : réviser, décider, transmettre ?",
+      "question_en": "What is this summary for: revising, deciding, passing it on?"
+    },
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "intention-analyse",
+      "level": 1,
+      "cats": [
+        "analyse"
+      ],
+      "profiles": null,
+      "question_fr": "Cette analyse doit t'aider à décider quoi ?",
+      "question_en": "What should this analysis help you decide?"
+    },
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "intention-2",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Comment tu sauras que la réponse est bonne ?",
+      "question_en": "How will you know the answer is good?"
+    },
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "intention-3",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Tu vas faire quoi de la réponse, juste après l'avoir reçue ?",
+      "question_en": "What will you do with the answer, right after you get it?"
+    },
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "intention-5",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Décris en une phrase la réponse que tu espères.",
+      "question_en": "Describe in one sentence the answer you are hoping for."
+    },
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "intention-4",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Qu'est-ce que tu cherches vraiment à comprendre ?",
+      "question_en": "What are you really trying to understand?"
+    },
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "intention-6",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Écris le critère précis qui te fera dire : cette réponse est utilisable telle quelle.",
+      "question_en": "Write the precise criterion that will let you say: this answer is usable as is."
+    },
+    {
+      "axis": "intention",
+      "axis_label": "Ce que je veux obtenir",
+      "axis_label_en": "What I want to get",
+      "key": "intention-7",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "De quel travail plus grand cette réponse n'est-elle qu'une étape, et qui jugera le résultat final ?",
+      "question_en": "What larger piece of work is this answer just one step of, and who will judge the final result?"
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "delegation",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Tu as déjà essayé quelque chose de ton côté ? Raconte, même si c'est court.",
+      "question_en": "Have you already tried something on your own? Tell me, even if it's short."
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "connaissance-code",
+      "level": 1,
+      "cats": [
+        "code"
+      ],
+      "profiles": null,
+      "question_fr": "Qu'est-ce qui se passe quand tu lances le code ? Colle le message d'erreur.",
+      "question_en": "What happens when you run the code? Paste the error message."
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "connaissance-redaction",
+      "level": 1,
+      "cats": [
+        "rédaction"
+      ],
+      "profiles": null,
+      "question_fr": "Tu as déjà des idées ou des bouts de phrases ? Colle-les ici, même en vrac.",
+      "question_en": "Do you already have ideas or bits of sentences? Paste them here, even messy."
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "connaissance-recherche",
+      "level": 1,
+      "cats": [
+        "recherche"
+      ],
+      "profiles": null,
+      "question_fr": "Tu crois savoir quoi sur ce sujet, avant de demander ?",
+      "question_en": "What do you think you already know about this, before asking?"
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "connaissance-2",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Tu en sais déjà quoi, même vaguement ?",
+      "question_en": "What do you already know about this, even vaguely?"
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "connaissance-3",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Quelle partie tu sais faire tout seul, là, maintenant ?",
+      "question_en": "Which part can you do on your own, right now?"
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "connaissance-4",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Tu as cherché où, avant de venir ici ?",
+      "question_en": "Where did you look before coming here?"
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "connaissance-5",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Tu as un cours ou un document sur le sujet ? Lequel ?",
+      "question_en": "Do you have a course or a document on this? Which one?"
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "connaissance-6",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Sur quelle partie tu veux que l'IA relise ton travail, plutôt que le faire à ta place ?",
+      "question_en": "On which part do you want the AI to proofread your work, rather than do it for you?"
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "connaissance-7",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Rédige d'abord ta version, même mauvaise, en trois phrases. C'est elle que l'IA améliorera.",
+      "question_en": "Write your own version first, even a bad one, in three sentences. That is what the AI will improve."
+    },
+    {
+      "axis": "connaissance",
+      "axis_label": "Ce que je sais déjà ou ai tenté",
+      "axis_label_en": "What I already know or tried",
+      "key": "connaissance-8",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Qu'apprendrais-tu en le faisant toi-même que tu n'apprendras pas en le déléguant ?",
+      "question_en": "What would you learn by doing it yourself that you will not learn by delegating it?"
+    },
+    {
+      "axis": "hypothese",
+      "axis_label": "Ma tentative",
+      "axis_label_en": "My attempt",
+      "key": "hypothese-1",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Si tu devais répondre toi-même, tu dirais quoi ?",
+      "question_en": "If you had to answer yourself, what would you say?"
+    },
+    {
+      "axis": "hypothese",
+      "axis_label": "Ma tentative",
+      "axis_label_en": "My attempt",
+      "key": "hypothese-code",
+      "level": 1,
+      "cats": [
+        "code"
+      ],
+      "profiles": null,
+      "question_fr": "D'après toi, ça casse où ?",
+      "question_en": "Where do you think it breaks?"
+    },
+    {
+      "axis": "hypothese",
+      "axis_label": "Ma tentative",
+      "axis_label_en": "My attempt",
+      "key": "hypothese-4",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Écris la première phrase de la réponse, toi-même.",
+      "question_en": "Write the first sentence of the answer yourself."
+    },
+    {
+      "axis": "hypothese",
+      "axis_label": "Ma tentative",
+      "axis_label_en": "My attempt",
+      "key": "hypothese-analyse",
+      "level": 2,
+      "cats": [
+        "analyse"
+      ],
+      "profiles": null,
+      "question_fr": "Ton avis pour l'instant, c'est quoi ?",
+      "question_en": "What is your view, for now?"
+    },
+    {
+      "axis": "hypothese",
+      "axis_label": "Ma tentative",
+      "axis_label_en": "My attempt",
+      "key": "hypothese-2",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Qu'est-ce qui te fait croire que c'est la bonne piste ?",
+      "question_en": "What makes you believe it's the right lead?"
+    },
+    {
+      "axis": "hypothese",
+      "axis_label": "Ma tentative",
+      "axis_label_en": "My attempt",
+      "key": "hypothese-5",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "De 0 à 10, tu as quelle confiance dans ta piste ?",
+      "question_en": "From 0 to 10, how confident are you in your lead?"
+    },
+    {
+      "axis": "hypothese",
+      "axis_label": "Ma tentative",
+      "axis_label_en": "My attempt",
+      "key": "hypothese-3",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Et si c'était l'inverse ? Qu'est-ce qui rendrait la réponse opposée crédible ?",
+      "question_en": "And if it were the opposite? What would make the opposite answer credible?"
+    },
+    {
+      "axis": "hypothese",
+      "axis_label": "Ma tentative",
+      "axis_label_en": "My attempt",
+      "key": "hypothese-6",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Formule le meilleur argument CONTRE ta piste. S'il est solide, que reste-t-il de ta position ?",
+      "question_en": "State the best argument AGAINST your lead. If it holds, what remains of your position?"
+    },
+    {
+      "axis": "hypothese",
+      "axis_label": "Ma tentative",
+      "axis_label_en": "My attempt",
+      "key": "hypothese-7",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Quelle preuve accepterais-tu comme démonstration que ta piste est fausse ?",
+      "question_en": "What evidence would you accept as proof that your lead is wrong?"
+    },
+    {
+      "axis": "contexte",
+      "axis_label": "Mon contexte",
+      "axis_label_en": "My context",
+      "key": "contexte",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Cette réponse va te servir à quoi ?",
+      "question_en": "What will this answer be used for?"
+    },
+    {
+      "axis": "contexte",
+      "axis_label": "Mon contexte",
+      "axis_label_en": "My context",
+      "key": "contexte-2",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Il y a des contraintes à respecter : longueur, délai, format ?",
+      "question_en": "Are there constraints to respect: length, deadline, format?"
+    },
+    {
+      "axis": "contexte",
+      "axis_label": "Mon contexte",
+      "axis_label_en": "My context",
+      "key": "contexte-3",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Qui va lire {livrable} ?",
+      "question_en": "Who will read {livrable}?"
+    },
+    {
+      "axis": "contexte",
+      "axis_label": "Mon contexte",
+      "axis_label_en": "My context",
+      "key": "contexte-code",
+      "level": 1,
+      "cats": [
+        "code"
+      ],
+      "profiles": null,
+      "question_fr": "Ce code tourne où : quel langage, quelle version ?",
+      "question_en": "Where does this code run: which language, which version?"
+    },
+    {
+      "axis": "contexte",
+      "axis_label": "Mon contexte",
+      "axis_label_en": "My context",
+      "key": "contexte-redaction",
+      "level": 1,
+      "cats": [
+        "rédaction"
+      ],
+      "profiles": null,
+      "question_fr": "Ton texte doit faire quelle longueur, et pour quand ?",
+      "question_en": "How long should your text be, and by when?"
+    },
+    {
+      "axis": "contexte",
+      "axis_label": "Mon contexte",
+      "axis_label_en": "My context",
+      "key": "contexte-traduction",
+      "level": 1,
+      "cats": [
+        "traduction"
+      ],
+      "profiles": null,
+      "question_fr": "Cette traduction, c'est pour qui ?",
+      "question_en": "Who is this translation for?"
+    },
+    {
+      "axis": "contexte",
+      "axis_label": "Mon contexte",
+      "axis_label_en": "My context",
+      "key": "contexte-4",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Qu'est-ce que l'IA ne peut pas deviner de ta situation ?",
+      "question_en": "What can the AI not guess about your situation?"
+    },
+    {
+      "axis": "contexte",
+      "axis_label": "Mon contexte",
+      "axis_label_en": "My context",
+      "key": "contexte-5",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Colle un bout de ta matière : l'énoncé, tes notes, ton brouillon.",
+      "question_en": "Paste a bit of your material: the assignment, your notes, your draft."
+    },
+    {
+      "axis": "contexte",
+      "axis_label": "Mon contexte",
+      "axis_label_en": "My context",
+      "key": "contexte-6",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Quel détail de ton contexte, s'il manquait, rendrait la réponse inutilisable ?",
+      "question_en": "Which detail of your context, if missing, would make the answer unusable?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Comment tu vérifieras que la réponse est juste ?",
+      "question_en": "How will you check that the answer is right?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-recherche",
+      "level": 1,
+      "cats": [
+        "recherche"
+      ],
+      "profiles": null,
+      "question_fr": "Où tu pourras vérifier cette info, ailleurs que dans l'IA ?",
+      "question_en": "Where will you be able to check this outside the AI?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-4",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Tu vas lui demander quelles sources ?",
+      "question_en": "Which sources will you ask it for?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-code",
+      "level": 2,
+      "cats": [
+        "code"
+      ],
+      "profiles": null,
+      "question_fr": "Tu vas tester ce code comment ?",
+      "question_en": "How will you test this code?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-analyse",
+      "level": 2,
+      "cats": [
+        "analyse"
+      ],
+      "profiles": null,
+      "question_fr": "Quels chiffres de la réponse tu vas vouloir vérifier ?",
+      "question_en": "Which numbers in the answer will you want to check?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-2",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Que se passerait-il si la réponse était fausse et que tu ne t'en rendais pas compte ?",
+      "question_en": "What would happen if the answer were wrong and you didn't notice?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-3",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Sur quoi l'IA risque le plus de se tromper, ici ?",
+      "question_en": "What is the AI most likely to get wrong here?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-5",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Qu'est-ce que l'IA ne peut pas savoir dans ton cas ?",
+      "question_en": "What can the AI not know in your case?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-9",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Tu t'attends à quoi de raté dans la réponse : du vague, des généralités, de la flatterie ?",
+      "question_en": "What do you expect to be off in the answer: vagueness, generalities, flattery?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-6",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Quel est le coût réel si tu utilises une réponse fausse : pour toi, pour qui te lit ?",
+      "question_en": "What is the real cost if you use a wrong answer: for you, for whoever reads you?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-7",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Quelle partie de la réponse assumeras-tu de défendre sans pouvoir citer l'IA ?",
+      "question_en": "Which part of the answer will you commit to defending without being able to cite the AI?"
+    },
+    {
+      "axis": "critique",
+      "axis_label": "Comment je vérifierai",
+      "axis_label_en": "How I will verify",
+      "key": "critique-8",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Décide maintenant : qu'est-ce qui te fera rejeter la réponse plutôt que la retoucher ?",
+      "question_en": "Decide now: what will make you reject the answer rather than patch it?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "iteration",
+      "level": 1,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Ta demande a changé depuis tout à l'heure ?",
+      "question_en": "Has your request changed since a moment ago?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-7",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Tu comprends quoi mieux qu'il y a cinq minutes ?",
+      "question_en": "What do you understand better than five minutes ago?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-2",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Qu'est-ce qui te ferait changer d'avis ?",
+      "question_en": "What would make you change your mind?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-3",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Explique ton besoin comme à un enfant de 10 ans.",
+      "question_en": "Explain your need as you would to a 10-year-old."
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-4",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Qu'est-ce qui te manque vraiment pour avancer seul ?",
+      "question_en": "What do you really lack to move forward on your own?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-6",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Sans IA, quel serait ton plan en trois étapes ?",
+      "question_en": "Without AI, what would your three-step plan be?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-10",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Qu'est-ce que tu comprends le moins bien, là-dedans ?",
+      "question_en": "What do you understand least well in all this?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-12",
+      "level": 2,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Dans une semaine, tu veux avoir retenu quoi de ce travail ?",
+      "question_en": "A week from now, what do you want to have kept from this work?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-5",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Quelle question évites-tu de te poser ?",
+      "question_en": "Which question are you avoiding asking yourself?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-8",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Si tu ne pouvais poser qu'UNE question à un expert humain, laquelle ? Pose-la ici.",
+      "question_en": "If you could ask a human expert only ONE question, which one? Ask it here."
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-9",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Défends la position inverse pendant deux phrases. Qu'est-ce que ça t'apprend ?",
+      "question_en": "Defend the opposite position for two sentences. What does that teach you?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-11",
+      "level": 3,
+      "cats": null,
+      "profiles": null,
+      "question_fr": "Qu'est-ce qui, dans ta demande, relève de la facilité plutôt que du besoin ?",
+      "question_en": "What part of your request comes from convenience rather than need?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-13",
+      "level": 3,
+      "cats": null,
+      "profiles": [
+        "student"
+      ],
+      "question_fr": "Si ton enseignant te demandait de justifier chaque phrase de ta production, lesquelles tiendraient ?",
+      "question_en": "If your teacher asked you to justify every sentence of your work, which ones would hold?"
+    },
+    {
+      "axis": "approfondissement",
+      "axis_label": "Ma réflexion",
+      "axis_label_en": "My reflection",
+      "key": "appro-14",
+      "level": 3,
+      "cats": null,
+      "profiles": [
+        "consultant",
+        "employee"
+      ],
+      "question_fr": "Si ton client ou ton équipe te demandait de justifier chaque affirmation, lesquelles tiendraient ?",
+      "question_en": "If your client or your team asked you to justify every claim, which ones would hold?"
+    }
+  ]
+}

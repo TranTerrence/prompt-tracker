@@ -16,6 +16,31 @@ window.addEventListener("error", (event) => {
 
 const t = (...a) => CoachI18n.t(...a);
 
+/* ---------- Affichage du score : réglage d'organisation ---------- */
+
+// Une organisation peut masquer TOUT ce qui est chiffré (demande I-BE³ : ce
+// que l'étudiant doit lire est un comportement — « ai-je réfléchi avant de
+// demander » — et non une note sur cent, qui se transforme immédiatement en
+// objectif à optimiser). Le score continue d'être calculé, stocké et
+// synchronisé : seul l'AFFICHAGE disparaît. Masquer le total en laissant
+// quatre rubriques sur 25 déplacerait le problème au lieu de le régler, d'où
+// la tendance hebdomadaire (un delta de score) et le seuil dans le lot.
+let showScore = true;
+
+function applyScoreVisibility() {
+  document.getElementById("stat-score-tile").hidden = !showScore;
+  document.getElementById("stat-trend-tile").hidden = !showScore;
+  document.getElementById("rubrics-section").hidden = !showScore;
+  document.getElementById("threshold-row").hidden = !showScore;
+  if (!showScore) document.getElementById("eff-threshold").hidden = true;
+}
+
+// Derniers arguments de render : la config d'organisation arrive de façon
+// asynchrone et doit pouvoir redessiner sans relire le stockage.
+let lastRenderedEvents = [];
+let lastRenderedThreshold = 40;
+
+
 /* ---------- i18n ---------- */
 
 for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = t(el.dataset.i18n);
@@ -343,6 +368,15 @@ renderPendingSignup();
 // une sync qui ne part pas est invisible : c'est ce qui a laissé vivre le
 // blocage `no_baseline_consent` pendant tout le parcours web.
 const SYNC_ACTIONS = {
+  // La session a expiré alors que le compte ÉTAIT lié. Distinct de
+  // `not_authenticated`, qui est le mode nominal d'un usage 100 % local et
+  // n'affiche volontairement rien : ici l'utilisateur perd quelque chose
+  // qu'il avait, il doit l'apprendre.
+  session_expired: {
+    text: "syncBlockedExpired",
+    cta: "syncCtaExpired",
+    run: async () => document.getElementById("pair-start").click(),
+  },
   no_baseline_consent: {
     text: "syncBlockedBaseline",
     cta: "syncCtaBaseline",
@@ -406,6 +440,13 @@ function refreshAuthUi() {
   chrome.storage.local.get(["session", "profile", "orgConfig", "events"], (data) => {
     const pending = (data.events || []).filter((e) => !e.synced).length;
     showAuthState(data.session, data.profile, data.orgConfig, pending);
+    // La config d'org peut arriver APRÈS le premier rendu (sync-now au
+    // chargement du popup) : on réapplique, sinon le score reste visible
+    // jusqu'à la réouverture suivante.
+    showScore = !(data.orgConfig && data.orgConfig.showScore === false);
+    applyScoreVisibility();
+    renderLibraryOffer(data.orgConfig);
+    render(lastRenderedEvents, lastRenderedThreshold);
   });
   renderSyncBanner();
 }
@@ -428,6 +469,58 @@ chrome.storage.local.get("session", (data) => {
   if (data.session) chrome.runtime.sendMessage({ type: "sync-now" }, () => refreshAuthUi());
 });
 
+/* ---------- Bibliothèque de prompts de l'organisation ---------- */
+
+// La permission d'hôte est facultative et se demande ICI, sur la seule origine
+// publiée par l'organisation, et seulement sur un clic — `permissions.request`
+// exige de toute façon un geste utilisateur. Rien n'est envoyé à cet hôte :
+// l'extension le LIT, sans compte, sans jeton, sans cookie.
+function libraryOrigin(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" ? `${u.origin}/*` : null;
+  } catch {
+    return null;
+  }
+}
+
+function renderLibraryOffer(orgConfig) {
+  const box = document.getElementById("library-offer");
+  const origin = orgConfig && orgConfig.libraryUrl && libraryOrigin(orgConfig.libraryUrl);
+  if (!origin) {
+    box.hidden = true;
+    return;
+  }
+  chrome.permissions.contains({ origins: [origin] }, (granted) => {
+    // Déjà accordée : la carte n'a plus rien à proposer, elle disparaît.
+    box.hidden = Boolean(granted);
+    if (granted) return;
+    const name = (orgConfig.branding && orgConfig.branding.name) || t("brandDefault");
+    document.getElementById("library-offer-text").textContent = t("libraryOffer", name);
+    document.getElementById("library-offer-hint").textContent = t("libraryOfferHint");
+    document.getElementById("library-enable").textContent = t("libraryEnable");
+  });
+}
+
+document.getElementById("library-enable").addEventListener("click", () => {
+  chrome.storage.local.get("orgConfig", (data) => {
+    const origin = data.orgConfig && data.orgConfig.libraryUrl && libraryOrigin(data.orgConfig.libraryUrl);
+    if (!origin) return;
+    chrome.permissions.request({ origins: [origin] }, (granted) => {
+      const status = document.getElementById("library-status");
+      status.textContent = granted ? t("libraryEnabled") : t("libraryDenied");
+      status.hidden = false;
+      if (!granted) return;
+      document.getElementById("library-enable").hidden = true;
+      // Première récupération immédiate : sans elle, la bibliothèque
+      // n'apparaîtrait qu'au prochain chargement d'un onglet de chat.
+      chrome.runtime.sendMessage({ type: "library-fetch", force: true }, () => {
+        if (chrome.runtime.lastError) return;
+      });
+    });
+  });
+});
+
 /* ---------- Stats locales ---------- */
 
 const RUBRICS = [
@@ -442,24 +535,28 @@ function avg(arr) {
 }
 
 function render(events, threshold) {
+  lastRenderedEvents = events;
+  lastRenderedThreshold = threshold;
   document.getElementById("stat-count").textContent = events.length;
 
-  // La métrique principale est le PREMIER JET : ce que l'utilisateur écrit
-  // seul, avant tout coaching. C'est la seule mesure honnête de l'apprentissage.
-  const firstDrafts = events.map((e) => CoachScoring.firstDraftScore(e)).filter((s) => s !== null);
-  document.getElementById("stat-score").textContent = firstDrafts.length ? `${Math.round(avg(firstDrafts))}/100` : "–";
+  if (showScore) {
+    // La métrique principale est le PREMIER JET : ce que l'utilisateur écrit
+    // seul, avant tout coaching. C'est la seule mesure honnête de l'apprentissage.
+    const firstDrafts = events.map((e) => CoachScoring.firstDraftScore(e)).filter((s) => s !== null);
+    document.getElementById("stat-score").textContent = firstDrafts.length ? `${Math.round(avg(firstDrafts))}/100` : "–";
 
-  const now = Date.now();
-  const week = 7 * 24 * 3600 * 1000;
-  const draft = (e) => CoachScoring.firstDraftScore(e);
-  const recent = events.filter((e) => now - Date.parse(e.ts) < week).map(draft).filter((s) => s !== null);
-  const before = events.filter((e) => now - Date.parse(e.ts) >= week && now - Date.parse(e.ts) < 2 * week).map(draft).filter((s) => s !== null);
-  const trendEl = document.getElementById("stat-trend");
-  if (recent.length && before.length) {
-    const delta = Math.round(avg(recent) - avg(before));
-    trendEl.textContent = `${delta >= 0 ? "+" : ""}${delta}`;
-  } else {
-    trendEl.textContent = "–";
+    const now = Date.now();
+    const week = 7 * 24 * 3600 * 1000;
+    const draft = (e) => CoachScoring.firstDraftScore(e);
+    const recent = events.filter((e) => now - Date.parse(e.ts) < week).map(draft).filter((s) => s !== null);
+    const before = events.filter((e) => now - Date.parse(e.ts) >= week && now - Date.parse(e.ts) < 2 * week).map(draft).filter((s) => s !== null);
+    const trendEl = document.getElementById("stat-trend");
+    if (recent.length && before.length) {
+      const delta = Math.round(avg(recent) - avg(before));
+      trendEl.textContent = `${delta >= 0 ? "+" : ""}${delta}`;
+    } else {
+      trendEl.textContent = "–";
+    }
   }
 
   // Série de jours où les premiers jets tiennent le seuil : on célèbre
@@ -472,7 +569,9 @@ function render(events, threshold) {
 
   const rubricsEl = document.getElementById("rubrics");
   rubricsEl.textContent = "";
-  if (!events.length) {
+  if (!showScore) {
+    // Rien à construire : la section entière est masquée par l'organisation.
+  } else if (!events.length) {
     const p = document.createElement("p");
     p.className = "empty";
     p.textContent = t("popupEmpty");
@@ -526,9 +625,11 @@ function toCsv(events) {
   return [header.join(";"), ...rows].join("\n");
 }
 
-chrome.storage.local.get(["events", "settings", "health_chatgpt", "health_claude", "health_gemini", "health_mistral", "health_grok"], (data) => {
+chrome.storage.local.get(["events", "settings", "orgConfig", "health_chatgpt", "health_claude", "health_gemini", "health_mistral", "health_grok"], (data) => {
   const events = data.events || [];
   const settings = { captureMode: "metadata", interceptEnabled: true, threshold: 40, theme: "light", ...(data.settings || {}) };
+  showScore = !(data.orgConfig && data.orgConfig.showScore === false);
+  applyScoreVisibility();
   render(events, settings.threshold);
 
   applyTheme(settings.theme);
@@ -542,7 +643,7 @@ chrome.storage.local.get(["events", "settings", "health_chatgpt", "health_claude
   const effEl = document.getElementById("eff-threshold");
   const effText = t("popupEffThreshold", settings.threshold, eff);
   effEl.textContent = effText;
-  effEl.hidden = !effText;
+  effEl.hidden = !effText || !showScore;
 
   const healths = [
     ["ChatGPT", data.health_chatgpt],

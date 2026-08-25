@@ -62,17 +62,23 @@ fi
 #    store/SUBMISSION.md (le Store demande une justification par permission).
 PERMS="$(python3 -c "
 import json;m=json.load(open('$MANIFEST'))
-print(' '.join(m.get('permissions',[])+m.get('host_permissions',[])))")"
+print(' '.join(m.get('permissions',[])+m.get('host_permissions',[])+m.get('optional_host_permissions',[])))")"
 PERM_FAIL=0
 for p in $PERMS; do
   case "$p" in
     storage)  USED=$(grep -rl "chrome.storage" "$EXT/src" "$EXT/popup" 2>/dev/null | head -1) ;;
     alarms)   USED=$(grep -rl "chrome.alarms" "$EXT/src" 2>/dev/null | head -1) ;;
     tabs)     USED=$(grep -rl "chrome.tabs" "$EXT/src" "$EXT/popup" 2>/dev/null | head -1) ;;
+    # Une permission d'hôte FACULTATIVE n'est légitime que si le code la
+    # demande explicitement à l'exécution. Sans appel à permissions.request,
+    # elle est soit morte, soit demandée par un chemin qu'on n'a pas vu.
+    https://*/*|http*) USED=$(grep -rl "permissions.request" "$EXT/src" "$EXT/popup" 2>/dev/null | head -1) ;;
     *)        USED="?" ;;
   esac
   [ -z "$USED" ] && { fail "permission « $p » déclarée mais jamais utilisée dans le code — la retirer"; PERM_FAIL=1; }
-  grep -q "\`$p\`" "$ROOT/store/SUBMISSION.md" 2>/dev/null \
+  # -F obligatoire : un motif d'hôte contient des « * », que grep lirait comme
+  # des quantificateurs — « https://*/* » ne se trouverait alors jamais.
+  grep -qF "\`$p\`" "$ROOT/store/SUBMISSION.md" 2>/dev/null \
     || { fail "permission « $p » sans justification dans store/SUBMISSION.md"; PERM_FAIL=1; }
 done
 [ $PERM_FAIL -eq 0 ] && ok "permissions ($PERMS) utilisées et justifiées"

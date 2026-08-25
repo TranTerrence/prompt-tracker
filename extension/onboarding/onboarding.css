@@ -11,6 +11,14 @@
   font-display: swap;
 }
 
+/* GARDE-FOU, ne pas retirer. L'attribut « hidden » n'est qu'une règle d'agent
+   utilisateur, à très faible spécificité : la moindre règle « display: » de
+   cette feuille la bat. Sans cette ligne, une tuile passée en display:block ou
+   un label en display:flex restent VISIBLES malgré hidden — c'est ainsi que le
+   seuil « 40/100 » survivait au masquage du score demandé par l'organisation.
+   Tout l'affichage conditionnel de cet écran repose sur hidden. */
+[hidden] { display: none !important; }
+
 :root, [data-theme="light"] {
   --bg: #faf7f0;
   --surface: #ffffff;

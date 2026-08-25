@@ -200,6 +200,32 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
+          <Section title="6 bis. Bibliothèque de prompts de votre établissement (option)">
+            <p className="leading-relaxed text-muted">
+              Votre établissement peut publier une bibliothèque de prompts que
+              l&apos;extension vous propose au moment du dialogue.{" "}
+              <strong className="text-foreground">
+                L&apos;extension LIT cette page, elle ne lui envoie rien
+              </strong>{" "}
+              : pas de cookie, pas de session, pas de jeton, et aucun paramètre
+              tiré de votre compte — ni votre identifiant, ni votre adresse, ni
+              vos prompts, ni vos scores. L&apos;adresse est appelée exactement
+              telle que votre établissement l&apos;a renseignée. Le serveur qui
+              la sert ne peut donc pas savoir qui la consulte.
+            </p>
+            <p className="mt-3 leading-relaxed text-muted">
+              L&apos;autorisation d&apos;accéder à ce site est{" "}
+              <strong className="text-foreground">facultative</strong> : elle
+              n&apos;est demandée qu&apos;à votre clic, dans la popup, et
+              uniquement pour l&apos;adresse de votre établissement.{" "}
+              <strong className="text-foreground">Vous pouvez refuser</strong>{" "}
+              — tout le reste de l&apos;extension fonctionne à l&apos;identique.
+              Les prompts récupérés sont conservés jusqu&apos;à six heures dans
+              le stockage local de votre navigateur, et effacés dès que votre
+              établissement retire sa bibliothèque.
+            </p>
+          </Section>
+
           <Section title="7. Durées de conservation">
             <ul className="list-disc space-y-1.5 pl-5 leading-relaxed text-muted">
               <li>
@@ -443,6 +469,32 @@ export default function PrivacyPage() {
               the next question. This data transits without being stored, by
               our server or by Anthropic. Without those consents, questions
               come from a local bank built into the extension.
+            </p>
+          </Section>
+
+          <Section title="6 bis. Your institution's prompt library (optional)">
+            <p className="leading-relaxed text-muted">
+              Your institution may publish a library of prompts that the
+              extension offers you during the dialogue.{" "}
+              <strong className="text-foreground">
+                The extension READS that page, it sends nothing to it
+              </strong>{" "}
+              : no cookie, no session, no token, and no parameter derived from
+              your account — not your identifier, your address, your prompts or
+              your scores. The address is called exactly as your institution
+              entered it. The server hosting it therefore cannot know who is
+              reading it.
+            </p>
+            <p className="mt-3 leading-relaxed text-muted">
+              Permission to reach that site is{" "}
+              <strong className="text-foreground">optional</strong>: it is
+              requested only when you click, in the popup, and only for your
+              institution&apos;s address.{" "}
+              <strong className="text-foreground">You may decline</strong> —
+              everything else in the extension works exactly the same. Retrieved
+              prompts are kept for up to six hours in your browser&apos;s local
+              storage, and erased as soon as your institution removes its
+              library.
             </p>
           </Section>
 

@@ -7,7 +7,8 @@ const path = require("path");
 const assert = require("assert");
 
 globalThis.self = globalThis;
-(0, eval)(fs.readFileSync(path.join(__dirname, "..", "src", "scoring.js"), "utf8"));
+const src = fs.readFileSync(path.join(__dirname, "..", "src", "scoring.js"), "utf8");
+(0, eval)(src);
 const S = globalThis.CoachScoring;
 
 /* ---------- topic : extraction du groupe nominal ---------- */
@@ -260,6 +261,188 @@ assert.ok(
     if (q.recycled) break;
     assert.notStrictEqual(q.key, "appro-13", "appro-13 est réservée au profil student");
     asked.push(q.key);
+  }
+}
+
+/* ---------- detectLang : la langue du PROMPT, pas de l'interface ---------- */
+
+// C'est le vrai défaut « ça ne marche pas en anglais » : le barème est
+// bilingue depuis l'origine, mais la banque de questions suivait la locale du
+// navigateur. Un étudiant en Chrome français qui écrit en anglais recevait
+// des questions françaises.
+{
+  const EN = [
+    "do my homework",
+    "make me a business plan",
+    "write my essay about climate change",
+    "summarize the causes of world war one for me please",
+    "Explain the difference between TCP and UDP for a networking class",
+  ];
+  const FR = [
+    "fais mes devoirs de maths",
+    "écris ma lettre de motivation",
+    "résume ce texte",
+    "traduis en anglais",
+    "Explique-moi la différence entre TCP et UDP pour un cours de réseau",
+  ];
+  for (const t of EN) assert.strictEqual(S.detectLang(t, "fr"), "en", `anglais détecté : ${t}`);
+  for (const t of FR) assert.strictEqual(S.detectLang(t, "en"), "fr", `français détecté : ${t}`);
+
+  // Signal trop faible : on ne devine pas, on rend le repli de l'appelant.
+  // C'est volontaire — inventer une langue est pire que suivre l'interface.
+  for (const t of ["ok", "merci", "code python", "tl;dr", ""]) {
+    assert.strictEqual(S.detectLang(t, "XX"), "XX", `repli sur signal faible : « ${t} »`);
+  }
+
+  // La langue choisit la banque : à clé égale, les deux banques ne rendent
+  // pas le même texte. (Comparer aux caractères ASCII ne marcherait pas : les
+  // gabarits anglais portent des guillemets typographiques.)
+  const state = { originalPrompt: "do my homework", scores: S.score("do my homework"), asked: [] };
+  const qEn = S.nextQuestion({ ...state, lang: "en" });
+  const qFr = S.nextQuestion({ ...state, lang: "fr" });
+  assert.strictEqual(qEn.key, qFr.key, "même clé des deux côtés : les banques sont alignées");
+  assert.notStrictEqual(qEn.question, qFr.question, "la langue du prompt change le texte de la question");
+  assert.ok(/would you say|what/i.test(qEn.question), `question servie en anglais : ${qEn.question}`);
+}
+
+/* ---------- Parité FR/EN du barème ---------- */
+
+// Des prompts jumeaux doivent obtenir le MÊME score. C'est la mesure qui
+// répond au cahier des charges I-BE³ (« un prompt correct en anglais obtient
+// un score proche de zéro »), et c'est elle qui a révélé le défaut inverse :
+// les verbes français à initiale accentuée (« écris », « évalue ») étaient
+// invisibles pour \b, qui raisonne en ASCII.
+{
+  const PAIRS = [
+    ["écris un mail au professeur", "write an email to the teacher"],
+    ["rédige un plan de cours", "draft a lesson plan"],
+    ["évalue ces deux options", "evaluate these two options"],
+  ];
+  for (const [fr, en] of PAIRS) {
+    assert.strictEqual(S.score(fr).clarte, S.score(en).clarte, `parité clarté : « ${fr} » vs « ${en} »`);
+  }
+  // Régression nommée : « écris » doit valoir exactement « rédige ».
+  assert.strictEqual(
+    S.score("écris un mail au prof").total,
+    S.score("rédige un mail au prof").total,
+    "écris et rédige valent le même score (frontières de mot Unicode)"
+  );
+  assert.strictEqual(S.categorize("évalue ces deux options"), "analyse", "évalue est bien une analyse");
+  // Le verbe d'action ne doit plus être extrait comme sujet du prompt.
+  assert.ok(
+    !/écris/.test(S.topic("écris un mail à mon patron pour demander une augmentation", "fr") || ""),
+    "un verbe d'action accentué n'est pas un sujet"
+  );
+}
+
+/* ---------- coverage : la fin naturelle du dialogue ---------- */
+
+// « Une question par axe faible, puis la main rendue » : sans cette borne,
+// nextQuestion recycle l'approfondissement indéfiniment, ce qui se lit comme
+// du remplissage dès le deuxième tour.
+{
+  const prompt = "fais mes devoirs de maths";
+  const scores = S.score(prompt);
+  const cov0 = S.coverage({ originalPrompt: prompt, scores, answers: [], lang: "fr" });
+  assert.strictEqual(cov0.complete, false, "rien de couvert au départ");
+  assert.ok(cov0.axes.includes("hypothese"), "délégation totale : la tentative est exigée");
+  assert.strictEqual(cov0.axes.length, cov0.labels.length, "un libellé par axe");
+
+  // Une question PASSÉE ne couvre rien : sinon il suffirait de tout passer.
+  const skipped = cov0.axes.map((axis) => ({ axis, answer: "" }));
+  assert.strictEqual(
+    S.coverage({ originalPrompt: prompt, scores, answers: skipped, lang: "fr" }).complete,
+    false,
+    "passer les questions ne clôt pas le dialogue"
+  );
+
+  const answered = cov0.axes.map((axis) => ({ axis, answer: "une vraie réponse" }));
+  assert.strictEqual(
+    S.coverage({ originalPrompt: prompt, scores, answers: answered, lang: "fr" }).complete,
+    true,
+    "tous les axes faibles répondus : la main est rendue"
+  );
+
+  // Le dialogue borné doit converger : au plus un tour par axe faible.
+  const asked = [];
+  const answers = [];
+  let rounds = 0;
+  while (rounds < 12) {
+    if (S.coverage({ originalPrompt: prompt, scores, answers, lang: "fr" }).complete) break;
+    const q = S.nextQuestion({ originalPrompt: prompt, scores, asked, answeredCount: answers.length, lang: "fr" });
+    asked.push(q.key);
+    answers.push({ ...q, answer: "une vraie réponse" });
+    rounds++;
+  }
+  assert.ok(rounds <= cov0.axes.length, `clôture en ${rounds} tours pour ${cov0.axes.length} axes faibles`);
+
+  // Prompt sans axe faible (interception par le filet anti-décrochage) :
+  // une seule vraie réponse suffit à rendre la main.
+  const rich = "Je suis étudiant. Rédige un plan sur la souveraineté numérique pour un public non spécialiste. Cite tes sources et donne les limites.";
+  const rs = S.score(rich);
+  assert.strictEqual(S.coverage({ originalPrompt: rich, scores: rs, answers: [], lang: "fr" }).complete, false);
+  assert.strictEqual(
+    S.coverage({ originalPrompt: rich, scores: rs, answers: [{ axis: "hypothese", answer: "mon avis" }], lang: "fr" }).complete,
+    true
+  );
+}
+
+/* ---------- Le JSON du dashboard ne doit pas dériver de la banque ---------- */
+
+// `dashboard/lib/question-bank.json` est GÉNÉRÉ depuis ce module par
+// `scripts/export-question-bank.mjs`, et c'est lui que l'écran
+// d'administration lit pour proposer la surcharge par organisation. Rien
+// n'empêche mécaniquement d'ajouter une question ici et d'oublier de rejouer
+// l'export : l'organisation ne verrait alors jamais la nouvelle clé. Ce test
+// est ce garde-fou — il tourne à chaque modification de scoring.js.
+{
+  const bankPath = path.join(__dirname, "..", "..", "dashboard", "lib", "question-bank.json");
+  if (!fs.existsSync(bankPath)) {
+    console.warn("  (question-bank.json absent : export non rejoué, contrôle sauté)");
+  } else {
+    const exported = JSON.parse(fs.readFileSync(bankPath, "utf8"));
+    // Les clés vivantes du module, reconstruites en interrogeant nextQuestion
+    // jusqu'à épuisement sur un prompt qui n'exclut aucune catégorie.
+    const seen = new Set();
+    const asked = [];
+    const prompt = "code python résume traduis analyse idées qu'est-ce que";
+    const scores = S.score(prompt);
+    for (let i = 0; i < 300; i++) {
+      const q = S.nextQuestion({ originalPrompt: prompt, scores, asked, lang: "fr", profile: "student" });
+      if (q.recycled) break;
+      seen.add(q.key);
+      asked.push(q.key);
+    }
+    const exportedKeys = new Set(exported.questions.map((q) => q.key));
+    const missing = [...seen].filter((k) => !exportedKeys.has(k));
+    assert.deepStrictEqual(
+      missing,
+      [],
+      `question-bank.json est périmé (${missing.length} clé(s) absente(s)) — rejouer : node scripts/export-question-bank.mjs`
+    );
+    // Et les FORMULATIONS doivent correspondre, sinon l'administrateur voit en
+    // filigrane un texte que l'étudiant ne recevra jamais. On relit la banque
+    // dans la source, exactement comme le fait le script d'export.
+    const literal = src.match(/const BANKS = (\{[\s\S]*?\n {2}\});/);
+    assert.ok(literal, "BANKS introuvable dans la source — le format a changé ?");
+    const BANKS = new Function(`return (${literal[1]})`)();
+    const live = new Map();
+    for (const lang of ["fr", "en"]) {
+      for (const axis of Object.keys(BANKS[lang])) {
+        for (const q of BANKS[lang][axis].questions) live.set(`${lang}:${q.key}`, q.q);
+      }
+    }
+    const drift = exported.questions.flatMap((q) =>
+      [
+        live.get(`fr:${q.key}`) !== q.question_fr ? `${q.key} (fr)` : null,
+        live.get(`en:${q.key}`) !== q.question_en ? `${q.key} (en)` : null,
+      ].filter(Boolean)
+    );
+    assert.deepStrictEqual(
+      drift,
+      [],
+      `question-bank.json a dérivé sur ${drift.length} formulation(s) — rejouer : node scripts/export-question-bank.mjs`
+    );
   }
 }
 

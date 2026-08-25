@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Réponse au cahier des charges — I-BE³ · Prompt Tracker</title>
+<style>
+/* ============================================================================
+   Terrence — design system ÉCHELLE DOCUMENT
+   ----------------------------------------------------------------------------
+   Dérivé de `AI video studio/studio/brand/capsule.css` (échelle stage 1920×1080).
+   La source de vérité des couleurs reste `studio/brand/theme.capsule.json` :
+   si un token change là-bas, il change ici. Ne redéfinis jamais une couleur ici
+   sans l'avoir changée dans le thème.
+
+   Ce que ce fichier reprend à l'identique : toute la palette, les noms de
+   variables (--accent, --panel-*, --ink-*, --cat-*, --code-*), Inter, et le
+   vocabulaire de classes (.ink .ink-2 .key-phrase .panel .card .label).
+
+   Ce qu'il ajoute : une échelle typographique de document (14–44 px au lieu de
+   28–130), de vraies surfaces (il n'y a plus de PNG de fond), et un mode sombre.
+
+   POURQUOI LE MODE SOMBRE EST GRATUIT : la charte vidéo contient déjà les deux
+   moitiés d'un système clair/sombre — l'encre navy sur le stage clair d'un côté,
+   le texte blanc sur le panel navy de l'autre. Le mode sombre ne fait que
+   remapper --ink-* sur les valeurs --panel-text-*. Rien n'est inventé.
+   ============================================================================ */
+
+:root {
+  /* ---- palette de marque, identique à theme.capsule.json ---- */
+  --accent: #3b82c8;
+  --accent-deep: #1e5aaa;
+  --accent-glow: rgba(59, 130, 200, 0.45);
+
+  --ink-primary: rgba(12, 22, 40, 0.96);
+  --ink-secondary: rgba(20, 40, 70, 0.72);
+  --ink-muted: rgba(20, 40, 70, 0.45);
+  --ink-accent: #123a63;
+
+  --panel-bg: rgba(10, 22, 40, 0.92);
+  --panel-bg-solid: #0a1628;
+  --panel-gradient: linear-gradient(135deg, #0a1628 0%, #0d2847 40%, #0a1628 100%);
+  --panel-border: rgba(59, 130, 200, 0.35);
+  --panel-grid: rgba(59, 130, 200, 0.06);
+  --panel-text: rgba(255, 255, 255, 0.95);
+  --panel-text-2: rgba(255, 255, 255, 0.6);
+  --panel-text-3: rgba(255, 255, 255, 0.35);
+  --card-bg: rgba(255, 255, 255, 0.06);
+  --card-border: rgba(59, 130, 200, 0.30);
+
+  --cat-urgent: #ef4444;
+  --cat-followup: #f59e0b;
+  --cat-newsletter: #22c55e;
+  --cat-archive: #64748b;
+  --code-md: #22c55e;
+  --code-html: #f59e0b;
+  --code-json: #3b82c8;
+  --code-text: #64748b;
+
+  --font: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --fw-headline: 800;
+  --fw-body: 500;
+  --fw-label: 600;
+  /* Le poids 500 de la marque est juste pour un super vidéo, trop dense pour un
+     paragraphe lu de près. Le texte courant descend à 400 ; tout le reste
+     (titres, labels, cartes, emphases) garde les poids de marque. */
+  --fw-prose: 400;
+
+  /* ---- surfaces : spécifique écran ------------------------------------------
+     Le stage vidéo est un PNG gris moyen (#a7a7a7) qui n'a aucun sens dans un
+     document. On en garde le RÔLE — un fond neutre légèrement bleuté sur lequel
+     l'encre navy se pose — pas la valeur. */
+  --surface: #f5f6f8;      /* fond de page */
+  --surface-2: #ffffff;    /* carte surélevée */
+  --surface-3: #eceef2;    /* creux : code, citations, en-têtes de tableau */
+  --border: rgba(20, 40, 70, 0.14);
+  --border-strong: rgba(20, 40, 70, 0.26);
+
+  /* ---- échelle typographique de document ---- */
+  --fs-display: clamp(30px, 4.2vw, 44px);
+  --fs-h1: clamp(25px, 3vw, 32px);
+  --fs-h2: clamp(20px, 2.2vw, 24px);
+  --fs-h3: 18px;
+  --fs-body: 16px;
+  --fs-small: 14px;
+  --fs-label: 12px;
+  --lh-tight: 1.18;
+  --lh-body: 1.6;
+
+  /* ---- rythme, rayons, ombres ---- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  /* Le panel vidéo utilise 20px + une ombre de 80px avec glow : correct à 1,5 m
+     d'un écran, grotesque dans un document. Échelle réduite, glow supprimé. */
+  --shadow-1: 0 1px 2px rgba(12, 22, 40, 0.06), 0 2px 8px rgba(12, 22, 40, 0.04);
+  --shadow-2: 0 2px 4px rgba(12, 22, 40, 0.08), 0 8px 24px rgba(12, 22, 40, 0.08);
+
+  color-scheme: light;
+}
+
+/* ---- mode sombre -----------------------------------------------------------
+   Le panel navy de la marque DEVIENT le fond de page, et --ink-* est remappé sur
+   les encres claires du panel. Défini deux fois : une fois pour la préférence
+   système, une fois pour un choix explicite, pour que le bascule marche dans les
+   deux sens. Aucune couleur n'a sa définition unique dans un de ces blocs. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface: #0a1628;
+    --surface-2: #0d2847;
+    --surface-3: #071120;
+    --border: rgba(59, 130, 200, 0.22);
+    --border-strong: rgba(59, 130, 200, 0.40);
+    --ink-primary: rgba(255, 255, 255, 0.95);
+    --ink-secondary: rgba(255, 255, 255, 0.60);
+    --ink-muted: rgba(255, 255, 255, 0.35);
+    --ink-accent: #7fb2e5;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+    --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.3);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --surface: #0a1628;
+  --surface-2: #0d2847;
+  --surface-3: #071120;
+  --border: rgba(59, 130, 200, 0.22);
+  --border-strong: rgba(59, 130, 200, 0.40);
+  --ink-primary: rgba(255, 255, 255, 0.95);
+  --ink-secondary: rgba(255, 255, 255, 0.60);
+  --ink-muted: rgba(255, 255, 255, 0.35);
+  --ink-accent: #7fb2e5;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
+}
+
+/* ============================================================================
+   Base
+   ============================================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink-primary);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-prose);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums; /* --numeric du thème */
+}
+
+/* Garde-fous de débordement : lavish audite le layout et remonte les
+   dépassements dans l'inbox. Autant ne pas en produire. */
+:where(.grid, .flex) > * { min-width: 0; }
+:where(p, h1, h2, h3, h4, li, dd, blockquote, figcaption, td, th, .label, .badge) {
+  overflow-wrap: anywhere;
+}
+:where(img, svg, video, canvas, iframe) { max-width: 100%; height: auto; }
+
+/* ============================================================================
+   Mise en page
+   ============================================================================ */
+
+/* .stage — l'équivalent document du stage vidéo : le sol sur lequel tout pose. */
+.stage {
+  min-height: 100vh;
+  background: var(--surface);
+  padding: var(--sp-7) var(--sp-5);
+}
+
+.artefact {
+  max-width: 68rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+.grid { display: grid; gap: var(--sp-4); }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+.flex { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; }
+
+/* ============================================================================
+   Typographie — vocabulaire repris de capsule.css
+   ============================================================================ */
+
+h1, h2, h3, h4 {
+  font-weight: var(--fw-headline);
+  line-height: var(--lh-tight);
+  color: var(--ink-primary);
+  margin: 0;
+  letter-spacing: -0.015em;
+}
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); font-weight: var(--fw-label); }
+p { margin: 0 0 var(--sp-3); }
+p:last-child { margin-bottom: 0; }
+
+/* .display — l'équivalent document du bandeau `title` d'une capsule. */
+.display {
+  font-size: var(--fs-display);
+  font-weight: var(--fw-headline);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.025em;
+}
+
+.ink { color: var(--ink-primary); font-family: var(--font); }
+.ink-2 { color: var(--ink-secondary); }
+.ink-3 { color: var(--ink-muted); }
+
+/* .key-phrase — l'emphase de marque.
+   ATTENTION CONTRASTE, et la règle n'est PAS celle de la vidéo :
+   - sur le stage vidéo gris (#a7a7a7), --accent-deep tombe à 2,85:1 et est
+     interdit pour du texte ; c'est --ink-accent (#123a63, 4,88:1) qui sert.
+   - sur la surface document claire (#f5f6f8), --accent-deep remonte à 6,27:1 :
+     il passe AA en texte courant, et c'est lui qu'on utilise.
+   - --accent (#3b82c8) n'est qu'à 3,73:1 sur la surface claire : réservé aux
+     grands titres, bordures, icônes et pastilles — jamais du texte courant.
+   - sur le panel navy, --accent est à 4,50:1 : il passe, d'où `.on-panel`.
+   Si tu déplaces cette classe sur un fond gris moyen, reviens à --ink-accent. */
+.key-phrase { color: var(--accent-deep); font-weight: var(--fw-headline); }
+.key-phrase.on-panel { color: var(--accent); }
+:root[data-theme="dark"] .key-phrase { color: var(--accent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .key-phrase { color: var(--accent); }
+}
+
+/* .statement — la respiration : une affirmation large et seule.
+   Équivalent document de l'asset_type `statement` d'une capsule. */
+.statement {
+  font-size: var(--fs-h1);
+  font-weight: var(--fw-headline);
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  max-width: 34ch;
+  margin: var(--sp-5) 0;
+}
+
+.label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: var(--fw-label);
+  font-size: var(--fs-label);
+  color: var(--ink-secondary);
+}
+.panel .label { color: var(--panel-text-2); }
+
+/* GARDE-FOU, ne pas retirer. Mermaid génère ses propres `<g class="label">` à
+   l'intérieur du SVG — une douzaine par diagramme. Sans cette remise à zéro, la
+   règle ci-dessus met tous les nœuds du diagramme en petites capitales espacées
+   à 12 px, et le diagramme devient illisible. C'est exactement le piège que le
+   playbook `diagram` de lavish signale : ne jamais laisser un nom de classe
+   générique fuiter dans une bibliothèque de diagrammes.
+   (`.label` reste non préfixé parce que capsule.css l'utilise aussi — c'est le
+   vocabulaire partagé qui rend le pont HyperFrames possible.) */
+.mermaid .label {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.lede { font-size: 17px; color: var(--ink-secondary); max-width: 62ch; }
+.small { font-size: var(--fs-small); }
+
+/* ============================================================================
+   Surfaces
+   ============================================================================ */
+
+/* .card — la carte courante, sur la surface de page.
+   Équivalent document de l'asset_type `pills`. */
+.card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow-1);
+}
+.card > :first-child { margin-top: 0; }
+
+/* .panel — le bloc navy, pour le dense et le technique.
+   Même rôle qu'en vidéo : il tranche avec la surface et attire l'œil. En mode
+   sombre il s'aplatit volontairement (le fond est déjà navy) et ne se distingue
+   plus que par sa bordure. */
+.panel {
+  background: var(--panel-gradient);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  color: var(--panel-text);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-2);
+}
+.panel h1, .panel h2, .panel h3, .panel .ink { color: var(--panel-text); }
+.panel .ink-2 { color: var(--panel-text-2); }
+.panel .ink-3 { color: var(--panel-text-3); }
+.panel .card {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  box-shadow: none;
+  color: var(--panel-text);
+}
+
+/* ============================================================================
+   Composants
+   ============================================================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 3px var(--sp-2);
+  border-radius: 999px;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-label);
+  line-height: 1.5;
+  border: 1px solid currentColor;
+  /* La couleur de la pastille vient d'une classe sémantique ci-dessous.
+     `color-mix` teinte le fond sans avoir à écrire huit rgba() à la main. */
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+/* Sémantique de catégorie — celle de theme.capsule.json, pas une nouvelle. */
+.cat-urgent { color: var(--cat-urgent); }
+.cat-followup { color: var(--cat-followup); }
+.cat-newsletter { color: var(--cat-newsletter); }
+.cat-archive { color: var(--cat-archive); }
+/* Sémantique de format de fichier — idem. */
+.code-md { color: var(--code-md); }
+.code-html { color: var(--code-html); }
+.code-json { color: var(--code-json); }
+.code-text { color: var(--code-text); }
+
+/* Filet d'accent à gauche : le geste de mise en avant le plus économique. */
+.accent-rule {
+  border-left: 3px solid var(--accent);
+  padding-left: var(--sp-4);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+th, td {
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+th {
+  background: var(--surface-3);
+  font-weight: var(--fw-label);
+  font-size: var(--fs-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-secondary);
+}
+.panel th { background: var(--card-bg); color: var(--panel-text-2); }
+.panel th, .panel td { border-bottom-color: var(--card-border); }
+/* Un tableau large scrolle dans son propre conteneur : la page, jamais. */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); }
+
+code, pre, .mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  font-variant-ligatures: none;
+}
+code {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+pre {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  overflow-x: auto;
+  line-height: 1.5;
+  margin: 0;
+}
+pre code { background: none; border: none; padding: 0; }
+.panel code, .panel pre { background: var(--card-bg); border-color: var(--card-border); }
+
+blockquote {
+  margin: 0;
+  padding-left: var(--sp-4);
+  border-left: 3px solid var(--border-strong);
+  color: var(--ink-secondary);
+}
+
+hr { border: none; border-top: 1px solid var(--border); margin: var(--sp-6) 0; }
+
+a { color: var(--accent-deep); text-underline-offset: 2px; }
+:root[data-theme="dark"] a { color: var(--accent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) a { color: var(--accent); }
+}
+
+/* Diagrammes Mermaid : centrés, et jamais plus larges que leur conteneur. */
+.mermaid { display: flex; justify-content: center; overflow-x: auto; }
+.mermaid svg { max-width: 100%; height: auto; }
+
+@media print {
+  .stage { padding: 0; min-height: 0; }
+  .card, .panel { box-shadow: none; break-inside: avoid; }
+}
+
+</style>
+</head>
+<body>
+<div class="stage">
+<div class="artefact">
+
+  <header>
+    <p class="label">Prompt Tracker · Réponse au cahier des charges I-BE³ · 25 août 2026</p>
+    <h1 class="display">Ce que nous avons corrigé, et ce que le code disait déjà</h1>
+    <p class="lede">
+      Votre cahier des charges du 25 août liste cinq demandes et trois défauts. Nous
+      avons lu chacun d'eux dans le code, mesures à l'appui. Trois portaient sur une
+      version antérieure à juillet et sont déjà réglés ; les autres sont livrés dans
+      la version 0.8.0. Un point vous concerne directement : le défaut de langue
+      existe, mais il n'est pas celui que vous décrivez.
+    </p>
+  </header>
+
+  <p class="statement">
+    Le barème comprend l'anglais depuis l'origine. Ce qui ne suivait pas la langue du
+    prompt, c'était le coaching.
+  </p>
+
+  <section>
+    <p class="label">Le point qui demande votre attention</p>
+
+    <div class="card accent-rule">
+      <p><span class="badge cat-urgent">Priorité 1 · corrigé</span></p>
+      <h2 class="key-phrase">Le scoring en anglais : le diagnostic était inversé</h2>
+      <p>
+        <strong>Ce que dit le code.</strong> Les expressions de reconnaissance sont
+        bilingues depuis la première version : contexte, itération, esprit critique,
+        verbes d'action, et les sept catégories. Notre banc d'évaluation contenait
+        déjà des prompts anglais. Mesuré sur des <strong>paires jumelles</strong> —
+        même demande, deux langues :
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Prompt français</th><th>Prompt anglais</th><th>Score</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>fais mes devoirs</td><td>do my homework</td><td>7 / 7</td></tr>
+            <tr><td>évalue ces deux options</td><td>evaluate these two options</td><td>12 / 12</td></tr>
+            <tr><td>Je suis enseignante et je prépare un cours sur l'offre et la demande…</td><td>I am a teacher preparing a lesson on supply and demand…</td><td>45 / 45</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Un prompt correct en anglais n'obtient donc pas « un score proche de zéro ».
+        Nous préférons vous le dire plutôt que corriger un défaut qui n'existe pas.
+      </p>
+      <p>
+        <strong>Mais votre observation de terrain était juste.</strong> En cherchant,
+        nous avons trouvé le vrai défaut, ailleurs : la langue du <em>coaching</em>
+        suivait la langue du <em>navigateur</em>, jamais celle du prompt. Un étudiant
+        sous Chrome français qui écrit en anglais recevait des questions en français,
+        et notre extracteur de sujet appliquait les mots-outils français à du texte
+        anglais, produisant des sujets cassés du type
+        <code>difference between TCP and UDP for a</code>. C'est très exactement
+        l'expérience « ça ne marche pas en anglais ».
+      </p>
+      <p>
+        <strong>Corrigé.</strong> La langue est désormais détectée sur le prompt
+        lui-même, à chaque envoi. Elle pilote la banque de questions, l'extraction de
+        sujet et l'en-tête du prompt compilé. La langue de l'interface reste celle du
+        navigateur : ce sont deux choses différentes, et vous aviez raison de dire que
+        la seconde n'est qu'un confort.
+      </p>
+    </div>
+
+    <div class="card accent-rule">
+      <p><span class="badge cat-followup">Trouvé en chemin · corrigé</span></p>
+      <h2 class="key-phrase">Un défaut de parité qui pénalisait le français</h2>
+      <p>
+        En construisant la mesure de parité ci-dessus, nous avons découvert un défaut
+        que personne n'avait signalé, et qui allait dans l'autre sens.
+      </p>
+      <p>
+        Les frontières de mot de notre moteur raisonnaient en ASCII. Un mot commençant
+        par une lettre accentuée n'a pas de frontière devant lui pour cette mécanique :
+        <code>écris</code>, <code>évalue</code>, <code>étapes</code> et
+        <code>à destination de</code> n'étaient <strong>jamais reconnus</strong>.
+        Conséquences mesurées : « écris un mail » perdait les 7 points de verbe
+        d'action que « rédige un mail » obtenait ; « donne les étapes » perdait les
+        15 points de contexte que « give me the steps » obtenait ; « évalue ces
+        options » n'était pas classé en analyse. Symétriquement, deux verbes anglais
+        manquaient à l'appel (<code>draft</code>, <code>do</code>).
+      </p>
+      <p>
+        <strong>Corrigé, et verrouillé.</strong> Un banc de parité tourne désormais à
+        chaque modification : sept paires jumelles doivent obtenir un score
+        strictement identique. Le barème passe en <strong>version 3</strong>. Les
+        scores concernés <strong>montent</strong>, jamais ils ne descendent : une
+        courbe de progression qui traverse le 25 août se lit à version de barème
+        constante, et le champ est déjà dans vos exports.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Vos demandes, livrées en 0.8.0</p>
+
+    <div class="card">
+      <p><span class="badge cat-newsletter">Priorité 1 · livré</span></p>
+      <h2 class="key-phrase">Les questions de coaching, retravaillées</h2>
+      <p>
+        Les 46 questions de niveau 1 et 2 ont été réécrites, en français comme en
+        anglais. Trois règles : une seule question par phrase — celles soudées par un
+        « et » ne recevaient qu'une demi-réponse —, aucun méta-vocabulaire, et un
+        ancrage sur la tâche plutôt que sur la posture.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Avant</th><th>Après</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Que doit faire ce code exactement, et sur quel exemple d'entrée et de sortie le testeras-tu ?</td>
+              <td>Ton code doit faire quoi, exactement ?</td>
+            </tr>
+            <tr>
+              <td>Quelle partie du travail t'appartient de droit, celle où l'IA ne devrait être qu'un relecteur ?</td>
+              <td>Sur quelle partie tu veux que l'IA relise ton travail, plutôt que le faire à ta place ?</td>
+            </tr>
+            <tr>
+              <td>Quel est le point le plus fragile de ta compréhension du sujet ?</td>
+              <td>Qu'est-ce que tu comprends le moins bien, là-dedans ?</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Le ciblage par catégorie que vous mentionnez existait déjà et est conservé : une
+        question « code » ne sort que sur un prompt de code.
+      </p>
+      <p class="small ink-2">
+        Les questions de niveau 3 (contre-factuel, falsifiabilité) ne sont pas touchées :
+        elles sont rarement atteintes, et le dialogue borné ci-dessous les rend encore
+        plus rares.
+      </p>
+    </div>
+
+    <div class="card">
+      <p><span class="badge cat-newsletter">Priorité 1 · livré</span></p>
+      <h2 class="key-phrase">Votre équipe pédagogique peut désormais réécrire la banque</h2>
+      <p>
+        Vous proposiez de relire une proposition de banque de questions. Nous vous
+        offrons mieux, et c'est un défaut que votre demande a mis au jour : le moteur
+        acceptait une surcharge sur <strong>n'importe quelle</strong> question, mais
+        l'écran d'administration n'en exposait que <strong>cinq sur soixante-six</strong>.
+        Votre équipe ne pouvait donc pas retravailler la banque, même en le voulant.
+      </p>
+      <p>
+        Les 66 questions sont maintenant adressables depuis
+        <em>Paramètres → Questions socratiques</em>, groupées par axe de raisonnement,
+        avec la formulation par défaut en filigrane et la version anglaise sous chaque
+        champ. Un champ laissé vide garde notre formulation. Votre texte remplace la
+        nôtre dans les deux langues.
+      </p>
+    </div>
+
+    <div class="card">
+      <p><span class="badge cat-newsletter">Priorité 2 · livré</span></p>
+      <h2 class="key-phrase">Le dialogue a maintenant une fin</h2>
+      <p>
+        Vous aviez raison sur le fond : le dialogue ne se terminait jamais de lui-même,
+        et le recyclage de l'axe « approfondissement » se lisait comme du remplissage.
+      </p>
+      <p>
+        Nous avons retenu la formule que vous proposiez, <strong>une question par axe
+        faible puis la main rendue</strong>, sans jamais fermer de force. Quand chaque
+        axe faible a reçu une <em>vraie</em> réponse — passer une question ne compte
+        pas —, la modale bascule en clôture : « Tu as couvert l'essentiel : intention,
+        contexte, vérification. À toi de décider quand envoyer. » Le bouton d'envoi
+        passe en avant, et un lien discret « poser une question de plus » relance la
+        boucle pour qui le veut.
+      </p>
+      <p>
+        En pratique, un prompt de délégation totale reçoit désormais
+        <strong>quatre questions</strong>, contre un enchaînement sans terme
+        auparavant.
+      </p>
+    </div>
+
+    <div class="card">
+      <p><span class="badge cat-newsletter">Priorité 2 · livré</span></p>
+      <h2 class="key-phrase">Le score peut être masqué au niveau de l'organisation</h2>
+      <p>
+        Nouveau réglage <em>Paramètres → Afficher le score aux utilisateurs</em>.
+        Décoché, l'extension n'affiche <strong>plus aucun chiffre</strong> : ni le
+        total sur 100, ni les quatre rubriques sur 25, ni le seuil dans la pastille et
+        l'onboarding, ni la tendance hebdomadaire — qui est un delta de score.
+      </p>
+      <p>
+        Nous sommes allés au-delà de votre demande littérale à dessein : masquer le
+        total en laissant quatre notes sur 25 aurait déplacé le problème que vous
+        décrivez au lieu de le régler. Ce qui reste est comportemental : le nombre de
+        prompts, la série de jours, la répartition par catégorie.
+      </p>
+      <p>
+        La mesure, elle, ne change pas. Le score continue d'être calculé, stocké et
+        servi par votre API et vos exports : c'est l'écran de l'étudiant qui se tait.
+      </p>
+      <p class="small ink-2">
+        Votre demande annexe — pas de personnalisation par modèle de langage — n'appelle
+        aucun développement : c'est déjà un réglage d'organisation
+        (<em>Analyse LLM activée</em>), décoché par défaut. Vérifiez simplement qu'il
+        l'est chez vous.
+      </p>
+    </div>
+
+    <div class="card">
+      <p><span class="badge cat-newsletter">Priorité 3 · livré</span></p>
+      <h2 class="key-phrase">Votre bibliothèque de prompts dans l'extension</h2>
+      <p>
+        Vous demandiez une heure de discussion technique. Nous avons préféré construire
+        et vous soumettre quelque chose de concret : un canal 5 s'ajoute au contrat
+        d'intégration. Vous publiez un JSON à une adresse ; l'extension le propose à
+        l'ouverture du dialogue, sous « Partir d'un prompt qui a fonctionné ». Vos deux
+        niveaux sont portés par le champ <code>kind</code> :
+        <code>official</code> pour les pré-prompts de l'équipe pédagogique,
+        <code>peer</code> pour les prompts partagés, triés par nombre de reprises.
+      </p>
+      <p>
+        <strong>Deux choix de conception qui appellent votre validation.</strong>
+      </p>
+      <p>
+        <em>Premier choix : nous n'envoyons rien.</em> La requête part sans cookie,
+        sans jeton, sans en-tête d'authentification et sans aucun paramètre tiré du
+        compte. Le serveur qui sert la bibliothèque ne peut pas savoir qui la consulte.
+        Conséquence pour vous : cette adresse doit être <strong>publique en
+        lecture</strong>. Nous ne pouvons pas l'authentifier sans faire circuler un
+        secret partagé dans l'extension de chaque étudiant, ce que nous refusons de
+        faire.
+      </p>
+      <p>
+        <em>Second choix : le bloc est replié par défaut.</em> Vous signalez
+        vous-même que « le bon moment est celui de l'interception » est une hypothèse
+        non testée. Replié, il ne peut pas dégrader le dialogue si l'hypothèse est
+        fausse, et son taux d'ouverture se mesure.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Les trois défauts de votre tableau</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Votre constat</th><th>État</th><th>Ce que dit le code</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Le bouton « ouvrir le dashboard » pointe sur <code>http://localhost:3200/</code></td>
+            <td><span class="badge cat-newsletter">Déjà corrigé</span></td>
+            <td>Le bouton pointe sur <code>https://track-prompt.vercel.app</code>. Il n'existe plus aucune occurrence de <code>3200</code> dans le dépôt. La correction est antérieure à votre document ; le testeur a probablement gardé une version de juillet.</td>
+          </tr>
+          <tr>
+            <td>Le score est affiché dans la popup sans jamais y être expliqué</td>
+            <td><span class="badge cat-followup">Partiellement fondé, corrigé</span></td>
+            <td>Le barème est publié et discutable sur <code>/methode</code>, lié depuis la popup et depuis le « ? » de la modale. Le vrai défaut est que ce lien vivait en pied de popup, loin du nombre : la tuile de score est désormais elle-même le lien. Sans objet si vous retenez le masquage.</td>
+          </tr>
+          <tr>
+            <td>Configuration impossible sur iPhone</td>
+            <td><span class="badge cat-newsletter">Déjà documenté</span></td>
+            <td>Le guide d'installation l'écrit déjà : « Pas de version iPhone, iPad ou Android à ce stade ». Nous partageons votre analyse — c'est une limite de Manifest V3, pas un défaut à corriger.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Ce que ça change pour votre déploiement</p>
+    <div class="panel">
+      <p>
+        <strong>Rien à faire de votre côté pour l'essentiel.</strong> Les corrections de
+        langue, de parité, de banque de questions et de fin de dialogue arrivent avec la
+        mise à jour de l'extension. Aucune ne modifie le contrat d'intégration, aucune ne
+        touche aux données que vous ingérez.
+      </p>
+      <p>
+        Trois actions vous appartiennent, toutes dans <em>Paramètres</em> :
+      </p>
+      <div class="grid grid-3">
+        <div class="card">
+          <p class="label">1 · Une case à cocher</p>
+          <p>Décocher <em>Afficher le score aux utilisateurs</em>. L'écran de l'étudiant devient cohérent avec le vôtre.</p>
+        </div>
+        <div class="card">
+          <p class="label">2 · Une URL</p>
+          <p>Renseigner l'adresse publique de votre bibliothèque, au format du canal 5 du contrat d'intégration.</p>
+        </div>
+        <div class="card">
+          <p class="label">3 · Vos questions</p>
+          <p>Ouvrir <em>Questions socratiques</em> et réécrire ce que votre équipe pédagogique veut réécrire.</p>
+        </div>
+      </div>
+      <p class="ink-2">
+        Un seul point demande une décision de fond de votre part : la bibliothèque
+        suppose une adresse <strong>publique en lecture</strong>. Si cela ne convient
+        pas à votre politique, dites-le-nous — nous n'avons pas d'autre conception à
+        proposer qui ne fasse pas circuler un secret dans chaque poste étudiant.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Note de méthode</p>
+    <div class="card">
+      <p>
+        Nous avons vérifié chaque affirmation de votre document dans le code avant d'y
+        répondre, plutôt que de tout corriger de confiance. C'est ce qui nous a évité de
+        réécrire un moteur bilingue qui l'était déjà — et c'est aussi ce qui nous a fait
+        trouver, en cherchant, un défaut de parité réel que personne n'avait vu et qui
+        pénalisait le français depuis le début.
+      </p>
+      <p class="small ink-2">
+        Toutes les mesures citées ici sont reproductibles :
+        <code>node extension/tests/scoring-eval.js</code> sort la matrice de confusion,
+        le tableau de parité et le contrôle de détection de langue.
+      </p>
+    </div>
+  </section>
+
+</div>
+</div>
+</body>
+</html>

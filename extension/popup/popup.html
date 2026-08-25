@@ -110,14 +110,25 @@
     </div>
   </section>
 
+  <!-- Bibliothèque de prompts de l'organisation. La permission d'hôte est
+       FACULTATIVE : elle n'est demandée qu'ici, sur la seule origine publiée
+       par l'organisation, et seulement si l'utilisateur clique. Refuser ne
+       coûte rien — tout le reste de l'extension fonctionne à l'identique. -->
+  <section id="library-offer" class="inert" hidden>
+    <p id="library-offer-text"></p>
+    <p id="library-offer-hint" class="muted"></p>
+    <button id="library-enable"></button>
+    <p id="library-status" class="muted" hidden></p>
+  </section>
+
   <section class="stats">
     <div class="stat"><span class="value" id="stat-count">0</span><span class="label" data-i18n="popupPrompts"></span></div>
-    <div class="stat"><span class="value" id="stat-score">–</span><span class="label" data-i18n="popupAvgScore"></span></div>
-    <div class="stat"><span class="value" id="stat-trend">–</span><span class="label" data-i18n="popupTrend"></span></div>
+    <a class="stat" id="stat-score-tile" href="https://track-prompt.vercel.app/methode" target="_blank" rel="noreferrer"><span class="value" id="stat-score">–</span><span class="label" data-i18n="popupAvgScore"></span></a>
+    <div class="stat" id="stat-trend-tile"><span class="value" id="stat-trend">–</span><span class="label" data-i18n="popupTrend"></span></div>
     <div class="stat"><span class="value" id="stat-mirror">–</span><span class="label" data-i18n="popupMirror"></span></div>
   </section>
 
-  <section>
+  <section id="rubrics-section">
     <h2 data-i18n="popupRubrics"></h2>
     <div id="rubrics"></div>
   </section>
@@ -130,7 +141,7 @@
   <section class="settings">
     <h2 data-i18n="popupSettings"></h2>
     <label><input type="checkbox" id="setting-mirror" checked /> <span data-i18n="popupIntercept"></span></label>
-    <label class="slider"><span data-i18n="popupThreshold"></span> <b id="threshold-value">40</b>/100
+    <label class="slider" id="threshold-row"><span data-i18n="popupThreshold"></span> <b id="threshold-value">40</b>/100
       <input type="range" id="setting-threshold" min="0" max="100" step="5" value="40" />
     </label>
     <p class="muted" id="eff-threshold" hidden></p>

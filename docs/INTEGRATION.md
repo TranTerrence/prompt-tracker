@@ -1,4 +1,4 @@
-# Contrat d'intégration Prompt Tracker (v1.1)
+# Contrat d'intégration Prompt Tracker (v1.2)
 
 Comment brancher votre application (SI pédagogique, journal réflexif, entrepôt
 de données, LMS) sur les données produites par l'extension Prompt Tracker.
@@ -8,18 +8,23 @@ consentement ; les applications consomment. Aucune référence à une applicatio
 particulière n'existe dans le code du plugin : tout passe par la configuration
 d'organisation et par les canaux décrits ici.
 
-## Vue d'ensemble : quatre canaux
+## Vue d'ensemble : cinq canaux
 
-| Canal | Pour qui | Latence | Mise en place |
-|---|---|---|---|
-| 1. API REST (pull) | Toute application serveur | Le rythme de votre cron (15 min recommandé) | Une clé d'API d'organisation |
-| 2. Export CSV | Analyses ponctuelles, tableurs | Manuelle | Aucune |
-| 3. Push vers votre endpoint | Besoin temps réel | Réservé à une v2 du contrat | Non implémenté |
-| 4. Widgets embarqués (iframe) | Afficher sans rien construire | Temps réel à chaque rendu | Une clé avec le scope `embed:mint` |
+| Canal | Pour qui | Sens | Latence | Mise en place |
+|---|---|---|---|---|
+| 1. API REST (pull) | Toute application serveur | Vous lisez | Le rythme de votre cron (15 min recommandé) | Une clé d'API d'organisation |
+| 2. Export CSV | Analyses ponctuelles, tableurs | Vous lisez | Manuelle | Aucune |
+| 3. Push vers votre endpoint | Besoin temps réel | Nous écrivons | Réservé à une v2 du contrat | Non implémenté |
+| 4. Widgets embarqués (iframe) | Afficher sans rien construire | Vous affichez | Temps réel à chaque rendu | Une clé avec le scope `embed:mint` |
+| 5. Bibliothèque de prompts | Proposer vos prompts dans l'extension | **Nous lisons chez vous** | Cache de 6 h | Une URL https publique |
 
 Le canal 3 garde son numéro bien qu'il ne soit toujours pas implémenté : ce
 contrat est versionné et additif, renuméroter casserait les références
 existantes.
+
+Le canal 5 est le seul où **nous** appelons **vous**. Il est décrit en fin de
+document, avec ses garanties de confidentialité — qui sont la raison d'être de
+sa conception.
 
 ## Canal 1 : l'API REST (canal principal)
 
@@ -165,12 +170,22 @@ par chaque utilisateur : `prompt_text`, `socratic_dialogue`, `post_reflection`,
 
 ## Le score, en deux mots
 
-Barème local (aucun appel réseau pour scorer), versionné (`scoringVersion` 2
-actuellement) : 4 rubriques sur 25 (clarté, contexte, itération, esprit
+Barème local (aucun appel réseau pour scorer), versionné (`scoringVersion` 3
+depuis le 25/08/2026) : 4 rubriques sur 25 (clarté, contexte, itération, esprit
 critique), total sur 100, seuil d'interception 40 par défaut (surchargé par
 organisation). Des règles anti-contournement empêchent d'acheter le score à
 coups de mots-clés. La définition détaillée et discutable du barème est
 publiée sur le dashboard (page Méthode).
+
+**v3 — correction de parité entre langues.** Les frontières de mot du moteur
+raisonnaient en ASCII : les mots français à initiale accentuée (« écris »,
+« évalue », « étapes », « à destination de ») n'étaient jamais reconnus, et
+deux verbes d'action anglais manquaient à l'appel (« draft », « do »). Des
+prompts strictement équivalents obtenaient donc des scores différents selon la
+langue — dans les deux sens. Les scores concernés **montent**, jamais ils ne
+descendent : une courbe de progression qui traverse cette date se lit à
+`scoringVersion` constant. Le banc de parité qui verrouille la correction vit
+dans `extension/tests/scoring-eval.js`.
 
 ## Canal 2 : exports CSV
 
@@ -232,6 +247,90 @@ v1.1 ne l'ont pas, créez-en une nouvelle.
 Une cible de synchronisation configurable par organisation (endpoint + clé)
 est envisagée comme extension v2 de ce contrat si un besoin temps réel
 apparaît. Elle n'existe pas aujourd'hui : n'attendez pas de webhook, tirez.
+
+## Canal 5 : bibliothèque de prompts (nous lisons chez vous)
+
+Votre organisation publie un JSON ; l'extension le propose à l'ouverture du
+dialogue socratique, sous « Partir d'un prompt qui a fonctionné ». Deux niveaux
+sont prévus : les pré-prompts officiels de votre équipe pédagogique, et les
+prompts que vos apprenants partagent entre eux.
+
+### Ce que l'extension envoie : rien
+
+C'est le point de conception, pas un détail d'implémentation.
+
+- Requête `GET`, **`credentials: "omit"`** : aucun cookie, aucune session.
+- **Aucun en-tête d'authentification**, aucun jeton, aucune clé.
+- **Aucun paramètre dérivé du compte** : ni identifiant, ni courriel, ni
+  organisation, ni prompt, ni score. L'URL est appelée exactement telle que
+  vous l'avez configurée.
+
+Conséquence pour vous : cette URL doit être **publique en lecture**, et ne
+contenir que ce que vous acceptez de publier. Nous ne pouvons pas
+l'authentifier sans faire circuler un secret partagé dans l'extension de chaque
+apprenant, ce que nous refusons de faire.
+
+Conséquence pour vos journaux : vous verrez des requêtes anonymes, sans moyen
+de les rattacher à un apprenant. C'est voulu — l'appel ne doit rien révéler de
+qui l'émet.
+
+### Permission d'hôte : facultative, jamais d'office
+
+L'extension déclare `optional_host_permissions` et ne demande l'accès qu'à
+**votre origine**, depuis un clic de l'utilisateur dans la popup. Tant que la
+permission n'est pas accordée, aucune requête n'est tentée. L'apprenant peut
+refuser : le reste de l'extension fonctionne à l'identique.
+
+### Format v1
+
+```json
+{
+  "version": 1,
+  "updated_at": "2026-08-25T10:00:00Z",
+  "prompts": [
+    {
+      "id": "sov-01",
+      "kind": "official",
+      "lang": "fr",
+      "title": "Cadrer une dissertation",
+      "body": "Je prépare une dissertation sur [SUJET]…",
+      "category": "rédaction",
+      "author": "Équipe pédagogique",
+      "copies": 42,
+      "helpful": 7
+    }
+  ]
+}
+```
+
+| Champ | Obligatoire | Rôle |
+|---|---|---|
+| `body` | **oui** | Le prompt lui-même. Une entrée sans `body` est ignorée. |
+| `id` | non | Votre identifiant. À défaut, un rang est attribué. |
+| `title` | non | Titre affiché. À défaut, les 60 premiers caractères du `body`. |
+| `kind` | non | `official` (défaut) ou `peer`. Les officiels sont listés en premier. |
+| `lang` | non | `fr` ou `en`. **Filtrant** : une entrée déclarée dans une autre langue que celle du prompt en cours n'est pas proposée. Omettez-le pour qu'elle soit toujours visible. |
+| `category` | non | Texte libre affiché tel quel. Les catégories du barème (`code`, `rédaction`, `résumé`, `traduction`, `analyse`, `brainstorming`, `recherche`) restent le vocabulaire recommandé. |
+| `author` | non | Affiché après la nature. Répéter le libellé de nature n'ajoute rien : il est alors masqué. |
+| `copies`, `helpful` | non | Entiers positifs. Servent au tri des entrées `peer`, les plus reprises d'abord. |
+
+### Bornes appliquées à la lecture
+
+Tout ce qui vient du réseau est traité comme hostile. L'extension applique,
+sans erreur visible pour l'apprenant :
+
+- **256 Ko** de charge utile maximum, **200 prompts** maximum ;
+- `body` tronqué à 4000 caractères, `title` à 120, `author` à 80 ;
+- champs inconnus **ignorés** — le format peut grandir sans casser les clients
+  déjà déployés ;
+- délai de 4 s, **cache de 6 h**, repli silencieux sur le cache en cas
+  d'échec : une bibliothèque indisponible ne dégrade jamais le dialogue.
+
+### Configuration
+
+Dashboard → Paramètres → *Comportement de l'extension* → **Bibliothèque de
+prompts (URL)**. `https://` obligatoire, contrainte portée aussi par la base.
+Vider le champ retire la bibliothèque et purge le cache local des apprenants.
 
 ## Compatibilité et versionnement du contrat
 

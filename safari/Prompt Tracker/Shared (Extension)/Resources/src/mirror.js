@@ -1,8 +1,10 @@
 // Surfaces du miroir socratique, en Shadow DOM (styles isolés du site hôte) :
 //   show(message)  : toast non bloquant (suggestions légères).
 //   showModal(...) : dialogue socratique ITÉRATIF : le prompt a été RETENU avant
-//                    l'envoi ; une question à la fois, sans fin, jusqu'à ce que
-//                    l'utilisateur décide lui-même d'envoyer.
+//                    l'envoi ; une question à la fois, une par axe faible,
+//                    puis la modale rend la main (état de clôture). Rien n'est
+//                    fermé de force : « une question de plus » relance la
+//                    boucle, et l'utilisateur décide seul quand envoyer.
 // Design « éditorial calme » : tokens light/dark de CoachTheme, textes CoachI18n.
 
 const CoachMirror = (() => {
@@ -229,7 +231,9 @@ const CoachMirror = (() => {
 
   /* ---------- Modale : dialogue socratique itératif ---------- */
 
-  // opts: { promptText, scoreBefore, branding: {name, color},
+  // opts: { promptText, scoreBefore, showScore (défaut true), branding: {name, color},
+  //   library (tableau de prompts publiés par l'organisation, ou null),
+  //   lang (langue du PROMPT, pour filtrer la bibliothèque),
   //   subtitle (remplace le sous-titre : ré-entrée honnête),
   //   promise (bool : afficher la promesse « je ne t'interromprai plus »),
   //   rescore(text) -> scores, compile(originalPrompt, answers) -> string,
@@ -239,6 +243,9 @@ const CoachMirror = (() => {
     closeModal();
     const accent = (opts.branding && opts.branding.color) || CoachTheme.DEFAULT_ACCENT;
     const brand = (opts.branding && opts.branding.name) || t("brandDefault");
+    // Réglage d'organisation : aucun chiffre à l'écran. On continue de scorer
+    // et de synchroniser — c'est l'affichage qui disparaît, pas la mesure.
+    const showScore = opts.showScore !== false;
 
     const state = {
       answers: [], // {key, axis, label, question, answer}
@@ -247,6 +254,8 @@ const CoachMirror = (() => {
       previewFrozen: false, // édition manuelle de l'aperçu → on arrête de recompiler
       rerolls: 0, // relances « autre question » sur toute la session
       rerollsForCurrent: 0, // plafond par question (2) : borne le coût LLM
+      closed: false, // état de clôture atteint (axes faibles couverts)
+      bankExhausted: false, // toutes les questions adaptées ont été posées
     };
 
     modalHost = document.createElement("div");
@@ -255,6 +264,16 @@ const CoachMirror = (() => {
     shadow.innerHTML = `
       <style>
         :host { all: initial; }
+        /* GARDE-FOU, ne pas retirer. L'attribut « hidden » n'est qu'une règle
+           d'agent utilisateur, à très faible spécificité : la moindre règle
+           « display: » écrite ici la bat. C'est ce qui laissait la pastille
+           d'accent de la notice LLM (.llm-note, en display:flex) visible dans
+           TOUTES les modales, y compris quand aucune question n'était générée
+           par IA. Toute la mécanique d'affichage conditionnel de cette modale
+           repose sur « hidden » : elle a besoin qu'il gagne.
+           NB : ce bloc de style vit dans un littéral de gabarit JavaScript —
+           pas d'accent grave dans les commentaires, il fermerait la chaîne. */
+        [hidden] { display: none !important; }
         .root { ${CoachTheme.vars(accent)} }
         .overlay { position: fixed; inset: 0; z-index: 2147483647; background: var(--overlay);
           display: flex; align-items: center; justify-content: center; padding: 12px;
@@ -286,6 +305,29 @@ const CoachMirror = (() => {
           text-decoration: underline; text-underline-offset: 2px; padding: 8px 0 0; align-self: center; }
         .pause-link:hover { color: var(--ink); }
         .score { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
+
+        /* Bibliothèque de l'organisation : REPLIÉE par défaut. L'école
+           suppose que le bon moment est celui de l'interception, mais le dit
+           elle-même non vérifié : repliée, elle ne peut pas dégrader le
+           dialogue si l'hypothèse est fausse, et son taux d'ouverture est
+           mesurable. */
+        .library { margin: 0 22px 10px; border: 1px solid var(--border); border-radius: 10px;
+          background: var(--soft); }
+        .library summary { cursor: pointer; padding: 8px 12px; font-size: 12.5px; color: var(--ink);
+          list-style: none; }
+        .library summary::-webkit-details-marker { display: none; }
+        .library summary::before { content: "📚 "; }
+        .library summary:hover { color: var(--accent); }
+        .library-list { max-height: 30vh; overflow-y: auto; padding: 0 8px 8px; }
+        .lib-item { width: 100%; text-align: left; display: block; cursor: pointer; margin-top: 6px;
+          background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px;
+          font: inherit; color: var(--ink); }
+        .lib-item:hover { border-color: var(--accent); }
+        .lib-title { display: block; font-size: 13px; font-family: var(--font-display); }
+        .lib-meta { display: block; margin-top: 3px; font-size: 11px; color: var(--muted); }
+        .lib-body { display: block; margin-top: 4px; font-size: 11.5px; color: var(--muted);
+          overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .library-note { padding: 6px 12px 0; font-size: 11px; color: var(--muted); font-style: italic; }
 
         .thread { flex: 1; min-height: 60px; max-height: 32vh; overflow-y: auto; padding: 6px 22px; }
         .bubble { max-width: 86%; margin-bottom: 10px; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; }
@@ -320,6 +362,17 @@ const CoachMirror = (() => {
         .reroll-link:hover { color: var(--ink); }
         .exhausted { padding: 6px 0 0; color: var(--muted); font-size: 11px; font-style: italic; }
 
+        /* État de clôture : chaque axe faible a reçu une vraie réponse, on
+           rend la main. Rien n'est fermé de force — « une question de plus »
+           relance la boucle. */
+        .closing { padding: 2px 0 0; }
+        .closing-text { margin: 0; font-family: var(--font-display); font-size: 14px; color: var(--ink); }
+        .closing-more { margin-top: 8px; border: 0; background: none; color: var(--muted); font-size: 11.5px;
+          cursor: pointer; text-decoration: underline; text-underline-offset: 2px; padding: 4px 0; }
+        .closing-more:hover { color: var(--ink); }
+        /* L'envoi devient le geste évident, sans que rien d'autre disparaisse. */
+        .modal.ready .send { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+
         .preview-zone { padding: 12px 22px 18px; border-top: 1px solid var(--border); background: var(--soft); }
         .preview-head { display: flex; align-items: center; gap: 10px; font-size: 10.5px; color: var(--muted);
           text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; flex-wrap: wrap; }
@@ -349,6 +402,11 @@ const CoachMirror = (() => {
             <div class="llm-note" hidden><span class="llm-dot"></span><span class="llm-note-text"></span></div>
             <div class="intention" hidden></div>
             <div class="promise" hidden></div>
+            <details class="library" hidden>
+              <summary class="library-head"></summary>
+              <div class="library-note"></div>
+              <div class="library-list"></div>
+            </details>
             <div class="thread"></div>
             <div class="thinking" hidden>…</div>
             <div class="answer-zone">
@@ -358,6 +416,10 @@ const CoachMirror = (() => {
               </div>
               <button class="skip-link"></button><button class="reroll-link"></button>
               <div class="exhausted" hidden></div>
+              <div class="closing" hidden>
+                <p class="closing-text"></p>
+                <button class="closing-more"></button>
+              </div>
             </div>
             <div class="preview-zone">
               <div class="preview-head">
@@ -382,7 +444,8 @@ const CoachMirror = (() => {
     el(".closex").textContent = "✕";
     el(".closex").title = t("modalCancelTitle");
     // Sous-titre : ré-entrée honnête si fournie, sinon standard + promesse.
-    el(".sub").textContent = opts.subtitle || t("modalSub", opts.scoreBefore);
+    el(".sub").textContent =
+      opts.subtitle || (showScore ? t("modalSub", opts.scoreBefore) : t("modalSubNoScore"));
     // Intention d'implémentation : le plan de l'utilisateur, tel quel,
     // les premières semaines seulement (content.js décide de le fournir).
     if (opts.intention) {
@@ -398,6 +461,7 @@ const CoachMirror = (() => {
     el(".reply").textContent = t("modalReply");
     el(".skip-link").textContent = t("modalSkip");
     el(".reroll-link").textContent = `↻ ${t("modalOtherQuestion")}`;
+    el(".closing-more").textContent = t("modalOneMore");
     el(".reroll-link").title = t("modalOtherQuestionTitle");
     // Transparence LLM : quand l'org a activé les questions IA (et que les
     // consentements le permettent), on l'affiche, on ne le devine pas.
@@ -411,6 +475,7 @@ const CoachMirror = (() => {
     // Transparence : le « ? » ouvre la page publique qui explique le barème.
     el(".method-link").href = "https://track-prompt.vercel.app/methode";
     el(".method-link").title = t("modalMethodTitle");
+    el(".method-link").hidden = !showScore;
 
     const thread = el(".thread");
     const answerBox = el(".answer");
@@ -421,6 +486,12 @@ const CoachMirror = (() => {
     // l'utilisateur voit quelle réponse fait bouger quelle rubrique.
     function setPreviewScore(scores) {
       previewTitle.textContent = "";
+      if (!showScore) {
+        // Sans le chiffre, l'en-tête doit quand même dire CE QU'ON REGARDE :
+        // l'aperçu reste le texte qui partira, éditable et vérifiable.
+        previewTitle.append(t("modalPreviewHeadNoScore"));
+        return;
+      }
       previewTitle.append(`${t("modalPreviewHead")} `);
       const s = document.createElement("span");
       s.className = "score";
@@ -453,6 +524,68 @@ const CoachMirror = (() => {
       setPreviewScore(opts.rescore(preview.value));
     }
 
+    // Bibliothèque publiée par l'organisation. On ne garde que les entrées
+    // sans langue déclarée ou dans la langue du prompt : proposer un modèle
+    // français à quelqu'un qui écrit en anglais est pire que ne rien proposer.
+    // Les pré-prompts officiels passent devant, puis les prompts partagés
+    // entre étudiants, les plus repris d'abord.
+    function renderLibrary() {
+      const all = Array.isArray(opts.library) ? opts.library : [];
+      const lang = opts.lang || "fr";
+      const items = all
+        .filter((p) => !p.lang || p.lang === lang)
+        .sort((a, b) => {
+          if (a.kind !== b.kind) return a.kind === "official" ? -1 : 1;
+          return (b.copies || 0) - (a.copies || 0);
+        });
+      if (!items.length) return;
+
+      el(".library-head").textContent = t("libraryHead", items.length);
+      el(".library-note").textContent = t("libraryNote");
+      const list = el(".library-list");
+      for (const p of items) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "lib-item";
+
+        const title = document.createElement("span");
+        title.className = "lib-title";
+        title.textContent = p.title;
+
+        const meta = document.createElement("span");
+        meta.className = "lib-meta";
+        const kindLabel = p.kind === "peer" ? t("libraryPeer") : t("libraryOfficial");
+        const bits = [kindLabel];
+        // Une organisation qui nomme son auteur « Équipe pédagogique » écrirait
+        // deux fois la même chose : on ne répète pas le libellé de nature.
+        if (p.author && p.author !== kindLabel) bits.push(p.author);
+        if (p.category) bits.push(p.category);
+        if (p.copies) bits.push(t("libraryCopies", p.copies));
+        if (p.helpful) bits.push(t("libraryHelpful", p.helpful));
+        meta.textContent = bits.join(" · ");
+
+        const body = document.createElement("span");
+        body.className = "lib-body";
+        body.textContent = p.body;
+
+        btn.append(title, meta, body);
+        // Charger un prompt GÈLE la recompilation, exactement comme une
+        // édition manuelle de l'aperçu : le dialogue ne doit pas écraser le
+        // choix de l'utilisateur au tour suivant. Le lien « recompiler depuis
+        // le dialogue », déjà présent, est l'annulation en un clic.
+        btn.addEventListener("click", () => {
+          preview.value = p.body;
+          state.previewFrozen = true;
+          el(".preview-zone").classList.add("frozen");
+          setPreviewScore(opts.rescore(preview.value));
+          el(".library").open = false;
+          preview.focus();
+        });
+        list.appendChild(btn);
+      }
+      el(".library").hidden = false;
+    }
+
     function meta() {
       const filled = state.answers.filter((a) => a.answer && a.answer.trim());
       return {
@@ -465,9 +598,45 @@ const CoachMirror = (() => {
       };
     }
 
-    // Boucle infinie : demander la question suivante (jamais de fin imposée).
+    // Rendre la main : chaque axe faible a reçu une vraie réponse. On NE pose
+    // pas de question de plus, parce que la suivante serait de l'occupation —
+    // c'est le « recyclage qui se lit comme du remplissage » remonté par
+    // I-BE³. L'utilisateur garde la main dans les deux sens : envoyer, ou
+    // demander explicitement une question supplémentaire.
+    function showClosing(cov) {
+      state.closed = true;
+      el(".answer-row").hidden = true;
+      el(".skip-link").hidden = true;
+      el(".reroll-link").hidden = true;
+      el(".exhausted").hidden = true;
+      el(".closing-text").textContent =
+        cov.labels && cov.labels.length
+          ? t("modalCoverageDone", cov.labels.join(", "))
+          : t("modalCoverageDoneShort");
+      el(".closing").hidden = false;
+      el(".modal").classList.add("ready");
+      el(".send").focus();
+    }
+
+    function reopenDialogue() {
+      state.closed = false;
+      el(".closing").hidden = true;
+      el(".answer-row").hidden = false;
+      el(".skip-link").hidden = false;
+      // La relance ne redevient offerte que si la banque n'était pas épuisée.
+      if (!state.bankExhausted) el(".reroll-link").hidden = false;
+      el(".modal").classList.remove("ready");
+      askNext({ forced: true });
+    }
+
+    // Boucle : demander la question suivante. `forced` court-circuite la
+    // clôture (l'utilisateur a réclamé une question de plus).
     // extra transporte la relance ({ reroll, lastAxis, lastLevel, lastQuestion }).
     async function askNext(extra = {}) {
+      if (!extra.reroll && !extra.forced && typeof opts.coverage === "function") {
+        const cov = opts.coverage({ answers: state.answers, asked: state.asked });
+        if (cov && cov.complete) return showClosing(cov);
+      }
       el(".thinking").hidden = false;
       let q;
       try {
@@ -484,6 +653,7 @@ const CoachMirror = (() => {
       // Banque locale épuisée (questions adaptées toutes posées) : la relance
       // n'a plus de matière, sauf si le LLM peut toujours générer.
       if (q.recycled && !opts.llmActive) {
+        state.bankExhausted = true;
         el(".reroll-link").hidden = true;
         const ex = el(".exhausted");
         if (ex.hidden) {
@@ -525,6 +695,7 @@ const CoachMirror = (() => {
     el(".reply").addEventListener("click", () => submitAnswer(answerBox.value));
     el(".skip-link").addEventListener("click", () => submitAnswer(""));
     el(".reroll-link").addEventListener("click", rerollQuestion);
+    el(".closing-more").addEventListener("click", reopenDialogue);
     answerBox.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -576,6 +747,7 @@ const CoachMirror = (() => {
     });
 
     updatePreview();
+    renderLibrary();
     askNext();
   }
 

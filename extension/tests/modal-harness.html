@@ -30,7 +30,9 @@
   <script>
     // Modes : (défaut) modale d'interception ; ?post=1 : miroir d'après ;
     // ?llm=1 : questions simulées LLM (badge + notice + latence) ;
-    // ?exhaust=1 : banque quasi vide pour voir l'état épuisé.
+    // ?exhaust=1 : banque quasi vide pour voir l'état épuisé ;
+    // ?noscore=1 : organisation qui masque tout le chiffré ;
+    // ?library=1 : bibliothèque de prompts publiée par l'organisation.
     const prompt = "fais ma dissertation sur Candide pour demain";
     const scores = CoachScoring.score(prompt);
     const params = new URLSearchParams(location.search);
@@ -59,9 +61,31 @@
         reroll: Boolean(state.reroll), lastAxis: state.lastAxis || null, lastLevel: state.lastLevel || null,
         lang: "fr", profile: "student",
       });
+      // Bibliothèque simulée : deux pré-prompts officiels et un partagé.
+      const library = params.has("library")
+        ? [
+            { id: "off-1", kind: "official", lang: "fr", author: "Équipe pédagogique",
+              category: "rédaction", title: "Cadrer une dissertation",
+              body: "Je prépare une dissertation sur [SUJET] pour un cours de [MATIÈRE]. Voici mon plan provisoire : [PLAN]. Critique-le : qu'est-ce qui manque, qu'est-ce qui est hors sujet ? Ne rédige rien à ma place." },
+            { id: "off-2", kind: "official", lang: "fr", author: "Équipe pédagogique",
+              category: "analyse", title: "Comparer deux positions",
+              body: "Sur [SUJET], présente les deux positions les plus opposées, avec le meilleur argument de chacune et ce qui les rendrait fausses. Cite le type de source sur lequel tu t'appuies." },
+            { id: "peer-1", kind: "peer", lang: "fr", copies: 34, helpful: 12,
+              category: "recherche", title: "Vérifier avant de réutiliser",
+              body: "Explique [NOTION] en trois niveaux : à un enfant, à un lycéen, à un spécialiste. Termine par les deux points où tu peux te tromper." },
+            { id: "off-en", kind: "official", lang: "en", author: "Teaching team",
+              title: "Frame an essay", body: "I am preparing an essay on [TOPIC]." },
+          ]
+        : null;
       CoachMirror.showModal({
         promptText: prompt,
         scoreBefore: scores.total,
+        showScore: !params.has("noscore"),
+        library,
+        lang: "fr",
+        // Fin naturelle : une question par axe faible, puis la main rendue.
+        coverage: (state) =>
+          CoachScoring.coverage({ originalPrompt: prompt, scores, answers: state.answers, lang: "fr" }),
         promise: true,
         intention: "Si mon prompt est vague, alors je précise mon intention et mon contexte avant d'envoyer.",
         branding: null,

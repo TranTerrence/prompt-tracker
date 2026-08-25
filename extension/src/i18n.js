@@ -9,6 +9,11 @@ const CoachI18n = (() => {
       // Badge
       badgeActive: (name, threshold) =>
         `${name} actif : au premier message d'un fil, un prompt sous ${threshold}/100 ouvre le dialogue de réflexion ; ensuite je te laisse la main. Clique pour replier.`,
+      // Variante sans chiffre : l'organisation a choisi de ne pas montrer de
+      // score. Le sens reste le même — dire quand le dialogue s'ouvre —, dit
+      // en comportement plutôt qu'en note sur cent.
+      badgeActiveNoScore: (name) =>
+        `${name} actif : au premier message d'un fil, un prompt trop vague ouvre le dialogue de réflexion ; ensuite je te laisse la main. Clique pour replier.`,
       badgeWatch: (name) => `${name} actif : interception désactivée, tes prompts sont seulement analysés localement.`,
       badgeBroken: (name) => `${name}. Attention, l'UI du site a peut-être changé, la capture est à vérifier.`,
       badgeStandby: "(veille)",
@@ -31,10 +36,14 @@ const CoachI18n = (() => {
       modalTitle: (name) => `${name} : réfléchissons ensemble`,
       modalSub: (score) =>
         `Prompt retenu avant envoi. Score initial ${score}/100. Réponds autant de fois que tu veux : c'est toi qui décides quand envoyer.`,
+      modalSubNoScore:
+        "Prompt retenu avant envoi. Réponds autant de fois que tu veux : c'est toi qui décides quand envoyer.",
       modalPromise: "Une fois la discussion lancée, je ne t'interromprai plus dans ce fil.",
       modalIntention: (plan) => `Ton plan : « ${plan} »`,
       modalSubReentry: (score) =>
         `Trois prompts d'affilée bien en dessous de ton niveau habituel (dernier : ${score}/100). On reprend deux minutes ? Tu peux toujours envoyer tel quel.`,
+      modalSubReentryNoScore:
+        "Trois prompts d'affilée bien en dessous de ton niveau habituel. On reprend deux minutes ? Tu peux toujours envoyer tel quel.",
       modalPause: "Laisse-moi sur ce fil",
       modalAnswerPlaceholder: "Ta réponse… (Entrée pour valider, Shift+Entrée pour un saut de ligne)",
       modalReply: "Répondre",
@@ -43,10 +52,33 @@ const CoachI18n = (() => {
       modalOtherQuestion: "Autre question",
       modalOtherQuestionTitle: "Reformuler ou approfondir : une question différente, un cran plus exigeante.",
       modalBankExhausted: "Toutes les questions adaptées à ce prompt ont été posées. Réponds ou envoie quand tu es prêt.",
+      // Fin naturelle du dialogue : une question par axe faible, puis la main
+      // rendue. Le texte NOMME ce qui a été couvert — sans quoi « c'est fini »
+      // ressemble à un abandon plutôt qu'à un travail terminé.
+      modalCoverageDone: (axes) =>
+        `Tu as couvert l'essentiel : ${axes}. À toi de décider quand envoyer.`,
+      modalCoverageDoneShort: "Tu as posé ta réflexion. À toi de décider quand envoyer.",
+      modalOneMore: "Poser une question de plus",
+      // Bibliothèque de prompts publiée par l'organisation.
+      libraryHead: (n) => `Partir d'un prompt qui a fonctionné (${n})`,
+      libraryNote:
+        "Publiés par ton école. Cliquer en charge un dans l'aperçu ; « recompiler depuis le dialogue » revient en arrière.",
+      libraryOfficial: "Équipe pédagogique",
+      libraryPeer: "Partagé par un étudiant",
+      libraryCopies: (n) => `${n} reprises`,
+      libraryHelpful: (n) => `${n} 👍`,
+      // Popup : activation de la permission d'hôte, facultative.
+      libraryOffer: (name) => `${name} propose une bibliothèque de prompts.`,
+      libraryOfferHint:
+        "L'extension lira cette page sans envoyer ton compte, tes prompts ni aucun identifiant. Tu peux refuser : rien d'autre ne change.",
+      libraryEnable: "Activer la bibliothèque",
+      libraryEnabled: "Bibliothèque activée.",
+      libraryDenied: "Permission refusée. Tu peux réessayer quand tu veux.",
       modalLlmBadge: "Question générée par IA",
       modalLlmNotice: "Questions sur mesure par IA : ton prompt et tes réponses transitent par le serveur (selon tes consentements), sans être stockés. En cas de lenteur, repli automatique sur la banque locale.",
       llmAxisLabel: "Ma réflexion",
       modalPreviewHead: "Prompt qui sera envoyé : score",
+      modalPreviewHeadNoScore: "Prompt qui sera envoyé",
       rubClarte: "Clarté",
       rubContexte: "Contexte",
       rubCritique: "Esprit critique",
@@ -153,6 +185,12 @@ const CoachI18n = (() => {
       syncBlockedNoAuth:
         "Tu n'es pas connecté : ta progression reste sur cet ordinateur et ne remonte pas à ta classe.",
       syncCtaNoAuth: "Lier mon compte",
+      // Distinct de « pas connecté » : l'utilisateur ÉTAIT lié, sa session a
+      // expiré. Le dire, sinon il glisse en mode local sans s'en apercevoir et
+      // sa classe cesse de recevoir quoi que ce soit.
+      syncBlockedExpired:
+        "Ta session a expiré : tes prompts continuent d'être analysés sur cet ordinateur, mais ils ne remontent plus à ta classe. Rien n'est perdu, tout repartira à la reconnexion.",
+      syncCtaExpired: "Me reconnecter",
       syncBlockedError: (msg) => `La synchronisation a échoué : ${msg}. Nouvel essai automatique dans une minute.`,
       syncPending: (n) => `${n} événement(s) en attente.`,
       syncPendingSince: (n, date) => `${n} événement(s) en attente depuis le ${date}.`,
@@ -222,6 +260,8 @@ const CoachI18n = (() => {
       brandDefault: "Prompt Tracker",
       badgeActive: (name, threshold) =>
         `${name} active: on the first message of a thread, a prompt under ${threshold}/100 opens the reflection dialogue; after that, you're in charge. Click to collapse.`,
+      badgeActiveNoScore: (name) =>
+        `${name} active: on the first message of a thread, a prompt that is too vague opens the reflection dialogue; after that, you're in charge. Click to collapse.`,
       badgeWatch: (name) => `${name} active: interception off, your prompts are only analyzed locally.`,
       badgeBroken: (name) => `${name}. Warning, the site UI may have changed, capture needs checking.`,
       badgeStandby: "(standby)",
@@ -241,10 +281,14 @@ const CoachI18n = (() => {
       modalTitle: (name) => `${name}: let's think this through`,
       modalSub: (score) =>
         `Prompt held before sending. Initial score ${score}/100. Answer as many times as you like: you decide when to send.`,
+      modalSubNoScore:
+        "Prompt held before sending. Answer as many times as you like: it is up to you when to send.",
       modalPromise: "Once the discussion is launched, I won't interrupt you again in this thread.",
       modalIntention: (plan) => `Your plan: "${plan}"`,
       modalSubReentry: (score) =>
         `Three prompts in a row well below your usual level (latest: ${score}/100). Two minutes to regroup? You can always send as is.`,
+      modalSubReentryNoScore:
+        "Three prompts in a row well below your usual level. Two minutes to regroup? You can always send as is.",
       modalPause: "Leave me alone on this thread",
       modalAnswerPlaceholder: "Your answer… (Enter to submit, Shift+Enter for a new line)",
       modalReply: "Answer",
@@ -253,10 +297,28 @@ const CoachI18n = (() => {
       modalOtherQuestion: "Another question",
       modalOtherQuestionTitle: "Rephrase or go deeper: a different, more demanding question.",
       modalBankExhausted: "Every question suited to this prompt has been asked. Answer or send when you're ready.",
+      modalCoverageDone: (axes) =>
+        `You have covered the essentials: ${axes}. It is up to you when to send.`,
+      modalCoverageDoneShort: "You have laid out your thinking. It is up to you when to send.",
+      modalOneMore: "Ask one more question",
+      libraryHead: (n) => `Start from a prompt that worked (${n})`,
+      libraryNote:
+        "Published by your school. Clicking one loads it into the preview; “recompile from the dialogue” undoes it.",
+      libraryOfficial: "Teaching team",
+      libraryPeer: "Shared by a student",
+      libraryCopies: (n) => `${n} reuses`,
+      libraryHelpful: (n) => `${n} 👍`,
+      libraryOffer: (name) => `${name} publishes a prompt library.`,
+      libraryOfferHint:
+        "The extension will read that page without sending your account, your prompts or any identifier. You can decline: nothing else changes.",
+      libraryEnable: "Enable the library",
+      libraryEnabled: "Library enabled.",
+      libraryDenied: "Permission declined. You can try again whenever you like.",
       modalLlmBadge: "AI-generated question",
       modalLlmNotice: "AI-tailored questions: your prompt and answers transit through the server (per your consents), without being stored. If slow, automatic fallback to the local bank.",
       llmAxisLabel: "My reflection",
       modalPreviewHead: "Prompt that will be sent: score",
+      modalPreviewHeadNoScore: "Prompt that will be sent",
       rubClarte: "Clarity",
       rubContexte: "Context",
       rubCritique: "Critical eye",
@@ -357,6 +419,9 @@ const CoachI18n = (() => {
       syncBlockedNoAuth:
         "You're not signed in: your progress stays on this computer and doesn't reach your class.",
       syncCtaNoAuth: "Link my account",
+      syncBlockedExpired:
+        "Your session has expired: your prompts are still analyzed on this computer, but they no longer reach your class. Nothing is lost, everything will be sent again once you reconnect.",
+      syncCtaExpired: "Reconnect",
       syncBlockedError: (msg) => `Sync failed: ${msg}. Automatic retry in one minute.`,
       syncPending: (n) => `${n} event(s) pending.`,
       syncPendingSince: (n, date) => `${n} event(s) pending since ${date}.`,

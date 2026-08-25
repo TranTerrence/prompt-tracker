@@ -75,8 +75,14 @@ function showAccepted() {
   document.getElementById("ob-try").hidden = false;
 }
 
-chrome.storage.local.get(["settings", "disclosure"], (data) => {
+chrome.storage.local.get(["settings", "disclosure", "orgConfig"], (data) => {
   const settings = { theme: "light", threshold: 40, profile: null, ...(data.settings || {}) };
+  // Ré-ouverture après rattachement à une classe : si l'organisation masque
+  // le score, le curseur de seuil (« 40/100 ») n'a plus lieu d'être — c'est
+  // un score déguisé, et il est de toute façon imposé par l'org.
+  if (data.orgConfig && data.orgConfig.showScore === false) {
+    document.getElementById("threshold-card").hidden = true;
+  }
   applyTheme(settings.theme);
   applyProfile(settings.profile);
   document.getElementById("setting-threshold").value = settings.threshold;

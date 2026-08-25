@@ -35,6 +35,7 @@ Recopier ces textes dans le champ « justification » de chaque permission.
 |---|---|
 | `storage` | Stocke localement les réglages de l'utilisateur (seuil, thème, consentements) et l'historique de ses scores de prompts, qui alimente le tableau de bord de progression affiché dans la popup. Aucune de ces données ne quitte l'appareil sans consentement explicite. |
 | `alarms` | Planifie la synchronisation périodique en arrière-plan pour les utilisateurs ayant rejoint une classe. Sans elle, les indicateurs consentis ne remonteraient qu'à l'ouverture de la popup. |
+| `optional_host_permissions` : `https://*/*` | **Facultative, jamais accordée à l'installation.** Un établissement scolaire peut publier une bibliothèque de prompts pédagogiques à sa propre adresse ; l'extension ne peut pas connaître cette adresse à l'avance, elle varie d'un établissement à l'autre. Elle n'est donc PAS déclarée dans `host_permissions` : elle est demandée à l'exécution, par `chrome.permissions.request`, sur la **seule origine** configurée par l'établissement de l'utilisateur, et uniquement après un clic explicite de celui-ci dans la popup. Tant que l'utilisateur n'accorde rien, aucune requête n'est émise. L'appel est une simple lecture `GET` en `credentials: "omit"`, sans en-tête d'authentification et sans aucun paramètre dérivé du compte : aucune donnée utilisateur ne part vers cet hôte. Refuser la permission ne dégrade aucune autre fonction. |
 
 **Match patterns des content scripts** (`chatgpt.com`, `chat.openai.com`,
 `claude.ai`, `gemini.google.com`, `chat.mistral.ai`, `grok.com`) :
@@ -117,6 +118,30 @@ divulgation n'est pas accepté.
 
 ⚠️ Remplacer `<À FOURNIR AVANT ENVOI>` par un vrai compte de démonstration, ou
 supprimer la phrase. Un relecteur bloqué sur un login rejette sans appel.
+
+### Ce que le passage en 0.8.0 change pour la revue
+
+- **Une permission facultative ajoutée, aucune permission obligatoire.**
+  `optional_host_permissions: ["https://*/*"]` apparaît au manifest. Elle n'est
+  **jamais** accordée à l'installation : Chrome ne l'affiche pas dans l'écran
+  d'installation, et l'extension ne demande jamais `https://*/*` en bloc. Le
+  seul appel à `chrome.permissions.request` (dans `popup/popup.js`) passe
+  l'origine **exacte** publiée par l'établissement de l'utilisateur, et il
+  n'est atteignable qu'en cliquant « Activer la bibliothèque » sur une carte
+  qui ne s'affiche que si cet établissement a configuré une adresse. Le motif
+  du caractère facultatif est structurel : l'adresse varie d'un établissement à
+  l'autre, elle ne peut pas être déclarée à l'avance.
+- **Aucune donnée ne part vers cet hôte.** `fetch(url, { credentials: "omit" })`
+  dans `src/background.js`, sans en-tête d'authentification et sans paramètre
+  dérivé du compte. C'est une lecture, jamais un envoi. Bornes appliquées à la
+  réponse : 256 Ko, 200 entrées, champs inconnus ignorés, délai de 4 s,
+  cache de 6 h. Le JSON récupéré est affiché comme du **texte** (`textContent`),
+  jamais évalué : aucun code distant n'est exécuté.
+- **Aucune nouvelle catégorie de données collectée.** La divulgation ci-dessus
+  est inchangée ; la politique de confidentialité gagne une section 6 bis qui
+  décrit cette lecture et son caractère facultatif.
+- **Correction d'un défaut de parité entre langues** dans le barème local
+  (v3) : sans effet sur les permissions ni sur les données transmises.
 
 ### Ce que le passage en 0.7.0 change pour la revue
 

@@ -1,3 +1,5 @@
+import questionBank from "./question-bank.json";
+
 export type Scores = {
   clarte?: number;
   contexte?: number;
@@ -16,6 +18,19 @@ export type Organization = {
   capture_mode: "metadata" | "full";
   llm_enabled: boolean;
   intercept_enabled: boolean;
+  /**
+   * false : l'extension n'affiche AUCUN chiffre (total sur 100, rubriques sur
+   * 25, seuil, tendance hebdomadaire). La mesure, le stockage et l'API sont
+   * inchangés — seul l'écran se tait. Demande I-BE³ : l'étudiant doit lire un
+   * comportement, pas une note qui devient un objectif à optimiser.
+   */
+  show_score: boolean;
+  /**
+   * URL https d'une bibliothèque de prompts publiée par l'organisation, ou
+   * null. L'extension la lit sans aucune identité et derrière une permission
+   * d'hôte facultative. Format : docs/INTEGRATION.md.
+   */
+  library_url: string | null;
 };
 
 export type Profile = {
@@ -151,6 +166,45 @@ export const POST_KEY_LABELS: Record<string, string> = {
   disagree: "Désaccord",
 };
 
+/**
+ * Banque de questions socratiques, GÉNÉRÉE depuis `extension/src/scoring.js`
+ * par `scripts/export-question-bank.mjs`. La source de vérité reste
+ * l'extension : c'est elle qui sert les questions, hors ligne et sans réseau.
+ *
+ * Historiquement, seules cinq clés étaient proposées à la surcharge
+ * (SOCRATIC_KEYS ci-dessous) alors que `nextQuestion` accepte une surcharge
+ * sur N'IMPORTE QUELLE clé. Une équipe pédagogique qui voulait retravailler
+ * les questions ne pouvait donc pas le faire, même en le demandant. Toute la
+ * banque est désormais adressable.
+ */
+export type BankQuestion = {
+  axis: string;
+  axis_label: string;
+  axis_label_en: string;
+  key: string;
+  level: number;
+  cats: string[] | null;
+  profiles: string[] | null;
+  question_fr: string;
+  question_en: string;
+};
+
+export type BankAxis = { key: string; label: string };
+
+export const QUESTION_BANK = questionBank.questions as BankQuestion[];
+export const QUESTION_AXES = questionBank.axes as BankAxis[];
+export const QUESTION_BANK_KEYS = QUESTION_BANK.map((q) => q.key);
+
+/** Les questions d'un axe, dans l'ordre d'escalade de la banque. */
+export function bankByAxis(axis: string): BankQuestion[] {
+  return QUESTION_BANK.filter((q) => q.axis === axis);
+}
+
+/**
+ * Les cinq clés historiques. Conservées telles quelles : ce sont aussi les
+ * noms des rubriques de score affichées côté étudiant (`app/me`), et des
+ * lignes existent déjà en base sous ces clés.
+ */
 export const SOCRATIC_KEYS = [
   "delegation",
   "clarte",

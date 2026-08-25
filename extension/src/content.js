@@ -14,7 +14,9 @@
   // Fading : seuil effectif relevé par les séries de premiers jets réussis,
   // recalculé à chaque événement. La friction suit la compétence démontrée.
   let effectiveThreshold = null;
-  // Dernier prompt parti (pour choisir la question du miroir d'après).
+  // Dernier prompt parti (pour choisir la question du miroir d'après) :
+  // catégorie, scores, et LANGUE DU PROMPT — la question réflexive doit
+  // être posée dans la langue où l'utilisateur vient d'écrire.
   let lastPrompt = null;
 
   // Fenêtre pendant laquelle un événement envoyé attend ses mesures avant de
@@ -34,6 +36,24 @@
 
   let adapterHealthy = null;
 
+  // Bibliothèque de prompts publiée par l'organisation, tenue EN MÉMOIRE et
+  // rafraîchie hors du chemin critique. La modale ne doit jamais attendre le
+  // réseau — même contrat que les questions LLM : ce qui n'est pas là à
+  // l'ouverture n'est simplement pas affiché ce tour-ci.
+  let promptLibrary = null;
+
+  function refreshLibrary() {
+    if (!disclosureAccepted) return;
+    if (!(orgConfig && orgConfig.libraryUrl)) {
+      promptLibrary = null;
+      return;
+    }
+    chrome.runtime.sendMessage({ type: "library-fetch" }, (res) => {
+      if (chrome.runtime.lastError) return; // worker endormi : au prochain tour
+      promptLibrary = (res && res.prompts) || null;
+    });
+  }
+
   // Repère visible dans l'UI du chat : l'extension est active (couleurs de l'org).
   function refreshBadge() {
     if (!disclosureAccepted) {
@@ -48,6 +68,9 @@
       // L'org impose le réglage : l'interrupteur de la pastille reste visible
       // mais inerte (le toggle local serait sans effet, cf. effective()).
       lockedByOrg: Boolean(orgConfig && orgConfig.interceptEnabled !== undefined && orgConfig.interceptEnabled !== null),
+      // L'infobulle cite un seuil sur cent : c'est un score, donc soumis au
+      // même réglage d'organisation que le reste du chiffré.
+      showScore: effective("showScore") !== false,
     });
   }
 
@@ -92,6 +115,7 @@
     recomputeThreshold(data.events);
     CoachTheme.set(settings.theme);
     refreshBadge();
+    refreshLibrary();
   });
   chrome.storage.onChanged.addListener((changes) => {
     if (changes.settings) settings = { ...DEFAULT_SETTINGS, ...changes.settings.newValue };
@@ -106,6 +130,8 @@
       CoachTheme.set(settings.theme);
       refreshBadge();
     }
+    // L'organisation a publié, changé ou retiré sa bibliothèque.
+    if (changes.orgConfig) refreshLibrary();
   });
 
   function effective(key) {
@@ -179,7 +205,7 @@
       const q = CoachScoring.postQuestion({
         category: lastPrompt && lastPrompt.category,
         scores: lastPrompt && lastPrompt.scores,
-        lang: CoachI18n.lang,
+        lang: (lastPrompt && lastPrompt.lang) || CoachI18n.lang,
         count,
       });
       if (rootConv) {
@@ -309,7 +335,14 @@
       ts: new Date().toISOString(),
       // Version du barème : indispensable pour recalibrer le scorer sans
       // polluer la courbe de progression (comparer à barème constant).
-      scoringVersion: 2,
+      // v3 (25/08/2026) : correction des frontières de mot, qui raisonnaient
+      // en ASCII et rendaient invisibles les mots français à initiale
+      // accentuée (« écris », « évalue », « étapes »), plus les verbes
+      // d'action anglais manquants (« draft », « do »). C'est une correction
+      // de PARITÉ entre langues, pas une recalibration : les scores montent
+      // sur certains prompts français et anglais, jamais ils ne descendent.
+      // Une courbe qui traverse cette date se compare à version constante.
+      scoringVersion: 3,
       site: CoachAdapter.site,
       category: CoachScoring.categorize(text),
       words: CoachScoring.wordCount(text),
@@ -415,11 +448,19 @@
     },
 
     // Prompt retenu : rien n'est parti vers ChatGPT. Dialogue socratique
-    // itératif : une question à la fois, sans fin, jusqu'à ce que l'utilisateur
-    // décide lui-même d'envoyer.
+    // itératif : une question à la fois, une par axe faible, puis la main est
+    // rendue (voir CoachScoring.coverage). L'utilisateur peut en demander une
+    // de plus, et décide seul quand envoyer.
     onIntercept(text) {
       const scores = CoachScoring.score(text, recentPromptTexts);
       const templates = (orgConfig && orgConfig.templates) || {};
+      // Langue du PROMPT, pas de l'interface : c'est elle qui choisit la
+      // banque de questions, l'extraction de sujet et l'en-tête compilé.
+      // La chrome de la modale (boutons, libellés) reste en langue d'interface :
+      // ce sont deux choses différentes, et l'école le dit elle-même — la
+      // langue de l'interface est un confort, celle du coaching décide de tout.
+      const lang = CoachScoring.detectLang(text, CoachI18n.lang);
+      const showScore = effective("showScore") !== false;
 
       // Question suivante : LLM sur mesure si l'org l'active (repli silencieux
       // sur la banque locale : l'itération n'attend jamais le réseau plus de 2 s).
@@ -444,7 +485,7 @@
               reroll: Boolean(dialogueState.reroll),
               lastAxis: dialogueState.lastAxis || null,
               lastLevel: dialogueState.lastLevel || null,
-              lang: CoachI18n.lang,
+              lang,
               profile: effective("profile"),
             },
             templates
@@ -456,7 +497,7 @@
               type: "llm-question",
               prompt: text,
               dialogue: dialogueState.answers.map((a) => ({ question: a.question, answer: a.answer })),
-              lang: CoachI18n.lang,
+              lang,
               intent: dialogueState.reroll ? "reroll" : "next",
               rejected: dialogueState.reroll && dialogueState.lastQuestion ? [dialogueState.lastQuestion] : [],
               askedQuestions: dialogueState.answers.slice(-3).map((a) => a.question),
@@ -496,7 +537,15 @@
         branding: orgConfig && orgConfig.branding,
         // Ouverture de fil : promesse de tranquillité. Ré-entrée : honnêteté
         // sur la raison (3 décrochages), jamais de reproche.
-        subtitle: reentry ? CoachI18n.t("modalSubReentry", scores.total) : undefined,
+        // L'organisation peut masquer tout ce qui est chiffré : la modale
+        // reçoit le drapeau, et les sous-titres passent en variante sans note.
+        showScore,
+        // Bibliothèque de l'organisation, filtrée par la langue du prompt.
+        library: promptLibrary,
+        lang,
+        subtitle: reentry
+          ? CoachI18n.t(showScore ? "modalSubReentry" : "modalSubReentryNoScore", scores.total)
+          : undefined,
         promise: !reentry,
         llmActive,
         onPause(m) {
@@ -517,12 +566,18 @@
         // L'aperçu est re-scoré SANS l'échafaudage injecté par compilePrompt :
         // on mesure la réflexion de l'utilisateur, pas la structure du produit.
         rescore: (t) => CoachScoring.score(CoachScoring.stripScaffolding(t), recentPromptTexts),
-        compile: (original, answers) => CoachScoring.compilePrompt(original, answers, CoachI18n.lang),
+        compile: (original, answers) => CoachScoring.compilePrompt(original, answers, lang),
+        // Fin naturelle : la modale demande où en est la couverture des axes
+        // faibles avant chaque question. Quand tout est couvert, elle rend la
+        // main au lieu de recycler l'approfondissement (retour I-BE³ : le
+        // recyclage se lit comme du remplissage dès le deuxième tour).
+        coverage: (state) =>
+          CoachScoring.coverage({ originalPrompt: text, scores, answers: state.answers, lang }),
         ask,
         onSend(finalText, m) {
           rememberText(finalText);
           const after = CoachScoring.score(finalText, recentPromptTexts);
-          lastPrompt = { category: CoachScoring.categorize(finalText), scores: after };
+          lastPrompt = { category: CoachScoring.categorize(finalText), scores: after, lang };
           // Lisibilité des modes (retour terrain) : dire in situ comment cet
           // envoi sera compté, au moment exact où la catégorie se décide.
           CoachMirror.flash(
@@ -547,7 +602,7 @@
         },
         onSendAnyway(m) {
           rememberText(text);
-          lastPrompt = { category: CoachScoring.categorize(text), scores };
+          lastPrompt = { category: CoachScoring.categorize(text), scores, lang };
           CoachMirror.flash(
             CoachI18n.t("toastSentDirect"),
             orgConfig && orgConfig.branding && orgConfig.branding.color
@@ -591,6 +646,7 @@
     onSubmit(text) {
       if (!disclosureAccepted) return;
       const scores = CoachScoring.score(text, recentPromptTexts);
+      const lang = CoachScoring.detectLang(text, CoachI18n.lang);
       const conv = CoachAdapter.conversationKey();
       const isNew = CoachAdapter.isNewConversation();
       const followUp = CoachScoring.isFollowUp(text, recentPromptTexts);
@@ -602,7 +658,7 @@
               text,
               scores,
               (data.events || []).filter((e) => e.site === CoachAdapter.site),
-              CoachI18n.lang,
+              lang,
               followUp
             )
           : null;
@@ -612,7 +668,7 @@
           ...sendExtras(),
         });
         rememberText(text);
-        lastPrompt = { category: event.category, scores };
+        lastPrompt = { category: event.category, scores, lang };
         appendEvent(event, () => {
           // Chemin non intercepté : le site a déjà envoyé le prompt lui-même.
           CoachAdapter.armResponseWatch({ eventId: event.id, sentAt: Date.now() });

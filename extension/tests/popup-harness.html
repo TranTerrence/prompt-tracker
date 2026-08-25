@@ -97,7 +97,29 @@
           lastOkAt: null,
         };
       }
+      // ?noscore=1 : organisation qui masque tout ce qui est chiffré.
+      // ?library=1 : organisation qui publie une bibliothèque de prompts,
+      //   permission d'hôte pas encore accordée (la carte d'activation).
+      // ?library=granted : permission déjà accordée (la carte disparaît).
+      const params = new URLSearchParams(location.search);
+      const library = params.get("library");
+      if (params.has("noscore") || library) {
+        store.session = store.session || { email: "lea@lycee-jean-moulin.fr", user_id: "demo", expires_at: now + 36e5 };
+        store.profile = store.profile || { org_id: "demo-org", role: "member" };
+        store.orgConfig = {
+          orgId: "demo-org",
+          branding: { name: "Lycée Jean-Moulin" },
+          dataRequests: {},
+          showScore: !params.has("noscore"),
+          libraryUrl: library ? "https://lycee-jean-moulin.fr/prompts.json" : null,
+        };
+      }
+
       window.chrome = {
+        permissions: {
+          contains(_p, cb) { cb(library === "granted"); },
+          request(_p, cb) { cb(true); },
+        },
         storage: {
           local: {
             get(keys, cb) {

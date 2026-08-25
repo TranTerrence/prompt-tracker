@@ -6,8 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import {
   CONSENT_CATEGORIES,
   CONSENT_LABELS,
-  SOCRATIC_KEYS,
-  SOCRATIC_LABELS,
+  QUESTION_AXES,
+  QUESTION_BANK,
+  QUESTION_BANK_KEYS,
+  bankByAxis,
   type ConsentCategory,
   type Organization,
   type OrgDataRequest,
@@ -40,6 +42,9 @@ export default function SettingsForm({
   const [threshold, setThreshold] = useState(org.threshold ?? 50);
   const [llmEnabled, setLlmEnabled] = useState(org.llm_enabled);
   const [interceptEnabled, setInterceptEnabled] = useState(org.intercept_enabled);
+  const [showScore, setShowScore] = useState(org.show_score !== false);
+  const [libraryUrl, setLibraryUrl] = useState(org.library_url ?? "");
+  const [libraryError, setLibraryError] = useState<string | null>(null);
   const [requests, setRequests] = useState<Record<ConsentCategory, RequestState>>(() => {
     const state = {} as Record<ConsentCategory, RequestState>;
     for (const cat of CONSENT_CATEGORIES) {
@@ -51,9 +56,12 @@ export default function SettingsForm({
     }
     return state;
   });
+  // Toute la banque est adressable, pas seulement les cinq clés historiques.
+  // Un champ vide = on garde la formulation du produit ; c'est déjà le
+  // comportement de l'extension (`templates[key] || formulation par défaut`).
   const [tpl, setTpl] = useState<Record<string, TemplateState>>(() => {
     const state: Record<string, TemplateState> = {};
-    for (const key of SOCRATIC_KEYS) {
+    for (const key of QUESTION_BANK_KEYS) {
       const existing = templates.find((t) => t.key === key);
       state[key] = {
         question: existing?.question ?? "",
@@ -67,6 +75,14 @@ export default function SettingsForm({
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    // La base porte la même contrainte (0024) : la dire ici évite un message
+    // d'erreur Postgres brut à quelqu'un qui a simplement oublié le « s ».
+    const url = libraryUrl.trim();
+    if (url && !url.startsWith("https://")) {
+      setLibraryError("L'URL de la bibliothèque doit commencer par https://");
+      return;
+    }
+    setLibraryError(null);
     setSaving(true);
     setMessage(null);
     const supabase = createClient();
@@ -99,6 +115,8 @@ export default function SettingsForm({
           threshold,
           llm_enabled: llmEnabled,
           intercept_enabled: interceptEnabled,
+          show_score: showScore,
+          library_url: libraryUrl.trim() || null,
         })
         .eq("id", org.id);
       if (orgError) {
@@ -123,13 +141,22 @@ export default function SettingsForm({
         return;
       }
 
-      // 3. Upsert des questions socratiques (une par clé)
-      const rows = SOCRATIC_KEYS.map((key) => ({
-        org_id: org.id,
-        key,
-        question: tpl[key].question,
-        active: tpl[key].active,
-      }));
+      // 3. Upsert des questions socratiques.
+      // On n'écrit QUE les clés réellement personnalisées, plus celles qui
+      // l'étaient et ne le sont plus (désactivées pour que la formulation du
+      // produit reprenne la main). Sans ce filtre, chaque enregistrement
+      // sèmerait une soixantaine de lignes vides par organisation.
+      const rows = QUESTION_BANK_KEYS.filter(
+        (key) => tpl[key].question.trim() || templates.some((t) => t.key === key)
+      ).map((key) => {
+        const question = tpl[key].question.trim();
+        return {
+          org_id: org.id,
+          key,
+          question,
+          active: tpl[key].active && Boolean(question),
+        };
+      });
       const { error: tplError } = await supabase
         .from("socratic_templates")
         .upsert(rows, { onConflict: "org_id,key" });
@@ -267,6 +294,50 @@ export default function SettingsForm({
             />
             Interception activée
           </label>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={showScore}
+                onChange={(e) => setShowScore(e.target.checked)}
+                className="accent-accent"
+              />
+              Afficher le score aux utilisateurs
+            </label>
+            <p className="mt-1 text-xs text-muted">
+              Décoché : l&apos;extension n&apos;affiche plus aucun chiffre — ni le
+              total sur 100, ni les rubriques sur 25, ni le seuil, ni la
+              tendance. Le score reste calculé, synchronisé et disponible dans
+              votre API et vos exports : c&apos;est l&apos;écran de
+              l&apos;étudiant qui se tait, pas la mesure.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="library-url" className="mb-1.5 block text-sm text-muted">
+              Bibliothèque de prompts (URL)
+            </label>
+            <input
+              id="library-url"
+              type="url"
+              value={libraryUrl}
+              onChange={(e) => setLibraryUrl(e.target.value)}
+              placeholder="https://exemple.edu/api/prompt-library.json"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-accent"
+            />
+            {libraryError && (
+              <p className="mt-1 text-xs text-danger">{libraryError}</p>
+            )}
+            <p className="mt-1 text-xs text-muted">
+              Renseignée, l&apos;extension propose vos prompts à
+              l&apos;ouverture du dialogue. Elle lit cette URL{" "}
+              <strong>sans aucune identité</strong> (aucun compte, aucun
+              jeton, aucun cookie) et seulement après que l&apos;utilisateur a
+              accordé la permission, qu&apos;il peut refuser. Format attendu :
+              voir <code>docs/INTEGRATION.md</code>.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -332,45 +403,75 @@ export default function SettingsForm({
           Questions socratiques
         </h2>
         <p className="mt-1.5 text-sm text-muted">
-          Personnalise la question posée pour chaque rubrique.
+          Les {QUESTION_BANK.length} questions de la banque, groupées par axe de
+          raisonnement. Laissez un champ vide pour garder la formulation du
+          produit ; votre texte la remplace dès qu&apos;il est enregistré, dans
+          les deux langues. Les questions marquées d&apos;une catégorie ne sont
+          posées que sur les prompts de cette catégorie ; le niveau indique
+          l&apos;exigence croissante (1 clarifier, 2 approfondir, 3 challenger).
         </p>
-        <div className="mt-4 space-y-4">
-          {SOCRATIC_KEYS.map((key) => (
-            <div key={key}>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label htmlFor={`tpl-${key}`} className="text-sm text-muted">
-                  {SOCRATIC_LABELS[key]}
-                </label>
-                <label className="flex items-center gap-2 text-xs text-muted">
-                  <input
-                    type="checkbox"
-                    checked={tpl[key].active}
-                    onChange={(e) =>
-                      setTpl((s) => ({
-                        ...s,
-                        [key]: { ...s[key], active: e.target.checked },
-                      }))
-                    }
-                    className="accent-accent"
-                  />
-                  active
-                </label>
-              </div>
-              <textarea
-                id={`tpl-${key}`}
-                rows={2}
-                value={tpl[key].question}
-                onChange={(e) =>
-                  setTpl((s) => ({
-                    ...s,
-                    [key]: { ...s[key], question: e.target.value },
-                  }))
-                }
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-accent"
-                placeholder={`Question pour la rubrique « ${SOCRATIC_LABELS[key]} »…`}
-              />
-            </div>
-          ))}
+        <div className="mt-4 space-y-3">
+          {QUESTION_AXES.map((axis) => {
+            const questions = bankByAxis(axis.key);
+            const custom = questions.filter((q) => tpl[q.key].question.trim()).length;
+            return (
+              <details
+                key={axis.key}
+                className="rounded-xl border border-card-border bg-background/40 px-4 py-3"
+              >
+                <summary className="cursor-pointer text-sm font-medium">
+                  {axis.label}{" "}
+                  <span className="text-xs font-normal text-muted">
+                    — {questions.length} question{questions.length > 1 ? "s" : ""}
+                    {custom > 0 && `, ${custom} personnalisée${custom > 1 ? "s" : ""}`}
+                  </span>
+                </summary>
+                <div className="mt-4 space-y-4">
+                  {questions.map((q) => (
+                    <div key={q.key}>
+                      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                        <label htmlFor={`tpl-${q.key}`} className="text-xs text-muted">
+                          <code className="text-foreground">{q.key}</code> · niveau{" "}
+                          {q.level}
+                          {q.cats && ` · ${q.cats.join(", ")}`}
+                          {q.profiles && ` · ${q.profiles.join(", ")}`}
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-muted">
+                          <input
+                            type="checkbox"
+                            checked={tpl[q.key].active}
+                            onChange={(e) =>
+                              setTpl((st) => ({
+                                ...st,
+                                [q.key]: { ...st[q.key], active: e.target.checked },
+                              }))
+                            }
+                            className="accent-accent"
+                            disabled={!tpl[q.key].question.trim()}
+                          />
+                          utiliser ma version
+                        </label>
+                      </div>
+                      <textarea
+                        id={`tpl-${q.key}`}
+                        rows={2}
+                        value={tpl[q.key].question}
+                        onChange={(e) =>
+                          setTpl((st) => ({
+                            ...st,
+                            [q.key]: { ...st[q.key], question: e.target.value },
+                          }))
+                        }
+                        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-accent"
+                        placeholder={q.question_fr}
+                      />
+                      <p className="mt-1 text-xs text-muted">EN : {q.question_en}</p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            );
+          })}
         </div>
       </section>
 

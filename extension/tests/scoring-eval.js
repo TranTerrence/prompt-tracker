@@ -34,6 +34,12 @@ const CASES = [
   { text: "explique la photosynthèse", intercept: true },
   { text: "c'est quoi le machine learning", intercept: true },
   { text: "réponds à ce mail", intercept: true },
+  { text: "draft a lesson plan", intercept: true },
+  { text: "translate this into french", intercept: true },
+  { text: "give me some startup ideas", intercept: true },
+  { text: "explain photosynthesis", intercept: true },
+  { text: "reply to this email", intercept: true },
+  { text: "what is machine learning", intercept: true },
 
   // --- Vagues moyens (un peu de matière mais ni contexte ni vérification)
   { text: "écris un mail à mon patron pour demander une augmentation", intercept: true },
@@ -167,5 +173,62 @@ console.log("");
 console.log(`Score moyen des prompts étiquetés faibles : ${avg(weak).toFixed(1)} (min ${Math.min(...weak)}, max ${Math.max(...weak)})`);
 console.log(`Score moyen des prompts étiquetés forts   : ${avg(strong).toFixed(1)} (min ${Math.min(...strong)}, max ${Math.max(...strong)})`);
 console.log(`Séparation des moyennes : ${(avg(strong) - avg(weak)).toFixed(1)} points`);
+
+// ---------------------------------------------------------------------------
+// Parité FR/EN : des prompts JUMEAUX doivent obtenir le même score. Le cahier
+// des charges I-BE³ affirmait qu'un prompt correct en anglais tombait « proche
+// de zéro » ; la mesure dit le contraire, mais elle a révélé deux défauts
+// réels et symétriques, corrigés en barème v3 :
+//   * « \b » raisonne en ASCII : « écris », « évalue », « étapes » n'avaient
+//     aucune frontière gauche et étaient invisibles → le FRANÇAIS perdait des
+//     points ;
+//   * « draft » et « do » manquaient à la liste des verbes d'action →
+//     l'ANGLAIS en perdait à son tour.
+// Ce bloc est le garde-fou : toute régression de parité se voit ici.
+// ---------------------------------------------------------------------------
+const TWINS = [
+  ["fais mes devoirs", "do my homework"],
+  ["écris ma lettre de motivation", "write my cover letter"],
+  ["rédige un plan de cours", "draft a lesson plan"],
+  ["évalue ces deux options", "evaluate these two options"],
+  ["résume ce texte", "summarize this text"],
+  ["donne les étapes une par une", "give the steps one by one"],
+  [
+    "Je suis enseignante et je prépare un cours sur l'offre et la demande pour des élèves de 16 ans. Donne trois explications de difficulté croissante, et dis-moi laquelle tu abandonnerais si je n'avais que 20 minutes.",
+    "I am a teacher preparing a lesson on supply and demand for 16-year-old students. Give three explanations of increasing difficulty, and tell me which one you would drop if I only had 20 minutes.",
+  ],
+];
+
+console.log("");
+console.log("Parité FR/EN (prompts jumeaux, même score attendu)");
+let gaps = 0;
+for (const [fr, en] of TWINS) {
+  const a = S.score(fr, []);
+  const b = S.score(en, []);
+  const gap = Math.abs(a.total - b.total);
+  if (gap) gaps++;
+  console.log(
+    `  ${gap ? "ÉCART" : "  ok "} ${String(a.total).padStart(3)} / ${String(b.total).padEnd(3)} ${
+      gap ? `(${gap} pts) ` : ""
+    }« ${fr.slice(0, 34)}… » ‖ « ${en.slice(0, 34)}… »`
+  );
+}
+console.log(gaps ? `  → ${gaps} écart(s) de parité sur ${TWINS.length} paires` : `  → ${TWINS.length} paires à parité stricte`);
+
+// Détection de langue : la banque de questions doit suivre le prompt, pas la
+// locale du navigateur. Un échec ici = un étudiant coaché dans la mauvaise
+// langue, ce qui est le défaut réellement vécu par la promotion.
+const LANG_CASES = [
+  ...TWINS.map(([fr]) => [fr, "fr"]),
+  ...TWINS.map(([, en]) => [en, "en"]),
+];
+const misread = LANG_CASES.filter(([t, exp]) => S.detectLang(t, "??") !== exp);
+console.log("");
+console.log(
+  `Détection de la langue du prompt : ${LANG_CASES.length - misread.length}/${LANG_CASES.length} correctes`
+);
+for (const [t, exp] of misread) {
+  console.log(`  MAL LUE (attendu ${exp}, lu ${S.detectLang(t, "??")}) : « ${t.slice(0, 60)}… »`);
+}
 
 process.exitCode = 0; // banc informatif : il mesure, il ne casse pas le CI
