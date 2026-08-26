@@ -135,17 +135,6 @@ if [ -f "$ROOT/dist/prompt-tracker-$VERSION.zip" ]; then
                     || ok "zip propre"
 fi
 
-# 8. Copie Safari alignée. Elle n'entre pas dans le zip Chrome, mais la laisser
-#    dériver revient à publier deux produits différents sous le même nom — et
-#    c'est arrivé : sept fichiers d'écart, silencieusement.
-if [ -x "$ROOT/scripts/sync-safari.sh" ]; then
-  if "$ROOT/scripts/sync-safari.sh" --check >/dev/null 2>&1; then
-    ok "copie Safari alignée sur extension/"
-  else
-    fail "la copie Safari a dérivé — lancer ./scripts/sync-safari.sh"
-  fi
-fi
-
 echo "──"
 [ $FAIL -eq 0 ] && echo "Pré-vol mécanique OK. Passer à la revue de jugement (skill webstore-review)." \
                 || echo "Bloquants ci-dessus à corriger AVANT de soumettre."

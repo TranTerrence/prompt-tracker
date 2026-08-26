@@ -35,8 +35,6 @@ npm install && npm run dev                   # http://localhost:3000
 ./scripts/package.sh                         # → dist/prompt-tracker[-edge|-firefox]-<version>.zip
 ```
 
-Le portage Safari (macOS + iOS) vit dans `safari/` (projet Xcode généré, cf. [docs/PORTS.md](docs/PORTS.md)).
-
 Ajouter un site IA = un fichier `extension/src/adapters/<site>.js` (sélecteurs du composeur et du bouton d'envoi) + une entrée `content_scripts` dans le manifest : toute la mécanique est partagée par [`factory.js`](extension/src/adapters/factory.js).
 
 ## Design

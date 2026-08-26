@@ -3,17 +3,15 @@
 # (même zip que Chrome, soumission séparée au Partner Center) et Firefox AMO
 # (manifest transformé : event page + gecko.id ; les permissions d'hôte y sont
 # demandées à l'exécution par l'onboarding, pas à l'installation).
+# Le portage Safari a été retiré le 26/08/2026 (projet Xcode + sync dans
+# l'historique git) : copie complète à resynchroniser à chaque livraison,
+# sans signal de demande.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="$(python3 -c "import json; print(json.load(open('$ROOT/extension/manifest.json'))['version'])")"
 
 mkdir -p "$ROOT/dist"
-
-# --- Safari : la copie sous safari/ n'est pas empaquetée ici (elle passe par
-# Xcode), mais elle doit suivre le même code. La synchroniser AVANT de
-# packager évite qu'elle prenne un train de retard à chaque livraison. ---
-"$ROOT/scripts/sync-safari.sh"
 
 # --- Chrome (référence) ---
 OUT_CHROME="$ROOT/dist/prompt-tracker-$VERSION.zip"

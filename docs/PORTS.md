@@ -1,4 +1,4 @@
-# Portages navigateurs : Edge, Firefox, Safari
+# Portages navigateurs : Edge et Firefox
 
 Un seul code source (`extension/`), trois paquets. `./scripts/package.sh` produit
 les trois d'un coup dans `dist/` :
@@ -25,7 +25,7 @@ code est strictement partagé) :
 1. **Event page au lieu du service worker** : `background.scripts =
    ["src/supabase.js", "src/background.js"]`. Côté code, `background.js` garde
    `importScripts` sous garde (`typeof importScripts === "function"`) : Chrome
-   et Safari chargent `supabase.js` par `importScripts`, Firefox par la liste
+   charge `supabase.js` par `importScripts`, Firefox par la liste
    `scripts`.
 2. **`browser_specific_settings.gecko`** : id `prompt-tracker@track-prompt.vercel.app`,
    `strict_min_version` 121.0.
@@ -40,29 +40,17 @@ Soumission : [addons.mozilla.org](https://addons.mozilla.org/developers/)
 (compte AMO requis, publication généralement sous 24 h). Avant soumission,
 valider avec `npx web-ext lint --source-dir <zip décompressé>`.
 
-## Safari (macOS + iOS)
+## Safari : retiré
 
-Le projet Xcode généré par `safari-web-extension-converter` vit dans
-`safari/Prompt Tracker/` (app conteneur + extension, cibles macOS et iOS,
-ressources copiées depuis `extension/` — re-générer ou re-copier après chaque
-évolution de l'extension) :
-
-```bash
-# Regénérer les ressources après une modif de extension/ :
-xcrun safari-web-extension-converter extension --project-location safari \
-  --app-name "Prompt Tracker" --bundle-identifier app.track-prompt.PromptTracker \
-  --no-open --no-prompt --copy-resources --force
-# puis nettoyer safari/Prompt Tracker/Shared (Extension)/Resources :
-# supprimer tests/, prompt-tracker-logo/ et les zips éventuels.
-```
-
-Build local sans signature : ouvrir le projet dans Xcode, cible
-« Prompt Tracker (macOS) », puis autoriser l'extension non signée dans
-Safari → Réglages → Développeur. La distribution (App Store ou notarisation)
-exige un compte Apple Developer (99 $/an) : étape à déclencher sur signal de
-demande, conformément au pre-mortem du roadmap.
+Le portage Safari (projet Xcode `safari/`, script `sync-safari.sh`) a été
+retiré le 26/08/2026 : c'était une copie complète des ressources à
+resynchroniser à chaque livraison — elle avait déjà dérivé de sept fichiers en
+silence — sans signal de demande (cf. le pre-mortem du roadmap, qui le
+conditionnait précisément à ce signal). L'historique git conserve tout ;
+`safari-web-extension-converter` sait le régénérer depuis `extension/` le jour
+où la demande existe.
 
 ## Ce qui reste manuel (comptes du propriétaire)
 
-Les trois soumissions store (Partner Center, AMO, App Store Connect) demandent
-les comptes développeur du propriétaire : aucun envoi n'est automatisé ici.
+Les deux soumissions store (Partner Center, AMO) demandent les comptes
+développeur du propriétaire : aucun envoi n'est automatisé ici.
