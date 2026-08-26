@@ -4,6 +4,18 @@
 // Au-dessus du seuil, le prompt part normalement, sans latence ajoutée.
 
 (() => {
+  // Un onglet ouvert AVANT l'installation (ou avant une mise à jour) n'a pas de
+  // content script : il ne répondra jamais à ce ping. C'est ainsi, et seulement
+  // ainsi, que le popup et l'onboarding savent qu'il faut proposer un
+  // rechargement. Enregistré HORS du gating de divulgation : un onglet doit
+  // pouvoir se déclarer présent même quand la capture n'est pas encore armée.
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg && msg.type === "coach-ping") {
+      sendResponse({ ok: true });
+      return true;
+    }
+  });
+
   const DEFAULT_SETTINGS = { captureMode: "metadata", interceptEnabled: true, threshold: 40, theme: "light", postMirrorEnabled: true, profile: null };
   let settings = { ...DEFAULT_SETTINGS };
   // Config de l'organisation (branding, templates, seuil...) synchronisée par le

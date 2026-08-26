@@ -76,6 +76,10 @@ chrome.storage.local.get("disclosure", (data) => {
   document.getElementById("auth").hidden = !accepted;
   document.querySelector(".settings").hidden = !accepted;
 
+  // Tant que l'accord n'est pas donné, la bannière de veille dit déjà quoi
+  // faire : parler de rechargement par-dessus brouillerait le message.
+  if (accepted) renderStaleBanner();
+
   // Divulgation acceptée sur une version antérieure du texte : on INFORME.
   // Pas de retour en veille — même finalité, mêmes catégories de données
   // (des indicateurs, aucun contenu). Couper une classe en cours d'année
@@ -98,6 +102,39 @@ chrome.storage.local.get("disclosure", (data) => {
 document.getElementById("inert-cta").addEventListener("click", () => {
   chrome.tabs.create({ url: chrome.runtime.getURL("onboarding/onboarding.html") });
 });
+
+/* ---------- Onglets IA ouverts avant l'installation ---------- */
+
+// Chrome n'injecte les content scripts que dans les onglets chargés APRÈS
+// l'installation — et une mise à jour orpheline ceux des onglets ouverts. Dans
+// les deux cas l'extension y est muette, sans que rien ne le dise.
+//
+// La détection est faite à chaque ouverture du popup plutôt que mémorisée : un
+// drapeau en storage devrait être posé, périmé, réparé, et mentirait dès que
+// l'utilisateur recharge un onglet à la main. Ici le bandeau disparaît de
+// lui-même dès qu'il n'y a plus rien à recharger.
+function renderStaleBanner() {
+  const box = document.getElementById("stale-banner");
+  const text = document.getElementById("stale-text");
+  const cta = document.getElementById("stale-cta");
+  CoachStaleTabs.list((stale) => {
+    if (!stale.length) {
+      box.hidden = true;
+      return;
+    }
+    text.textContent = t("staleTabsBanner", stale.length);
+    cta.textContent = t("staleTabsCta", stale.length);
+    cta.hidden = false;
+    box.hidden = false;
+    cta.addEventListener("click", () => {
+      cta.disabled = true;
+      CoachStaleTabs.reload(stale, () => {
+        text.textContent = t("staleTabsDone");
+        cta.hidden = true;
+      });
+    });
+  });
+}
 
 /* ---------- Thème ---------- */
 

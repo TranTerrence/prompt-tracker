@@ -85,10 +85,16 @@
       <button id="accept"></button>
       <p class="hint"><a href="#" id="later" class="later"></a></p>
       <p class="hint" id="ob-try" hidden></p>
+      <!-- Onglets IA ouverts AVANT l'installation : Chrome n'y a pas injecté
+           les content scripts. Sans ce rappel, l'utilisateur tape son prompt,
+           rien ne se passe, et il conclut que l'extension est cassée. -->
+      <p class="hint" id="ob-reload" hidden></p>
+      <button id="ob-reload-cta" hidden></button>
     </footer>
   </main>
 
   <script src="../src/i18n.js"></script>
+  <script src="../src/stale-tabs.js"></script>
   <script src="onboarding.js"></script>
 </body>
 </html>

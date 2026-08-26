@@ -40,6 +40,15 @@
     <button id="disclosure-update-ok"></button>
   </section>
 
+  <!-- Onglets IA ouverts avant l'installation (ou avant une mise à jour) :
+       Chrome n'y a pas injecté les content scripts, l'extension y est muette.
+       Sans ce bandeau, l'utilisateur teste sur son onglet ouvert, ne voit rien,
+       et conclut que le produit ne marche pas. -->
+  <section id="stale-banner" class="inert" hidden>
+    <p id="stale-text"></p>
+    <button id="stale-cta"></button>
+  </section>
+
   <!-- Synchronisation bloquée : la raison est affichée avec l'action qui la
        lève. Une sync qui ne part pas ne doit jamais être silencieuse. -->
   <section id="sync-banner" class="sync-banner" hidden>
@@ -174,6 +183,7 @@
   <p class="privacy-link"><a id="method-link" href="https://track-prompt.vercel.app/methode" target="_blank" rel="noreferrer"></a> · <a id="privacy-link" href="https://track-prompt.vercel.app/privacy" target="_blank" rel="noreferrer"></a></p>
 
   <script src="../src/i18n.js"></script>
+  <script src="../src/stale-tabs.js"></script>
   <script src="../src/scoring.js"></script>
   <script src="../src/supabase.js"></script>
   <script src="popup.js"></script>

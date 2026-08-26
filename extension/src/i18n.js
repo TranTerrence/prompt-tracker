@@ -266,6 +266,18 @@ const CoachI18n = (() => {
       profileOther: "Autre",
       obSites: "Fonctionne sur ChatGPT, Claude, Gemini, Mistral (Le Chat) et Grok.",
       obTry: "Essaye maintenant : ouvre ChatGPT et tape « fais mes devoirs ».",
+      // Onglets IA ouverts avant l'installation : ils n'ont pas de content
+      // script tant qu'ils n'ont pas été rechargés (cf. src/stale-tabs.js).
+      staleTabsBanner: (n) =>
+        n === 1
+          ? "Un onglet IA était déjà ouvert avant l'installation : Prompt Tracker n'y est pas encore actif."
+          : `${n} onglets IA étaient déjà ouverts avant l'installation : Prompt Tracker n'y est pas encore actif.`,
+      staleTabsCta: (n) => (n === 1 ? "Recharger cet onglet" : "Recharger ces onglets"),
+      staleTabsDone: "Onglets rechargés ✓",
+      obReload: (n) =>
+        n === 1
+          ? "Un onglet IA était déjà ouvert : recharge-le pour que Prompt Tracker s'y active."
+          : `${n} onglets IA étaient déjà ouverts : recharge-les pour que Prompt Tracker s'y active.`,
     },
     en: {
       brandDefault: "Prompt Tracker",
@@ -501,6 +513,16 @@ const CoachI18n = (() => {
       profileOther: "Other",
       obSites: "Works on ChatGPT, Claude, Gemini, Mistral (Le Chat) and Grok.",
       obTry: "Try it now: open ChatGPT and type \"do my homework\".",
+      staleTabsBanner: (n) =>
+        n === 1
+          ? "One AI tab was already open before you installed: Prompt Tracker isn't active there yet."
+          : `${n} AI tabs were already open before you installed: Prompt Tracker isn't active there yet.`,
+      staleTabsCta: (n) => (n === 1 ? "Reload that tab" : "Reload those tabs"),
+      staleTabsDone: "Tabs reloaded ✓",
+      obReload: (n) =>
+        n === 1
+          ? "One AI tab was already open: reload it so Prompt Tracker switches on there."
+          : `${n} AI tabs were already open: reload them so Prompt Tracker switches on there.`,
     },
   };
 

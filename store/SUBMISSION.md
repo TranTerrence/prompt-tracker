@@ -177,6 +177,30 @@ divulgation n'est pas accepté.
 ⚠️ Remplacer `<À FOURNIR AVANT ENVOI>` par un vrai compte de démonstration, ou
 supprimer la phrase. Un relecteur bloqué sur un login rejette sans appel.
 
+### Ce que le passage en 0.9.1 change pour la revue
+
+- **Aucune permission ne change.** Le manifest reste à `storage` + `alarms`,
+  plus la permission d'hôte facultative inchangée.
+- **Correction d'un défaut d'installation visible par le relecteur.** Chrome
+  n'injecte les content scripts que dans les onglets chargés APRÈS
+  l'installation : un relecteur qui garde son onglet ChatGPT ouvert pendant
+  qu'il charge l'extension ne voit RIEN se passer, et peut conclure que la
+  fonctionnalité annoncée est absente. La page de bienvenue et la popup
+  détectent maintenant ces onglets et proposent un bouton « Recharger ces
+  onglets ».
+- **Les API d'onglets utilisées ne requièrent pas la permission `tabs`.**
+  `chrome.tabs.reload` n'en demande aucune ; `chrome.tabs.query` (filtre `url`)
+  et `chrome.tabs.sendMessage` sont couverts par les permissions d'hôte que les
+  `matches` de `content_scripts` accordent déjà sur les cinq sites déclarés —
+  les mêmes, ni plus ni moins. Aucun autre onglet n'est ni listé, ni lu, ni
+  interrogé. Même logique que `chrome.tabs.create` en 0.7.
+- **Le rechargement n'est jamais automatique** : il n'a lieu qu'au clic
+  explicite de l'utilisateur, et se limite aux onglets détectés.
+- **Aucune donnée nouvelle, aucun hôte nouveau, aucun code distant.** Le message
+  échangé avec les onglets est un ping vide (`{ type: "coach-ping" }`) dont la
+  seule réponse possible est `{ ok: true }` : aucun contenu de page n'est lu.
+  `DISCLOSURE_VERSION` est inchangé.
+
 ### Ce que le passage en 0.9.0 change pour la revue
 
 - **Aucune permission ne change.** Ni obligatoire, ni facultative, ni motif

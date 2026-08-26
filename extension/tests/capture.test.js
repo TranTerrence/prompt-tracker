@@ -31,7 +31,7 @@ function makeEnv({ settings = {}, orgConfig = null, consents = {}, disclosure = 
     disclosure: disclosure ? { accepted: true, version: 2 } : null,
     events: [],
   };
-  const captured = { modal: null, toast: null, flash: null, submitted: [] };
+  const captured = { modal: null, toast: null, flash: null, submitted: [], messageListeners: [] };
 
   const chrome = {
     storage: {
@@ -54,7 +54,14 @@ function makeEnv({ settings = {}, orgConfig = null, consents = {}, disclosure = 
       },
       onChanged: { addListener() {} },
     },
-    runtime: { sendMessage(_m, cb) { cb && cb(null); }, lastError: null, getURL: (p) => p },
+    runtime: {
+      sendMessage(_m, cb) { cb && cb(null); },
+      // content.js s'y accroche pour répondre au ping « coach-ping » : c'est ce
+      // qui distingue un onglet vivant d'un onglet ouvert avant l'installation.
+      onMessage: { addListener(fn) { captured.messageListeners.push(fn); } },
+      lastError: null,
+      getURL: (p) => p,
+    },
     i18n: { getUILanguage: () => "fr" },
   };
 
@@ -357,7 +364,35 @@ async function testCadence() {
   console.log("  ✓ cadence : ouverture coachée, fil lancé laissé libre, décrochage rattrapé");
 }
 
+// ---------------------------------------------------------------------------
+// 8. Ping de présence : un onglet chargé répond, même avant la divulgation
+// ---------------------------------------------------------------------------
+
+// C'est le seul signal qui distingue un onglet où le content script tourne d'un
+// onglet ouvert AVANT l'installation (cf. src/stale-tabs.js). Il doit répondre
+// hors de tout gating : un onglet en veille est présent, simplement inerte.
+async function testPing() {
+  const env = makeEnv({ disclosure: false });
+  const listeners = env.captured.messageListeners;
+  assert.ok(listeners.length >= 1, "content.js doit écouter les messages");
+
+  const reponses = [];
+  for (const fn of listeners) fn({ type: "coach-ping" }, {}, (r) => reponses.push(r));
+  assert.deepStrictEqual(
+    reponses.filter((r) => r && r.ok === true).length,
+    1,
+    "un onglet chargé répond exactement une fois au ping, même en veille"
+  );
+
+  // Un message inconnu ne doit pas se faire passer pour une présence.
+  const autres = [];
+  for (const fn of listeners) fn({ type: "autre-chose" }, {}, (r) => autres.push(r));
+  assert.strictEqual(autres.length, 0, "seul coach-ping répond");
+  console.log("  ✓ ping de présence : répond même avant la divulgation");
+}
+
 (async () => {
+  await testPing();
   await testPromptFort();
   await testCadence();
   await testQuatreIssues();

@@ -105,8 +105,11 @@
       //   depuis le cache, puis re-rendu depuis la réponse du worker).
       // ?library=empty : permission accordée, aucun cache et le worker ne
       //   répond rien (chargement → « aucun prompt publié »).
+      // ?tabs=2 : deux onglets IA ouverts AVANT l'installation (le content
+      //   script n'y répond pas) → bandeau « recharger ces onglets ».
       const params = new URLSearchParams(location.search);
       const library = params.get("library");
+      const STALE_TABS = Number(params.get("tabs") || 0);
       if (params.has("noscore") || library) {
         store.session = store.session || { email: "lea@lycee-jean-moulin.fr", user_id: "demo", expires_at: now + 36e5 };
         store.profile = store.profile || { org_id: "demo-org", role: "member" };
@@ -158,9 +161,22 @@
             cb && cb({ ok: false });
           },
           getURL: (p) => p,
+          getManifest: () => ({ content_scripts: [{ matches: ["https://chatgpt.com/*"] }] }),
           lastError: null,
         },
-        tabs: { create() {} },
+        // ?tabs=2 : deux onglets IA ouverts avant l'installation, qui ne
+        // répondent pas au ping → bandeau « recharger ces onglets ». Sans le
+        // paramètre, query ne renvoie rien et le bandeau reste masqué.
+        tabs: {
+          create() {},
+          query(_f, cb) { cb(Array.from({ length: STALE_TABS }, (_, i) => ({ id: i + 1 }))); },
+          sendMessage(_id, _m, cb) {
+            window.chrome.runtime.lastError = { message: "no receiver" };
+            cb(undefined);
+            window.chrome.runtime.lastError = undefined;
+          },
+          reload(_id, _o, cb) { cb && cb(); },
+        },
         i18n: { getUILanguage: () => "fr" },
       };
     })();

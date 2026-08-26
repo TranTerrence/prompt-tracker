@@ -115,5 +115,14 @@ footer { text-align: center; margin-top: 40px; }
 }
 #accept:hover { filter: brightness(1.08); }
 #accept:disabled { opacity: .7; cursor: default; filter: none; }
+/* Bouton de rechargement des onglets périmés : contour seul, il ne doit pas
+   concurrencer l'acte d'accord, qui reste le seul bouton plein de l'écran. */
+#ob-reload-cta {
+  margin-top: 12px; padding: 10px 22px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  font: 600 14px "IBM Plex Sans", sans-serif; cursor: pointer;
+}
+#ob-reload-cta:hover { border-color: var(--accent); color: var(--accent); }
+#ob-reload-cta:disabled { opacity: .7; cursor: default; }
 .later { color: var(--muted); text-decoration: underline; }
 footer .hint { margin-top: 14px; }

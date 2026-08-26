@@ -72,7 +72,38 @@ function showAccepted() {
   accept.textContent = t("obAccepted");
   accept.disabled = true;
   document.getElementById("later").hidden = true;
-  document.getElementById("ob-try").hidden = false;
+  offerReload();
+}
+
+// Chrome n'injecte les content scripts que dans les onglets chargés APRÈS
+// l'installation. Un utilisateur qui installe depuis un onglet ChatGPT ouvert
+// ne voit rien se passer et croit l'extension cassée : on lui dit, et on le
+// fait pour lui. S'il n'y a rien à recharger, l'invitation habituelle suffit.
+//
+// Appelé APRÈS chrome.permissions.request : sous Firefox les permissions
+// d'hôte ne sont accordées qu'au geste d'accord, et tabs.query ne verrait
+// aucun onglet avant. Ne pas remonter cet appel.
+function offerReload() {
+  const line = document.getElementById("ob-reload");
+  const cta = document.getElementById("ob-reload-cta");
+  CoachStaleTabs.list((stale) => {
+    if (!stale.length) {
+      document.getElementById("ob-try").hidden = false;
+      return;
+    }
+    line.textContent = t("obReload", stale.length);
+    cta.textContent = t("staleTabsCta", stale.length);
+    line.hidden = false;
+    cta.hidden = false;
+    cta.addEventListener("click", () => {
+      cta.disabled = true;
+      CoachStaleTabs.reload(stale, () => {
+        line.textContent = t("staleTabsDone");
+        cta.hidden = true;
+        document.getElementById("ob-try").hidden = false;
+      });
+    });
+  });
 }
 
 chrome.storage.local.get(["settings", "disclosure", "orgConfig"], (data) => {
