@@ -100,7 +100,11 @@
       // ?noscore=1 : organisation qui masque tout ce qui est chiffré.
       // ?library=1 : organisation qui publie une bibliothèque de prompts,
       //   permission d'hôte pas encore accordée (la carte d'activation).
-      // ?library=granted : permission déjà accordée (la carte disparaît).
+      // ?library=granted : permission accordée, cache frais (la liste 0.9.0).
+      // ?library=stale : permission accordée, cache de 7 h (rendu immédiat
+      //   depuis le cache, puis re-rendu depuis la réponse du worker).
+      // ?library=empty : permission accordée, aucun cache et le worker ne
+      //   répond rien (chargement → « aucun prompt publié »).
       const params = new URLSearchParams(location.search);
       const library = params.get("library");
       if (params.has("noscore") || library) {
@@ -114,10 +118,23 @@
           libraryUrl: library ? "https://lycee-jean-moulin.fr/prompts.json" : null,
         };
       }
+      if (library === "granted" || library === "stale") {
+        store.promptLibrary = {
+          url: "https://lycee-jean-moulin.fr/prompts.json",
+          fetchedAt: library === "stale" ? now - 7 * 36e5 : now,
+          prompts: [
+            { id: "off-1", title: "Analyser un article scientifique", body: "Contexte : je suis étudiant en ingénierie. Voici l'article et ce que j'en ai compris : … Vérifie mon résumé et pose-moi trois questions sur ce que j'aurais raté.", kind: "official", category: "analyse", lang: "fr", copies: 41, helpful: 12, author: null },
+            { id: "off-2", title: "Structure a literature review", body: "Context: I am writing a literature review on … Here is my draft outline: … Challenge the structure before improving the wording.", kind: "official", category: "recherche", lang: "en", copies: 18, helpful: 5, author: null },
+            { id: "off-3", title: "Vérifier un calcul d'ordre de grandeur", body: "Voici mon estimation et chaque hypothèse chiffrée : … Attaque les hypothèses une par une avant de recalculer.", kind: "official", category: null, lang: "fr", copies: null, helpful: null, author: null },
+            { id: "peer-1", title: "Plan de dissertation en 3 parties", body: "Je prépare une dissertation sur … Voici ma problématique et mon plan. Dis-moi où le plan ne répond pas à la problématique.", kind: "peer", category: "rédaction", lang: "fr", copies: 27, helpful: 9, author: null },
+            { id: "peer-2", title: "Débugger sans la solution", body: "Voici mon code et l'erreur. Ne me donne pas la correction : pose-moi des questions jusqu'à ce que je la trouve.", kind: "peer", category: "code", lang: "fr", copies: 12, helpful: 4, author: null },
+          ],
+        };
+      }
 
       window.chrome = {
         permissions: {
-          contains(_p, cb) { cb(library === "granted"); },
+          contains(_p, cb) { cb(["granted", "stale", "empty"].includes(library)); },
           request(_p, cb) { cb(true); },
         },
         storage: {
@@ -132,7 +149,17 @@
           },
           onChanged: { addListener() {} },
         },
-        runtime: { sendMessage(_m, cb) { cb && cb({ ok: false }); }, getURL: (p) => p, lastError: null },
+        runtime: {
+          sendMessage(m, cb) {
+            // Routage par type, comme le vrai worker : library-fetch répond
+            // les prompts du cache (ou null), le reste un ok neutre.
+            if (m && m.type === "library-fetch")
+              return cb && cb({ prompts: store.promptLibrary ? store.promptLibrary.prompts : null });
+            cb && cb({ ok: false });
+          },
+          getURL: (p) => p,
+          lastError: null,
+        },
         tabs: { create() {} },
         i18n: { getUILanguage: () => "fr" },
       };

@@ -446,6 +446,7 @@ function refreshAuthUi() {
     showScore = !(data.orgConfig && data.orgConfig.showScore === false);
     applyScoreVisibility();
     renderLibraryOffer(data.orgConfig);
+    renderLibraryPanel(data.orgConfig);
     render(lastRenderedEvents, lastRenderedThreshold);
   });
   renderSyncBanner();
@@ -516,9 +517,159 @@ document.getElementById("library-enable").addEventListener("click", () => {
       // n'apparaîtrait qu'au prochain chargement d'un onglet de chat.
       chrome.runtime.sendMessage({ type: "library-fetch", force: true }, () => {
         if (chrome.runtime.lastError) return;
+        // La liste apparaît tout de suite, sans rouvrir le popup.
+        renderLibraryPanel(data.orgConfig);
       });
     });
   });
+});
+
+/* ---------- Bibliothèque consultable (0.9.0) ---------- */
+
+// Le panneau du dialogue socratique montre ces prompts au moment de
+// l'interception ; ici, la même liste est consultable à tout moment. Pur
+// nouveau consommateur du canal existant : cache `promptLibrary` + message
+// `library-fetch`, le worker applique seul le TTL de 6 h.
+
+function copyPrompt(text) {
+  return navigator.clipboard.writeText(text).catch(() => {
+    // Repli : vieux Safari ou document qui a perdu le focus.
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    if (!ok) throw new Error("copy_failed");
+  });
+}
+
+// `var` et non `let`, et un initialiseur qui n'écrase pas : refreshAuthUi()
+// tourne plus haut dans le fichier, et quand les rappels storage sont
+// synchrones (harnais de test), le panneau se rend et REMPLIT cette variable
+// avant que cette ligne s'exécute. Une TDZ ferait tomber le popup ; un `= []`
+// sec viderait la liste déjà rendue.
+var libraryItems = libraryItems || []; // liste triée, source des rendus filtrés
+
+// Recherche insensible aux accents : « redaction » doit trouver « rédaction ».
+function normSearch(s) {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function libraryState(key) {
+  const el = document.getElementById("library-state");
+  el.textContent = key ? t(key) : "";
+  el.hidden = !key;
+}
+
+// Même tri que le panneau du dialogue : officiels d'abord, puis reprises.
+function sortLibrary(prompts) {
+  return (Array.isArray(prompts) ? [...prompts] : []).sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === "official" ? -1 : 1;
+    return (b.copies || 0) - (a.copies || 0);
+  });
+}
+
+function renderLibraryItems() {
+  const q = normSearch(document.getElementById("library-search").value.trim());
+  const items = libraryItems.filter(
+    (p) => !q || normSearch(`${p.title} ${p.body} ${p.category || ""}`).includes(q)
+  );
+  document.getElementById("library-summary").textContent = t("libraryPanelHead", libraryItems.length);
+  document.getElementById("library-note").textContent = t("libraryPanelNote");
+  const list = document.getElementById("library-list");
+  list.textContent = "";
+  libraryState(items.length ? null : libraryItems.length ? "libraryNoMatch" : "libraryEmptyPanel");
+  for (const p of items) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "lib-item";
+    const title = document.createElement("span");
+    title.className = "lib-title";
+    title.textContent = p.title;
+    const meta = document.createElement("span");
+    meta.className = "lib-meta";
+    // Mêmes conventions que la modale : étiquette de provenance, auteur
+    // seulement s'il dit plus que l'étiquette, puis les compteurs. Pas de
+    // filtre de langue ici — il n'y a pas de brouillon dont hériter la
+    // langue, et filtrer par navigateur montrerait des catalogues différents
+    // à deux étudiants de la même classe. Un tag EN/FR suffit quand l'entrée
+    // diffère de la langue de l'interface.
+    const kindLabel = p.kind === "peer" ? t("libraryPeer") : t("libraryOfficial");
+    const bits = [kindLabel];
+    if (p.author && p.author !== kindLabel) bits.push(p.author);
+    if (p.category) bits.push(p.category);
+    if (p.lang && p.lang !== CoachI18n.lang) bits.push(p.lang.toUpperCase());
+    if (p.copies) bits.push(t("libraryCopies", p.copies));
+    if (p.helpful) bits.push(t("libraryHelpful", p.helpful));
+    const metaText = bits.join(" · ");
+    meta.textContent = metaText;
+    const body = document.createElement("span");
+    body.className = "lib-body";
+    body.textContent = p.body;
+    btn.append(title, meta, body);
+    // Copier, puis le dire À L'ENDROIT du clic : la méta redevient normale
+    // après un battement — pas de toast global dans 360 px.
+    btn.addEventListener("click", () => {
+      copyPrompt(p.body).then(
+        () => {
+          meta.textContent = t("libraryCopied");
+          meta.classList.add("copied");
+        },
+        () => {
+          meta.textContent = t("libraryCopyFailed");
+        }
+      );
+      setTimeout(() => {
+        meta.textContent = metaText;
+        meta.classList.remove("copied");
+      }, 1500);
+    });
+    list.appendChild(btn);
+  }
+}
+
+function renderLibraryPanel(orgConfig) {
+  const section = document.getElementById("library-section");
+  const origin = orgConfig && orgConfig.libraryUrl && libraryOrigin(orgConfig.libraryUrl);
+  if (!origin) {
+    section.hidden = true;
+    return;
+  }
+  // Forme callback exprès : sur Gecko, la forme promesse n'existe que sur
+  // browser.* et un await ici rendrait undefined (même piège que le worker).
+  chrome.permissions.contains({ origins: [origin] }, (granted) => {
+    section.hidden = !granted;
+    if (!granted) return;
+    chrome.storage.local.get("promptLibrary", (data) => {
+      const cached =
+        data.promptLibrary && data.promptLibrary.url === orgConfig.libraryUrl
+          ? data.promptLibrary.prompts
+          : null;
+      if (cached) {
+        libraryItems = sortLibrary(cached);
+        renderLibraryItems();
+      } else {
+        libraryState("libraryLoading");
+      }
+      // Non forcé : le worker sert le cache sans réseau s'il est frais.
+      chrome.runtime.sendMessage({ type: "library-fetch" }, (res) => {
+        if (chrome.runtime.lastError || !res) return;
+        libraryItems = sortLibrary(res.prompts || []);
+        renderLibraryItems();
+      });
+    });
+  });
+}
+
+document.getElementById("library-search").placeholder = t("librarySearch");
+document.getElementById("library-search").addEventListener("input", renderLibraryItems);
+
+// Un fetch déclenché ailleurs (onglet de chat, activation) doit se refléter
+// dans un popup déjà ouvert.
+chrome.storage.onChanged.addListener((changes) => {
+  if (!changes.promptLibrary) return;
+  chrome.storage.local.get("orgConfig", (data) => renderLibraryPanel(data.orgConfig));
 });
 
 /* ---------- Stats locales ---------- */

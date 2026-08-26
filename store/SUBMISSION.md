@@ -39,9 +39,21 @@ extensions « couteau suisse ».
 > prompts éprouvés », qui la rattache au moment d'avant-envoi sans faire de la
 > phrase une liste de fonctionnalités.
 >
-> Si un jour la bibliothèque devient accessible AILLEURS que dans le dialogue —
-> depuis la popup, depuis un bouton sur la page — cet argument tombe, et c'est
-> la fonctionnalité qui doit partir, pas la phrase qu'il faut rallonger.
+> **Amendée en 0.9.0 — et 0.8.0 disait le contraire, il faut l'assumer.** La
+> 0.8.0 écrivait ici qu'une bibliothèque accessible depuis la popup ferait
+> tomber l'argument et devrait partir. La popup 0.9.0 la propose pourtant, et
+> voici pourquoi l'objectif tient quand même : ce qui rattache la bibliothèque
+> à « faire réfléchir avant l'envoi » n'est pas sa position dans l'interface,
+> c'est qu'elle ne COURT-CIRCUITE jamais la réflexion. La liste de la popup est
+> une lecture : cliquer copie le prompt dans le presse-papiers, rien n'est
+> injecté dans aucune page, rien n'est envoyé. Un prompt collé dans un chat
+> redevient un brouillon comme un autre — scoré localement, intercepté sous le
+> seuil, soumis au même dialogue. L'incise « au besoin en lui montrant des
+> prompts éprouvés » couvrait déjà ce geste ; ce qui était faux en 0.8.0,
+> c'était d'ancrer la garantie dans la géographie de l'interface plutôt que
+> dans le circuit de l'envoi. Le critère qui ferait vraiment partir la
+> fonctionnalité reste écrit : le jour où la bibliothèque INJECTE ou ENVOIE un
+> prompt à la place de l'utilisateur, elle sort de l'objectif unique.
 
 ## Justification des permissions
 
@@ -156,9 +168,27 @@ divulgation n'est pas accepté.
 >   paramètre dérivé du compte**. C'est une lecture, jamais un envoi : aucune
 >   donnée de l'utilisateur ne part vers cet hôte. La réponse est bornée
 >   (256 Ko, 200 entrées), affichée en `textContent` et jamais évaluée.
+>
+> Depuis la 0.9.0, la même liste (déjà récupérée par ce canal) est aussi
+> consultable dans la popup, en lecture seule : rendue en `textContent`,
+> cliquer copie le prompt dans le presse-papiers, localement. Aucune requête
+> supplémentaire, aucune injection dans une page, aucun envoi.
 
 ⚠️ Remplacer `<À FOURNIR AVANT ENVOI>` par un vrai compte de démonstration, ou
 supprimer la phrase. Un relecteur bloqué sur un login rejette sans appel.
+
+### Ce que le passage en 0.9.0 change pour la revue
+
+- **Aucune permission ne change.** Ni obligatoire, ni facultative, ni motif
+  d'hôte : le manifest est identique à la 0.8.0 sur tout ce qui se déclare.
+- **Aucune donnée nouvelle, aucun hôte nouveau, aucun code distant.** La seule
+  nouveauté est une surface d'AFFICHAGE : la bibliothèque de prompts que
+  l'extension récupérait déjà (canal facultatif de la 0.8.0, inchangé) devient
+  consultable dans la popup. Lecture seule, rendu en `textContent`, copie
+  locale dans le presse-papiers au clic — rien ne quitte l'appareil, le
+  presse-papiers est local.
+- La divulgation de l'usage des données est inchangée, `DISCLOSURE_VERSION`
+  aussi : rien de nouveau n'est capturé ni transmis.
 
 ### Ce que le passage en 0.8.0 change pour la revue
 

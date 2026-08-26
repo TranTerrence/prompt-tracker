@@ -74,6 +74,17 @@ const CoachI18n = (() => {
       libraryEnable: "Activer la bibliothèque",
       libraryEnabled: "Bibliothèque activée.",
       libraryDenied: "Permission refusée. Tu peux réessayer quand tu veux.",
+      // Popup : bibliothèque consultable (0.9.0). Copier, pas charger : il n'y
+      // a pas d'aperçu ici, le prompt part dans le presse-papiers.
+      libraryPanelHead: (n) => `Bibliothèque de prompts (${n})`,
+      libraryPanelNote:
+        "Publiés par ton école. Cliquer copie le prompt — colle-le dans ton chat et adapte-le.",
+      librarySearch: "Rechercher…",
+      libraryCopied: "Copié !",
+      libraryCopyFailed: "Impossible de copier.",
+      libraryLoading: "Chargement de la bibliothèque…",
+      libraryEmptyPanel: "Aucun prompt publié pour le moment.",
+      libraryNoMatch: "Aucun prompt ne correspond.",
       modalLlmBadge: "Question générée par IA",
       modalLlmNotice: "Questions sur mesure par IA : ton prompt et tes réponses transitent par le serveur (selon tes consentements), sans être stockés. En cas de lenteur, repli automatique sur la banque locale.",
       llmAxisLabel: "Ma réflexion",
@@ -314,6 +325,15 @@ const CoachI18n = (() => {
       libraryEnable: "Enable the library",
       libraryEnabled: "Library enabled.",
       libraryDenied: "Permission declined. You can try again whenever you like.",
+      libraryPanelHead: (n) => `Prompt library (${n})`,
+      libraryPanelNote:
+        "Published by your school. Clicking copies the prompt — paste it into your chat and adapt it.",
+      librarySearch: "Search…",
+      libraryCopied: "Copied!",
+      libraryCopyFailed: "Couldn't copy.",
+      libraryLoading: "Loading the library…",
+      libraryEmptyPanel: "No prompts published yet.",
+      libraryNoMatch: "No prompt matches.",
       modalLlmBadge: "AI-generated question",
       modalLlmNotice: "AI-tailored questions: your prompt and answers transit through the server (per your consents), without being stored. If slow, automatic fallback to the local bank.",
       llmAxisLabel: "My reflection",

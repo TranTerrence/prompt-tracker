@@ -121,6 +121,21 @@
     <p id="library-status" class="muted" hidden></p>
   </section>
 
+  <!-- Bibliothèque consultable : mêmes données que le panneau du dialogue
+       (cache promptLibrary, servi par le worker). N'apparaît qu'une fois la
+       permission accordée ; avant, c'est la carte d'activation ci-dessus qui
+       occupe cette place. Repliée par défaut : les stats restent au premier
+       regard. -->
+  <section id="library-section" hidden>
+    <details id="library-panel">
+      <summary id="library-summary"></summary>
+      <p id="library-note" class="muted"></p>
+      <input type="search" id="library-search" autocomplete="off" spellcheck="false" />
+      <div id="library-list" class="library-list"></div>
+      <p id="library-state" class="muted" hidden></p>
+    </details>
+  </section>
+
   <section class="stats">
     <div class="stat"><span class="value" id="stat-count">0</span><span class="label" data-i18n="popupPrompts"></span></div>
     <a class="stat" id="stat-score-tile" href="https://track-prompt.vercel.app/methode" target="_blank" rel="noreferrer"><span class="value" id="stat-score">–</span><span class="label" data-i18n="popupAvgScore"></span></a>
