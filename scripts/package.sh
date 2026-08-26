@@ -56,3 +56,10 @@ unzip -l "$OUT_CHROME" | tail -3
 mkdir -p "$ROOT/dashboard/public/downloads"
 cp "$OUT_CHROME" "$ROOT/dashboard/public/downloads/prompt-tracker-latest.zip"
 echo "→ dashboard/public/downloads/prompt-tracker-latest.zip"
+
+# La version affichée sur /install vient de ce fichier, généré ici depuis le
+# manifest. Elle était codée en dur dans la page et a pris trois versions de
+# retard sans que rien ne le signale : le paquet et le numéro voyagent
+# désormais ensemble, dans le même commit.
+printf '{\n  "version": "%s"\n}\n' "$VERSION" > "$ROOT/dashboard/lib/extension-version.json"
+echo "→ dashboard/lib/extension-version.json ($VERSION)"

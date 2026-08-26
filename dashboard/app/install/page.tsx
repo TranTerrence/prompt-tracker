@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
+// Le zip et le numéro de version sont posés ensemble par scripts/package.sh :
+// l'archive sous public/downloads, la version dans lib/extension-version.json.
+// Ne pas remettre un numéro en dur ici — c'est comme ça que la page a affiché
+// v0.6.0 pendant trois versions.
+import extensionRelease from "@/lib/extension-version.json";
 
 export const metadata: Metadata = {
   title: "Installer l'extension : Prompt Tracker",
@@ -9,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 const DIRECT_ZIP = "/downloads/prompt-tracker-latest.zip";
-const VERSION = "0.6.0";
+const VERSION = extensionRelease.version;
 
 function Step({
   n,
