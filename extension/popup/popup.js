@@ -522,9 +522,19 @@ function libraryOrigin(url) {
   }
 }
 
+// Posée au rendu de la carte, lue par le clic « Activer ». Le clic doit
+// appeler chrome.permissions.request de façon SYNCHRONE : un saut asynchrone
+// (storage.get) entre le clic et la demande fait perdre le geste utilisateur,
+// et la demande lève au lieu d'afficher l'invite — c'était le bogue
+// « impossible d'activer la bibliothèque ». `var` sans initialiseur : comme
+// libraryItems plus bas, renderLibraryOffer peut tourner avant cette ligne
+// quand les rappels storage sont synchrones (harnais de test).
+var libraryOfferConfig;
+
 function renderLibraryOffer(orgConfig) {
   const box = document.getElementById("library-offer");
   const origin = orgConfig && orgConfig.libraryUrl && libraryOrigin(orgConfig.libraryUrl);
+  libraryOfferConfig = origin ? orgConfig : null;
   if (!origin) {
     box.hidden = true;
     return;
@@ -541,24 +551,38 @@ function renderLibraryOffer(orgConfig) {
 }
 
 document.getElementById("library-enable").addEventListener("click", () => {
-  chrome.storage.local.get("orgConfig", (data) => {
-    const origin = data.orgConfig && data.orgConfig.libraryUrl && libraryOrigin(data.orgConfig.libraryUrl);
-    if (!origin) return;
+  const orgConfig = libraryOfferConfig;
+  const origin = orgConfig && libraryOrigin(orgConfig.libraryUrl);
+  if (!origin) return;
+  const status = document.getElementById("library-status");
+  const refuse = () => {
+    status.textContent = t("libraryDenied");
+    status.hidden = false;
+  };
+  // Même garde-fou que onboarding.js : la demande reste dans le tick du clic,
+  // et un échec (geste perdu, permission non déclarée) s'affiche dans la
+  // carte au lieu de finir dans la bannière fatale du popup.
+  try {
     chrome.permissions.request({ origins: [origin] }, (granted) => {
-      const status = document.getElementById("library-status");
-      status.textContent = granted ? t("libraryEnabled") : t("libraryDenied");
+      if (chrome.runtime.lastError || !granted) {
+        refuse();
+        return;
+      }
+      status.textContent = t("libraryEnabled");
       status.hidden = false;
-      if (!granted) return;
-      document.getElementById("library-enable").hidden = true;
+      // La permission est là : la carte n'a plus rien à proposer.
+      renderLibraryOffer(orgConfig);
       // Première récupération immédiate : sans elle, la bibliothèque
       // n'apparaîtrait qu'au prochain chargement d'un onglet de chat.
       chrome.runtime.sendMessage({ type: "library-fetch", force: true }, () => {
         if (chrome.runtime.lastError) return;
         // La liste apparaît tout de suite, sans rouvrir le popup.
-        renderLibraryPanel(data.orgConfig);
+        renderLibraryPanel(orgConfig);
       });
     });
-  });
+  } catch (e) {
+    refuse();
+  }
 });
 
 /* ---------- Bibliothèque consultable (0.9.0) ---------- */
@@ -691,8 +715,14 @@ function renderLibraryPanel(orgConfig) {
       }
       // Non forcé : le worker sert le cache sans réseau s'il est frais.
       chrome.runtime.sendMessage({ type: "library-fetch" }, (res) => {
-        if (chrome.runtime.lastError || !res) return;
-        libraryItems = sortLibrary(res.prompts || []);
+        // Le worker répond {prompts: null} sur un échec de fetch : ce n'est
+        // pas une liste vide, et écraser une liste déjà rendue depuis le
+        // cache la ferait disparaître sans raison.
+        if (chrome.runtime.lastError || !res || !Array.isArray(res.prompts)) {
+          if (!cached) libraryState("libraryEmptyPanel");
+          return;
+        }
+        libraryItems = sortLibrary(res.prompts);
         renderLibraryItems();
       });
     });

@@ -135,17 +135,43 @@
         };
       }
 
+      // Le vrai chrome.permissions.request n'accepte de tourner QUE dans le
+      // tick synchrone d'un geste utilisateur : un storage.get asynchrone
+      // entre le clic et la demande faisait lever la vraie API alors que
+      // l'ancien harnais (rappels synchrones, request toujours d'accord)
+      // ne pouvait pas le voir. On rejoue la contrainte : fenêtre de geste
+      // ouverte au clic, refermée au tick suivant. Le drapeau vit sur window
+      // (les propriétés survivent au document.write plus bas, pas les
+      // écouteurs : celui-ci est posé après le chargement du popup).
+      window.__userGesture = false;
+      window.__armGesture = () => {
+        window.__userGesture = true;
+        setTimeout(() => { window.__userGesture = false; }, 0);
+      };
+
+      // Comme la vraie API : une fois request accordé, contains dit oui.
+      let hostGranted = ["granted", "stale", "empty"].includes(library);
+
       window.chrome = {
         permissions: {
-          contains(_p, cb) { cb(["granted", "stale", "empty"].includes(library)); },
-          request(_p, cb) { cb(true); },
+          contains(_p, cb) { cb(hostGranted); },
+          request(_p, cb) {
+            if (!window.__userGesture) {
+              throw new Error("permissions.request may only be called from a user input handler (harnais : geste perdu)");
+            }
+            hostGranted = true;
+            cb(true);
+          },
         },
         storage: {
           local: {
             get(keys, cb) {
               const out = {};
               for (const k of Array.isArray(keys) ? keys : [keys]) if (k in store) out[k] = store[k];
-              cb(out);
+              // Asynchrone comme le vrai chrome.storage : les rappels
+              // synchrones de l'ancien harnais masquaient la perte du geste
+              // utilisateur (et n'importe quel bogue d'ordre d'exécution).
+              setTimeout(() => cb(out), 0);
             },
             set(obj, cb) { Object.assign(store, obj); cb && cb(); },
             remove(_k, cb) { cb && cb(); },
@@ -196,6 +222,9 @@
         document.open();
         document.write(html);
         document.close();
+        // document.open() a effacé les écouteurs : la fenêtre de geste se
+        // pose maintenant, sur le document du popup.
+        window.addEventListener("click", window.__armGesture, true);
       });
   </script>
 </body>

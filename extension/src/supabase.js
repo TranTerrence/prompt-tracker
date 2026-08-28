@@ -223,7 +223,11 @@ const CoachApi = (() => {
       body: body ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) throw new Error(`rest_${res.status}: ${await res.text()}`);
-    return res.status === 204 ? null : res.json();
+    // Un succès sans corps n'est pas toujours un 204 : PostgREST répond 201
+    // vide aux POST `Prefer: return=minimal` (sync, consentements). Décider
+    // sur le corps, pas sur le statut.
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
   }
 
   // Miroir local du consentement socle porté par profiles.baseline_consent_at.

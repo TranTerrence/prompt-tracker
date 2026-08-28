@@ -37,7 +37,10 @@ import json, sys
 path = sys.argv[1]
 m = json.load(open(path))
 m["background"] = {"scripts": ["src/supabase.js", "src/background.js"]}
-m["browser_specific_settings"] = {"gecko": {"id": "prompt-tracker@track-prompt.vercel.app", "strict_min_version": "121.0"}}
+# 127 minimum : optional_host_permissions n'existe chez Gecko que depuis
+# Firefox 127 — en dessous, la clé est ignorée et permissions.request sur une
+# origine (bibliothèque de prompts) est rejeté comme non déclaré.
+m["browser_specific_settings"] = {"gecko": {"id": "prompt-tracker@track-prompt.vercel.app", "strict_min_version": "127.0"}}
 json.dump(m, open(path, "w"), ensure_ascii=False, indent=2)
 PY
 OUT_FIREFOX="$ROOT/dist/prompt-tracker-firefox-$VERSION.zip"
