@@ -21,11 +21,12 @@ Chaque prompt est scoré localement, ventilation affichée en direct (clarté, c
 🔒 **Données et confidentialité**
 Rien n'est enregistré tant que tu n'as pas accepté l'écran de divulgation affiché au premier lancement : l'extension reste inactive avant ton accord explicite.
 • **En local, après ton accord** : scores de qualité, catégorie, nombre de mots, site, date, issue (envoyé, amélioré, annulé), tes réponses au dialogue et tes réflexions d'après-réponse, plus des mesures sur la réponse de l'IA — sa longueur, sa durée, le modèle utilisé et le temps que tu prends avant d'enchaîner. Le texte des réponses est compté puis oublié : jamais enregistré. Le texte complet de tes prompts n'est enregistré que si tu actives l'option dédiée. Tout reste sur ton ordinateur : pas de compte requis.
-• **Si tu rejoins une classe** (code fourni par ton école ou ton entreprise) : un second écran te dit exactement ce qui sera partagé (les indicateurs ci-dessus, jamais aucun texte) et tu confirmes d'un bouton. Ton email de compte t'identifie auprès de l'enseignant.
+• **Ton compte est provisionné par le programme** (I-BE³ Companion), avec ton organisation déjà rattachée : tu connectes l'extension en approuvant, sur l'application web, le code d'appairage affiché dans le popup. Un second écran te dit exactement ce qui sera partagé (les indicateurs ci-dessus, jamais aucun texte) et tu confirmes d'un bouton. Ton email de compte t'identifie auprès de ton organisation.
 • **Les contenus** (texte des prompts, dialogues, réflexions, fils de conversation) ne sont partagés que si ton organisation les demande avec un motif ET que tu consens, catégorie par catégorie. Interrupteurs désactivés par défaut, révocables à tout moment ; le serveur efface tout contenu non consenti dès réception.
 • **Questions IA sur mesure (option)** : si ton organisation l'active et que tu as consenti au partage de ton texte et de ton raisonnement, ton prompt transite par Anthropic pour générer la question suivante, sans être stocké.
 • **Conservation** : contenus effacés au bout de 90 jours, indicateurs supprimés au bout de 12 mois. Effacement et export possibles à tout moment. Aucune vente, aucune publicité, aucun entraînement d'IA.
-Politique complète : https://track-prompt.vercel.app/privacy
+Politique complète : <APP_URL>/extension/privacy
+<!-- replace <APP_URL> at release, see SUBMISSION.md -->
 
 Pour qui ?
 • Étudiants : apprendre AVEC l'IA sans qu'elle pense à ta place

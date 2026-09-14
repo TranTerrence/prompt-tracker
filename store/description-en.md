@@ -21,11 +21,12 @@ Every prompt is scored locally, with a live breakdown (clarity, context, critica
 🔒 **Data and privacy**
 Nothing is recorded until you accept the disclosure screen shown on first launch: the extension stays inactive before your explicit consent.
 • **Locally, after your consent**: quality scores, category, word count, site, date, outcome (sent, improved, cancelled), your dialogue answers and post-response reflections, plus measurements of the AI's answer — its length, its duration, the model used, and how long you take before sending the next prompt. The text of those answers is counted then forgotten: never recorded. The full text of your prompts is only recorded if you enable the dedicated setting. Everything stays on your computer: no account required.
-• **If you join a class** (code provided by your school or company): a second screen tells you exactly what will be shared (the indicators above, never any text) and you confirm with a button. Your account email identifies you to the teacher.
+• **Your account is provisioned by the programme** (I-BE³ Companion), already attached to your organization: you connect the extension by approving, on the web app, the pairing code shown in the popup. A second screen tells you exactly what will be shared (the indicators above, never any text) and you confirm with a button. Your account email identifies you to your organization.
 • **Content** (prompt text, dialogues, reflections, conversation threads) is shared only if your organization requests it with a stated purpose AND you consent, category by category. Toggles off by default, revocable at any time; the server erases any non-consented content upon receipt.
 • **Tailored AI questions (optional)**: if your organization enables it and you consented to sharing your text and reasoning, your prompt transits through Anthropic to generate the next question, without being stored.
 • **Retention**: content erased after 90 days, indicators deleted after 12 months. Erase and export at any time. No selling, no advertising, no AI training.
-Full policy: https://track-prompt.vercel.app/privacy
+Full policy: <APP_URL>/extension/privacy
+<!-- replace <APP_URL> at release, see SUBMISSION.md -->
 
 Who is it for?
 • Students: learn WITH AI without it thinking for you
