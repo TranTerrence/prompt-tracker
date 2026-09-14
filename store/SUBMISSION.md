@@ -62,7 +62,7 @@ Recopier ces textes dans le champ « justification » de chaque permission.
 | Permission | Justification à coller |
 |---|---|
 | `storage` | Stocke localement les réglages de l'utilisateur (seuil, thème, consentements) et l'historique de ses scores de prompts, qui alimente le tableau de bord de progression affiché dans la popup. Aucune de ces données ne quitte l'appareil sans consentement explicite. |
-| `alarms` | Planifie la synchronisation périodique en arrière-plan pour les utilisateurs ayant rejoint une classe. Sans elle, les indicateurs consentis ne remonteraient qu'à l'ouverture de la popup. |
+| `alarms` | Planifie la synchronisation périodique en arrière-plan pour les utilisateurs dont le compte est lié (l'organisation est rattachée au compte dès l'inscription, il n'y a plus de jonction séparée). Sans elle, les indicateurs consentis ne remonteraient qu'à l'ouverture de la popup. |
 | `optional_host_permissions` : `https://*/*` | **Facultative, jamais accordée à l'installation.** Un établissement scolaire peut publier une bibliothèque de prompts pédagogiques à sa propre adresse ; l'extension ne peut pas connaître cette adresse à l'avance, elle varie d'un établissement à l'autre. Elle n'est donc PAS déclarée dans `host_permissions` : elle est demandée à l'exécution, par `chrome.permissions.request`, sur la **seule origine** configurée par l'établissement de l'utilisateur, et uniquement après un clic explicite de celui-ci dans la popup. Tant que l'utilisateur n'accorde rien, aucune requête n'est émise. L'appel est une simple lecture `GET` en `credentials: "omit"`, sans en-tête d'authentification et sans aucun paramètre dérivé du compte : aucune donnée utilisateur ne part vers cet hôte. Refuser la permission ne dégrade aucune autre fonction. |
 
 **Match patterns des content scripts** (`chatgpt.com`, `chat.openai.com`,
@@ -137,13 +137,20 @@ divulgation n'est pas accepté.
 > **Aucun compte n'est nécessaire pour tester la fonctionnalité principale** :
 > les étapes 1 à 4 se font entièrement hors ligne, toute l'analyse est locale.
 >
-> La fonction « classe » est optionnelle. Elle se lie désormais par le web :
-> le bouton « Lier mon compte » du popup ouvre un onglet sur
-> https://track-prompt.vercel.app où l'utilisateur, une fois connecté, autorise
-> le navigateur. Aucun mot de passe n'est saisi dans l'extension par ce chemin.
-> Un formulaire e-mail / mot de passe reste disponible dans le popup, replié
+> La liaison de compte est optionnelle pour tester la fonctionnalité
+> principale. Elle se fait par le web : le bouton « Lier mon compte » du
+> popup ouvre un onglet sur la page `/extension/pair` de l'app I-BE³
+> Companion (domaine de production à renseigner avant l'envoi — voir
+> tâche 18) où l'utilisateur, une fois connecté, autorise le navigateur.
+> Aucun mot de passe n'est saisi dans l'extension par ce chemin. Un
+> formulaire e-mail / mot de passe reste disponible dans le popup, replié
 > sous « Se connecter avec un mot de passe », pour tester sans quitter
 > l'extension. Compte de démonstration : <À FOURNIR AVANT ENVOI>.
+>
+> **Depuis la 1.0.0, il n'existe plus de code de classe.** Les comptes sont
+> provisionnés avec leur organisation par le programme dès l'inscription : il
+> n'y a rien à saisir ni à rejoindre côté élève, et le champ correspondant a
+> disparu du popup.
 >
 > **À propos de la permission d'hôte facultative `https://*/*` (nouveauté 0.8.0).**
 > Elle n'est **jamais accordée à l'installation** : vous pouvez le constater sur
@@ -176,6 +183,51 @@ divulgation n'est pas accepté.
 
 ⚠️ Remplacer `<À FOURNIR AVANT ENVOI>` par un vrai compte de démonstration, ou
 supprimer la phrase. Un relecteur bloqué sur un login rejette sans appel.
+
+### Ce que le passage en 1.0.0 change pour la revue
+
+- **Backend changé, pas la fonctionnalité.** L'extension ne parle plus au
+  projet Supabase autonome de Prompt Tracker (`ovbvwawzrciwpudnaysp`) mais à
+  la base fusionnée du programme I-BE³ Companion : même surface PostgREST /
+  GoTrue, mêmes RPC d'appairage et de consentement (`create_pairing_request`,
+  `redeem_pairing`, `ack_baseline_consent`, `purge_my_content`…). Les deux
+  Edge Functions (`pair-extension`, `socratic-llm`) deviennent deux routes
+  Next.js de l'app (`/api/tracker/pair`, `/api/tracker/socratic`), avec le
+  même contrat (corps, réponse, CORS `*`). Rien de visible ne change pour
+  l'utilisateur côté appairage : le bouton « Lier mon compte » fonctionne à
+  l'identique, il ouvre désormais un onglet sur la page `/extension/pair` de
+  l'app I-BE³ Companion au lieu du dashboard `track-prompt.vercel.app`.
+- **Les codes de classe disparaissent.** Décision du programme : les comptes
+  sont désormais provisionnés avec leur organisation dès l'inscription, il
+  n'y a donc plus rien à « rejoindre ». Le champ de code et son bouton sont
+  retirés du popup (`extension/popup/popup.html`, `popup.js`) ainsi que leurs
+  chaînes de traduction FR/EN (`extension/src/i18n.js`). La fonction cliente
+  `CoachApi.joinGroup` reste dans `supabase.js` (elle appelle toujours le RPC
+  `join_group_with_code`, qui répond désormais `{"status":"not_available"}`)
+  mais plus rien dans l'UI ne l'appelle : aucune régression fonctionnelle,
+  juste du code mort documenté comme tel.
+- **Aucune nouvelle catégorie de données, aucune nouvelle destination.** Les
+  mêmes indicateurs partent vers le même type de plateforme (PostgREST /
+  GoTrue derrière RLS) ; seul l'hébergeur change. La divulgation de l'usage
+  des données ci-dessus reste valable telle quelle, sans modification.
+- **Permissions : entrées de développement à retirer avant l'envoi au
+  Store.** Pour la vérification locale de cette tâche,
+  `extension/manifest.json` déclare temporairement `http://localhost:3200/*`
+  et `http://127.0.0.1:54421/*` dans `optional_host_permissions`, en plus de
+  `https://*/*` (qui suffit déjà à couvrir tout domaine de production en
+  HTTPS). Ces deux entrées `http://` n'ont aucune utilité en production et
+  **doivent être retirées** du paquet soumis au Web Store — sinon un
+  relecteur verra deux hôtes non chiffrés injustifiés dans la liste des
+  permissions facultatives. À traiter avec les valeurs de production
+  (tâche 18).
+- **Constantes encore locales.** `SUPABASE_URL`, `SUPABASE_KEY` et `APP_URL`
+  (`extension/src/supabase.js`) pointent vers la stack `pnpm dev` locale
+  d'I-BE³ (`http://127.0.0.1:54421` / `http://localhost:3200`) le temps de la
+  vérification de cette tâche — un commentaire dans le code le rappelle. À
+  remplacer par les valeurs de production avant tout paquet destiné au Store
+  (tâche 18). Le lien vers la politique de confidentialité ci-dessus
+  (`track-prompt.vercel.app/privacy`) n'a pas été touché pour la même
+  raison : le domaine définitif n'est pas encore connu.
 
 ### Ce que le passage en 0.9.1 change pour la revue
 

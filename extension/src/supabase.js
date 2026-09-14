@@ -3,8 +3,17 @@
 // La clé publishable est publique par conception ; la sécurité repose sur RLS.
 
 const CoachApi = (() => {
-  const SUPABASE_URL = "https://ovbvwawzrciwpudnaysp.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_qWIkcDbQUoVqE9awpkyhKA_RdYnRUaa";
+  // La base fusionnée I-BE³ Companion (2026-09) : PostgREST/GoTrue derrière la
+  // même surface que l'ancien projet Prompt Tracker. Les trois valeurs sont
+  // des valeurs LOCALES (stack `pnpm dev` d'I-BE³) le temps de la vérification
+  // de la tâche 16 — à remplacer par celles de la stack de production au
+  // moment de la release ; voir store/SUBMISSION.md.
+  const SUPABASE_URL = "http://127.0.0.1:54421";
+  const SUPABASE_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
+  // Le web app I-BE³ sert désormais les deux routes qui étaient des Edge
+  // Functions (pair-extension, socratic-llm). Même remarque : valeur locale.
+  const APP_URL = "http://localhost:3200";
 
   const storage = {
     get: (keys) => new Promise((r) => chrome.storage.local.get(keys, r)),
@@ -121,7 +130,7 @@ const CoachApi = (() => {
     // Sans cet en-tête il faudrait la désactiver — on préfère garder le
     // filtrage au plus tôt. Le vrai contrôle d'accès reste le device_code,
     // qui n'a de valeur qu'associé à une approbation faite sur le web.
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/pair-extension`, {
+    const res = await fetch(`${APP_URL}/api/tracker/pair`, {
       method: "POST",
       headers: {
         apikey: SUPABASE_KEY,
@@ -581,7 +590,7 @@ const CoachApi = (() => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/socratic-llm`, {
+      const res = await fetch(`${APP_URL}/api/tracker/socratic`, {
         method: "POST",
         headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
         // opts : { lang, intent, rejected, askedQuestions, depth } : champs
@@ -616,6 +625,7 @@ const CoachApi = (() => {
     syncPostEvents,
     llmNextQuestion,
     SUPABASE_URL,
+    APP_URL,
   };
 })();
 

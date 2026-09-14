@@ -135,17 +135,7 @@ const CoachI18n = (() => {
       authConfirm: "Compte créé. Confirme ton email puis connecte-toi.",
       authHint: "Sans compte, tout reste local sur cet ordinateur.",
       authNoOrg: "aucune organisation rattachée",
-      joinCodePlaceholder: "Code de classe (ex. ABC2345)",
-      joinCta: "Rejoindre ma classe",
-      joinInvalid: "Code invalide, désactivé ou expiré.",
-      joinOtherOrg: "Ton compte est déjà rattaché à une autre organisation.",
       popupConsentLink: "🔒 Mes données partagées",
-      // Divulgation à la jonction : rejoindre = partager les indicateurs.
-      joinDiscTitle: "Avant de rejoindre",
-      joinDiscBody:
-        "Rejoindre une classe, c'est partager avec ton organisation : tes scores de qualité, catégories de prompts, nombres de mots, sites utilisés, issues (envoyé, amélioré, annulé) et dates, ainsi que la longueur et la durée des réponses de l'IA, le modèle utilisé et ton temps de lecture — jamais le texte de ces réponses. Jamais aucun texte sans ton accord séparé, catégorie par catégorie, à l'écran suivant. Ton email de compte t'identifie auprès de l'enseignant. Conservation : contenu 90 jours max, indicateurs 12 mois.",
-      joinDiscAccept: "Rejoindre et partager ces indicateurs",
-      joinDiscCancel: "Annuler",
       popupInertBanner: "Prompt Tracker est en veille : rien n'est enregistré tant que tu n'as pas accepté la divulgation des données.",
       popupInertCta: "Voir et activer",
       disclosureUpdate:
@@ -191,8 +181,8 @@ const CoachI18n = (() => {
         "Rien n'est encore partagé avec ton organisation : il manque ton accord pour envoyer tes indicateurs (scores, catégories, compteurs). Aucun texte de prompt n'est concerné ici.",
       syncCtaBaseline: "Accepter et activer le partage",
       syncBlockedNoOrg:
-        "Ton compte n'est rattaché à aucune classe. Saisis le code que t'a donné ton enseignant pour que ta progression lui remonte.",
-      syncCtaNoOrg: "Rejoindre ma classe",
+        "Ton compte n'est rattaché à aucune organisation : ta progression reste sur cet ordinateur. Vérifie ton compte sur le dashboard.",
+      syncCtaNoOrg: "Ouvrir le dashboard",
       syncBlockedNoAuth:
         "Tu n'es pas connecté : ta progression reste sur cet ordinateur et ne remonte pas à ta classe.",
       syncCtaNoAuth: "Lier mon compte",
@@ -208,7 +198,7 @@ const CoachI18n = (() => {
       // Appairage : le compte se lie depuis le web, où l'utilisateur est déjà
       // connecté. Aucun mot de passe n'est saisi dans le popup.
       pairIntro:
-        "Lie ton compte pour retrouver ta progression sur le web et la partager avec ta classe. Sans compte, tout reste sur cet ordinateur.",
+        "Clique sur « Lier mon compte », puis autorise la demande sur ta page I-BE³ Companion (/extension/pair). Sans compte, tout reste sur cet ordinateur.",
       pairStart: "Lier mon compte",
       pairWaiting:
         "Vérifie que ce code est bien celui affiché dans l'onglet qui vient de s'ouvrir, puis autorise. La liaison se fait ensuite toute seule.",
@@ -394,16 +384,7 @@ const CoachI18n = (() => {
       authConfirm: "Account created. Confirm your email, then sign in.",
       authHint: "Without an account, everything stays local on this computer.",
       authNoOrg: "no organization attached",
-      joinCodePlaceholder: "Class code (e.g. ABC2345)",
-      joinCta: "Join my class",
-      joinInvalid: "Invalid, disabled or expired code.",
-      joinOtherOrg: "Your account already belongs to another organization.",
       popupConsentLink: "🔒 My shared data",
-      joinDiscTitle: "Before you join",
-      joinDiscBody:
-        "Joining a class means sharing with your organization: your quality scores, prompt categories, word counts, sites used, outcomes (sent, improved, cancelled) and dates, plus the length and duration of the AI's answers, the model used and your reading time — never the text of those answers. Never any text without your separate, category-by-category consent on the next screen. Your account email identifies you to the teacher. Retention: content 90 days max, indicators 12 months.",
-      joinDiscAccept: "Join and share these indicators",
-      joinDiscCancel: "Cancel",
       popupInertBanner: "Prompt Tracker is on standby: nothing is recorded until you accept the data disclosure.",
       popupInertCta: "Review and enable",
       disclosureUpdate:
@@ -446,8 +427,8 @@ const CoachI18n = (() => {
         "Nothing is shared with your organisation yet: your agreement is missing to send your indicators (scores, categories, counters). No prompt text is involved here.",
       syncCtaBaseline: "Accept and enable sharing",
       syncBlockedNoOrg:
-        "Your account isn't linked to any class. Enter the code your teacher gave you so your progress reaches them.",
-      syncCtaNoOrg: "Join my class",
+        "Your account isn't linked to any organization: your progress stays on this computer. Check your account on the dashboard.",
+      syncCtaNoOrg: "Open dashboard",
       syncBlockedNoAuth:
         "You're not signed in: your progress stays on this computer and doesn't reach your class.",
       syncCtaNoAuth: "Link my account",
@@ -458,7 +439,7 @@ const CoachI18n = (() => {
       syncPending: (n) => `${n} event(s) pending.`,
       syncPendingSince: (n, date) => `${n} event(s) pending since ${date}.`,
       pairIntro:
-        "Link your account to find your progress on the web and share it with your class. Without an account, everything stays on this computer.",
+        "Click \"Link my account\", then authorize the request on your I-BE³ Companion page (/extension/pair). Without an account, everything stays on this computer.",
       pairStart: "Link my account",
       pairWaiting:
         "Check that this code matches the one in the tab that just opened, then authorise. Linking then happens on its own.",

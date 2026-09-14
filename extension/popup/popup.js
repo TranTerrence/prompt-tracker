@@ -1,7 +1,7 @@
 // Popup : login, stats rapides, réglages (dont thème), export CSV.
 // Les stats détaillées vivent dans le dashboard web ; ici, l'essentiel.
-
-const DASHBOARD_URL = "https://track-prompt.vercel.app";
+// L'URL du dashboard vient de CoachApi.APP_URL (extension/src/supabase.js) :
+// une seule valeur à changer au moment de la bascule en production.
 
 // Garde-fou : une erreur d'init ne doit jamais laisser un popup vide et muet
 // (retour terrain). i18n peut être la cause : message bilingue en dur.
@@ -174,9 +174,9 @@ function showAuthState(session, profile, orgConfig, pendingCount) {
     document.getElementById("auth-org").textContent =
       orgConfig && orgConfig.branding ? orgConfig.branding.name : t("authNoOrg");
     document.getElementById("sync-status").textContent = pendingCount ? t("authPending", pendingCount) : t("authSynced");
-    // Sans organisation : proposer le rattachement par code de classe.
-    // Avec : l'accès permanent aux choix de partage (consentement).
-    document.getElementById("join-org").hidden = Boolean(orgConfig);
+    // L'organisation est rattachée à l'inscription (comptes provisionnés par
+    // le programme) : le bouton de consentement n'a de sens qu'une fois cette
+    // organisation connue.
     document.getElementById("open-consent").hidden = !orgConfig;
     if (orgConfig && orgConfig.branding) {
       document.getElementById("brand-title").textContent = orgConfig.branding.name;
@@ -190,64 +190,18 @@ function showAuthState(session, profile, orgConfig, pendingCount) {
   }
 }
 
-/* ---------- Rejoindre une classe par code ---------- */
+/* ---------- Consentement ---------- */
 
-document.getElementById("join-code").placeholder = t("joinCodePlaceholder");
-document.getElementById("join-submit").textContent = t("joinCta");
+// Les codes de classe ont disparu (comptes provisionnés par le programme,
+// décision 2026-09) : il ne reste ici que l'accès aux choix de partage.
+// `CoachApi.joinGroup` existe toujours côté client (RPC `join_group_with_code`,
+// qui répond désormais `not_available`) mais plus rien dans ce popup ne
+// l'appelle.
 document.getElementById("open-consent").textContent = t("popupConsentLink");
-document.getElementById("join-disc-title").textContent = t("joinDiscTitle");
-document.getElementById("join-disc-body").textContent = t("joinDiscBody");
-document.getElementById("join-disc-accept").textContent = t("joinDiscAccept");
-document.getElementById("join-disc-cancel").textContent = t("joinDiscCancel");
 
 const CONSENT_URL = chrome.runtime.getURL("consent/consent.html");
 document.getElementById("open-consent").addEventListener("click", () => {
   chrome.tabs.create({ url: CONSENT_URL });
-});
-
-function joinError(message) {
-  const el = document.getElementById("join-error");
-  el.textContent = message;
-  el.hidden = !message;
-}
-
-// Jonction en deux temps (divulgation bien visible) : le premier clic déplie
-// ce que « rejoindre » partage avec l'organisation ; seul le bouton d'accord
-// déclenche réellement la jonction, et donc la synchronisation.
-document.getElementById("join-submit").addEventListener("click", () => {
-  joinError("");
-  if (!document.getElementById("join-code").value.trim()) return;
-  document.getElementById("join-disclosure").hidden = false;
-  document.getElementById("join-submit").disabled = true;
-});
-
-document.getElementById("join-disc-cancel").addEventListener("click", () => {
-  document.getElementById("join-disclosure").hidden = true;
-  document.getElementById("join-submit").disabled = false;
-});
-
-document.getElementById("join-disc-accept").addEventListener("click", async () => {
-  joinError("");
-  const code = document.getElementById("join-code").value.trim();
-  if (!code) return;
-  try {
-    // L'accord donné ici couvre le socle d'indicateurs. Il part avec la
-    // jonction (p_baseline_ack) et s'enregistre en base dans la même
-    // transaction : joinGroup enchaîne refreshOrgConfig, qui redescend
-    // baselineConsent depuis le serveur. Rien n'est écrit localement ici —
-    // c'était la cause du blocage silencieux des jonctions faites sur le web.
-    await CoachApi.joinGroup(code);
-    document.getElementById("join-disclosure").hidden = true;
-    document.getElementById("join-submit").disabled = false;
-    chrome.runtime.sendMessage({ type: "sync-now" }, () => refreshAuthUi());
-    // Le consentement se présente immédiatement après l'adhésion : c'est
-    // l'utilisateur qui décide ce que l'organisation recevra en plus du socle.
-    chrome.tabs.create({ url: CONSENT_URL });
-  } catch (e) {
-    if (String(e.message).includes("invalid_code")) joinError(t("joinInvalid"));
-    else if (String(e.message).includes("already_in_other_org")) joinError(t("joinOtherOrg"));
-    else joinError(e.message);
-  }
 });
 
 /* ---------- Appairage avec le web ---------- */
@@ -264,7 +218,7 @@ function pairError(message) {
 }
 
 function pairUrl(userCode) {
-  return `${DASHBOARD_URL}/extension/pair?c=${encodeURIComponent(userCode)}`;
+  return `${CoachApi.APP_URL}/extension/pair?c=${encodeURIComponent(userCode)}`;
 }
 
 function stopPairPolling() {
@@ -422,10 +376,13 @@ const SYNC_ACTIONS = {
       chrome.runtime.sendMessage({ type: "sync-now" }, () => renderSyncBanner());
     },
   },
+  // Ne devrait plus se produire (comptes provisionnés avec leur organisation
+  // dès l'inscription) mais reste géré défensivement : plus de champ de code
+  // à mettre en avant ici, le dashboard est le seul recours.
   no_org: {
     text: "syncBlockedNoOrg",
     cta: "syncCtaNoOrg",
-    run: async () => document.getElementById("join-code").focus(),
+    run: async () => chrome.tabs.create({ url: CoachApi.APP_URL }),
   },
   not_authenticated: {
     text: "syncBlockedNoAuth",
@@ -496,12 +453,12 @@ document.getElementById("auth-logout").addEventListener("click", async () => {
   refreshAuthUi();
 });
 document.getElementById("open-dashboard").addEventListener("click", () => {
-  chrome.tabs.create({ url: DASHBOARD_URL });
+  chrome.tabs.create({ url: CoachApi.APP_URL });
 });
 refreshAuthUi();
 
 // À l'ouverture du popup, on rafraîchit config + sync : c'est le moment où
-// l'utilisateur regarde. Sans ça, quelqu'un qui vient de rejoindre sa classe
+// l'utilisateur regarde. Sans ça, quelqu'un qui vient de lier son compte
 // sur le web verrait encore l'ancien état pendant un quart d'heure.
 chrome.storage.local.get("session", (data) => {
   if (data.session) chrome.runtime.sendMessage({ type: "sync-now" }, () => refreshAuthUi());

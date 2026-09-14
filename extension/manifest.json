@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "0.9.2",
+  "version": "1.0.0",
   "description": "__MSG_appDesc__",
   "default_locale": "fr",
   "icons": {
@@ -15,7 +15,9 @@
     "alarms"
   ],
   "optional_host_permissions": [
-    "https://*/*"
+    "https://*/*",
+    "http://localhost:3200/*",
+    "http://127.0.0.1:54421/*"
   ],
   "background": {
     "service_worker": "src/background.js"
