@@ -67,6 +67,40 @@ const compiled = S.compilePrompt(
 assert.ok(compiled.indexOf("Ma tentative") < compiled.indexOf("Mon contexte"), compiled);
 assert.strictEqual(S.compilePrompt("brut", [], "fr"), "brut");
 
+/* ---------- compileParts est LA SOURCE de compilePrompt ---------- */
+
+// La modale dessine sa colonne droite depuis compileParts. Si les deux
+// divergeaient, l'utilisateur lirait un ordre et enverrait l'autre — le pire
+// endroit où accepter une dérive silencieuse. Ici on recompose la chaîne
+// depuis les parts et on l'égale au texte compilé, dans les deux langues.
+for (const [lang, tentative] of [["fr", "Ma tentative"], ["en", "My attempt"]]) {
+  const answers = [
+    { key: "contexte", axis: "contexte", label: "Mon contexte", answer: "pour le lycée" },
+    { key: "hypothese-1", axis: "hypothese", label: tentative, answer: "je pense que X" },
+    { key: "contexte-2", axis: "contexte", label: "Mon contexte", answer: "terminale\nDS demain" },
+    { key: "passee", axis: "critique", label: "Ma vérification", answer: "   " },
+  ];
+  const parts = S.compileParts("ma demande", answers, lang);
+  const joined = parts.lines.length
+    ? `${parts.original}\n\n${parts.header}\n${parts.lines.map((l) => `- ${l.label} : ${l.text}`).join("\n")}`
+    : parts.original;
+  assert.strictEqual(joined, S.compilePrompt("ma demande", answers, lang), `parts == compilePrompt (${lang})`);
+  // La tentative reste remontée en tête, et chaque ligne porte sa clé : c'est
+  // ce qui permet à la modale d'apparier une réponse et le bloc qu'elle produit.
+  assert.strictEqual(parts.lines[0].axis, "hypothese", `hypothèse en tête (${lang})`);
+  assert.ok(parts.lines.every((l) => l.key), `chaque ligne porte sa clé (${lang})`);
+  // Une réponse vide ne produit pas de ligne : rien n'a atterri à droite.
+  assert.strictEqual(parts.lines.length, 3, `les réponses vides sont ignorées (${lang})`);
+  // Une réponse multiligne survit entière.
+  assert.ok(parts.lines.some((l) => l.text.includes("\nDS demain")), `réponse multiligne intacte (${lang})`);
+}
+
+const vide = S.compileParts("brut", [], "fr");
+assert.deepStrictEqual(vide.lines, [], "aucune réponse : aucune ligne");
+assert.strictEqual(vide.original, "brut");
+assert.strictEqual(vide.header, "Ma réflexion préalable :", "l'en-tête suit la langue du PROMPT");
+assert.strictEqual(S.compileParts("x", [], "en").header, "My prior reasoning:");
+
 /* ---------- postQuestion ---------- */
 
 assert.strictEqual(S.postQuestion({ category: "recherche", scores: { critique: 0 }, lang: "fr" }).key, "verify");

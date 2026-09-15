@@ -33,6 +33,18 @@ npm install && npm run dev                   # http://localhost:3000
 
 # Packager pour les stores (Chrome + Edge + Firefox, voir docs/PORTS.md) :
 ./scripts/package.sh                         # → dist/prompt-tracker[-edge|-firefox]-<version>.zip
+
+# Tests (aucune CI dans ce dépôt : ils se lancent à la main)
+for f in extension/tests/*.test.js; do node "$f"; done
+node extension/tests/scoring-eval.js         # banc du barème + parité FR/EN
+cd dashboard && npm test                     # dont le test différentiel du découpage
+
+# Harnais visuels de l'extension (modale, popup, badge, consentement) :
+python3 -m http.server 4321 --directory extension
+# puis http://localhost:4321/tests/modal-harness.html
+#   ?library=1 ?noscore=1 ?llm=1 ?exhaust=1 (cumulables)
+#   globales : __answer("…") __reroll() __edit() __done() __recompile() __lib(i)
+#              __check() -> [] si la vue construite et le texte envoyé s'accordent
 ```
 
 Ajouter un site IA = un fichier `extension/src/adapters/<site>.js` (sélecteurs du composeur et du bouton d'envoi) + une entrée `content_scripts` dans le manifest : toute la mécanique est partagée par [`factory.js`](extension/src/adapters/factory.js).

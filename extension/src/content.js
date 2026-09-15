@@ -579,6 +579,10 @@
         // on mesure la réflexion de l'utilisateur, pas la structure du produit.
         rescore: (t) => CoachScoring.score(CoachScoring.stripScaffolding(t), recentPromptTexts),
         compile: (original, answers) => CoachScoring.compilePrompt(original, answers, lang),
+        // La vue construite dessine un bloc par réponse : elle a besoin des
+        // parts, pas de la chaîne. Même source que compile, donc aucun risque
+        // de divergence entre ce qui est montré et ce qui sera envoyé.
+        compileParts: (original, answers) => CoachScoring.compileParts(original, answers, lang),
         // Fin naturelle : la modale demande où en est la couverture des axes
         // faibles avant chaque question. Quand tout est couvert, elle rend la
         // main au lieu de recycler l'approfondissement (retour I-BE³ : le

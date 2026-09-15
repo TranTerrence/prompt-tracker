@@ -237,6 +237,9 @@ const CoachMirror = (() => {
   //   subtitle (remplace le sous-titre : ré-entrée honnête),
   //   promise (bool : afficher la promesse « je ne t'interromprai plus »),
   //   rescore(text) -> scores, compile(originalPrompt, answers) -> string,
+  //   compileParts(originalPrompt, answers) -> {original, header, lines:[{key, axis, label, text}]}
+  //     (même source que compile : la vue construite en dessine un bloc par
+  //      ligne, sans reparser le texte compilé ; un repli existe si absent),
   //   ask(state) -> Promise<{key, axis, label, question}>,
   //   onSend(finalText, meta), onSendAnyway(meta), onCancel(meta), onPause(meta) }
   function showModal(opts) {
@@ -252,6 +255,14 @@ const CoachMirror = (() => {
       asked: [],
       current: null,
       previewFrozen: false, // édition manuelle de l'aperçu → on arrête de recompiler
+      // editing dit QUELLE FACE de la colonne droite est montrée ; previewFrozen
+      // dit QUI POSSÈDE le texte. Les confondre casserait deux choses : l'écouteur
+      // « input » ne peut pas se déclencher sur un textarea en display:none (il
+      // n'y aurait plus d'entrée en édition), et ouvrir le texte brut pour le
+      // LIRE gèlerait la recompilation, donc tuerait « voir le prompt se
+      // construire » pour qui revient ensuite répondre. Invariant : gelé ⇒ en
+      // édition (un texte gelé ne se décompose pas en blocs honnêtes).
+      editing: false,
       rerolls: 0, // relances « autre question » sur toute la session
       rerollsForCurrent: 0, // plafond par question (2) : borne le coût LLM
       closed: false, // état de clôture atteint (axes faibles couverts)
@@ -292,6 +303,11 @@ const CoachMirror = (() => {
           .head { padding-top: 12px; }
           .preview-zone { padding-bottom: 12px; }
         }
+        /* Les deux colonnes n'existent qu'a partir de 900px (voir plus bas).
+           En dessous, « display: contents » les efface de l'arbre de boites :
+           .thread reste un enfant flex DIRECT de .modal et garde son flex:1,
+           donc l'enveloppe n'a rigoureusement aucun effet de mise en page. */
+        .col { display: contents; }
         .head { display: flex; align-items: center; padding: 18px 22px 8px; }
         h1 { font: 600 17px/1.3 var(--font-display); margin: 0; color: var(--ink); letter-spacing: .005em; }
         h1 .tick { color: var(--accent); }
@@ -386,6 +402,59 @@ const CoachMirror = (() => {
           display: inline-flex; align-items: center; justify-content: center; font-size: 10px; }
         .method-link:hover { color: var(--accent); border-color: var(--accent); }
         .preview { width: 100%; min-height: 72px; max-height: 150px; }
+
+        /* Deux faces d'une meme chose. Le basculement se fait PAR CLASSE
+           D'ANCETRE et jamais par l'attribut hidden : la regle [hidden] plus
+           haut est en !important et gagnerait sur tout, c'est le bug que son
+           commentaire raconte. Et display:none (pas visibility ni opacity) est
+           ce qui sort correctement le textarea cache de l'ordre de tabulation. */
+        .preview-render { display: block; overflow-y: auto; max-height: 240px; cursor: text; }
+        .preview { display: none; }
+        .preview-zone.editing .preview { display: block; }
+        .preview-zone.editing .preview-render { display: none; }
+        .edit-link, .done-link { border: 0; background: none; color: var(--accent); font-size: 11px;
+          cursor: pointer; text-decoration: underline; text-underline-offset: 2px; padding: 0; }
+        .edit-link { display: inline; }
+        .preview-zone.editing .edit-link { display: none; }
+        .done-link { display: none; }
+        .preview-zone.editing .done-link { display: inline; }
+        .preview-zone.frozen .done-link { display: none; }
+
+        /* La demande d'origine, puis un bloc par reponse. Les prefixes
+           « - Label : » deviennent des legendes : c'est le prix a payer pour
+           pouvoir montrer QUELLE ligne vient d'arriver, et « modifier le
+           texte » rend les octets bruts en un clic. */
+        .pv-original { white-space: pre-wrap; overflow-wrap: anywhere; padding: 10px 12px;
+          border-radius: 12px; background: var(--surface); border: 1px solid var(--border);
+          font: 13.5px/1.6 var(--font-text); color: var(--ink); }
+        .pv-cap { display: block; margin-bottom: 4px; font: 10.5px var(--font-text); color: var(--muted);
+          text-transform: uppercase; letter-spacing: .08em; }
+        .pv-header { margin: 14px 0 8px; font: 10.5px var(--font-text); color: var(--muted);
+          text-transform: uppercase; letter-spacing: .08em; }
+        .pv-line { position: relative; margin-bottom: 8px; padding: 9px 12px; border-radius: 12px;
+          background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); }
+        .pv-line .pv-cap { text-transform: none; letter-spacing: normal; font-size: 11px; }
+        .pv-text { white-space: pre-wrap; overflow-wrap: anywhere; font: 13.5px/1.6 var(--font-text); }
+        .pv-empty { margin-top: 12px; color: var(--muted); font-size: 12px; font-style: italic;
+          font-family: var(--font-display); }
+
+        /* Le lien reponse <-> bloc. La pastille numerotee est le mecanisme
+           DURABLE : un lien au survol est invisible en premiere lecture,
+           invisible au tactile et invisible au clavier. Le survol n'est qu'un
+           renfort. Une question passee n'a pas de pastille : rien n'a atterri. */
+        .pv-line[data-n]::before, .bubble.user[data-n]::before {
+          content: attr(data-n); position: absolute; top: -7px; left: -7px;
+          width: 17px; height: 17px; border-radius: 50%; background: var(--accent); color: #FDFCF9;
+          font: 600 10px/17px var(--font-text); text-align: center; }
+        .bubble.user { position: relative; }
+        .pv-line.linked, .bubble.linked { background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+          border-color: var(--accent); }
+        .pv-line.fresh { animation: pv-in .32s ease-out; }
+        @keyframes pv-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        @media (prefers-reduced-motion: reduce) { .pv-line.fresh { animation: none; } }
+
+        .sr-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+          white-space: nowrap; margin: 0; }
         .buttons { display: flex; gap: 10px; margin-top: 12px; }
         .send { flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--accent); background: var(--accent);
           color: #FDFCF9; font: 600 13.5px var(--font-text); cursor: pointer; }
@@ -393,11 +462,77 @@ const CoachMirror = (() => {
         .anyway { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: none;
           color: var(--muted); cursor: pointer; font: 12px var(--font-text); }
         .anyway:hover { color: var(--ink); border-color: var(--muted); }
+
+        /* ---------- Deux colonnes : le dialogue a gauche, le prompt a droite ----------
+           Ecrit en surcouche, pas en remplacement : tout ce qui precede reste la
+           mise en page de repli. Une requete mal cadree degrade donc vers la
+           modale d'aujourd'hui, qui fonctionne, et non vers un ecran casse.
+           Le garde min-height evite le pire cas : sous ~520px de haut, les deux
+           colonnes ne tiennent pas leur chrome fixe et overflow:hidden couperait
+           les boutons au lieu de les rendre atteignables. */
+        @media (min-width: 900px) and (min-height: 520px) {
+          .modal { width: min(1040px, 94vw);
+            height: min(760px, calc(100vh - 24px)); height: min(760px, calc(100dvh - 24px));
+            display: grid;
+            /* minmax(0, …) est obligatoire : un element de grille vaut
+               min-width:auto par defaut, et un seul jeton insecable du prompt
+               (une URL collee) ferait deborder la colonne. */
+            grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+            grid-template-rows: minmax(0, 1fr);
+            overflow: hidden; position: relative; }
+          /* min-height:0 pour la meme raison cote flex : sans lui, .thread
+             refuse de retrecir et fait deborder la colonne entiere. */
+          .col { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+          .col.right { background: var(--soft); border-left: 1px solid var(--border); }
+
+          .thread { flex: 1; min-height: 0; max-height: none; }
+
+          /* La croix ferme le dialogue entier, pas la colonne gauche : elle
+             reste dans .head en source (l'ordre du DOM porte le repli) et se
+             pose en absolu au coin de la modale. */
+          .closex { position: absolute; top: 10px; right: 12px; margin-left: 0; z-index: 1; }
+
+          .preview-zone { flex: 1; min-height: 0; display: flex; flex-direction: column;
+            border-top: 0; background: none; padding: 16px 22px 18px; }
+          /* Le titre absorbe la place, ce qui pousse les liens a droite sans
+             margin-left:auto ; la ventilation par rubrique passe sur sa propre
+             ligne plutot que de faire deborder le bandeau sur deux niveaux. */
+          .preview-head { flex-wrap: nowrap; align-items: flex-start; padding-right: 26px; }
+          .preview-title { flex: 1 1 auto; min-width: 0; }
+          .score-detail { display: block; margin-top: 3px; }
+          .preview-render, .preview { flex: 1; min-height: 0; max-height: none; }
+          .buttons, .pause-link { flex: none; }
+          /* La colonne est trop etroite pour deux boutons cote a cote : l'un
+             sous l'autre, l'envoi d'abord. « Tel quel » reste inamovible. */
+          .buttons { flex-direction: column; gap: 8px; }
+          .send { flex: none; }
+
+          /* Une longue reponse en blanc sur accent, alignee a droite, est le
+             texte le moins lisible de la modale. En deux colonnes le fil est
+             une surface de RELECTURE : la reponse redevient un bloc de lecture,
+             la distinction question/reponse passant par la famille typographique
+             et le filet d'accent. */
+          .bubble.user { max-width: 100%; margin-left: 0; background: var(--surface); color: var(--ink);
+            border: 1px solid var(--border); border-left: 3px solid var(--accent);
+            border-bottom-right-radius: 14px; }
+        }
+
+        /* Ecran bas ET deux colonnes : on resserre les marges, mais on ne
+           plafonne plus .thread ni l'apercu — ils sont en flex:1 et la hauteur
+           suit deja dvh. Les regles du bloc compact ci-dessus seraient fausses. */
+        @media (min-width: 900px) and (max-height: 700px) and (min-height: 520px) {
+          .thread { max-height: none; }
+          .preview { min-height: 0; max-height: none; }
+          .head { padding: 12px 22px 6px; }
+          .sub { padding-bottom: 8px; }
+          .preview-zone { padding: 12px 22px 12px; }
+        }
       </style>
       <div class="root">
         <div class="overlay">
-          <div class="modal" role="dialog" aria-modal="true">
-            <div class="head"><h1><span class="tick">🪞</span> </h1><button class="closex"></button></div>
+          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="coach-title">
+            <div class="col left">
+            <div class="head"><h1 id="coach-title"><span class="tick">🪞</span> </h1><button class="closex"></button></div>
             <div class="sub"></div>
             <div class="llm-note" hidden><span class="llm-dot"></span><span class="llm-note-text"></span></div>
             <div class="intention" hidden></div>
@@ -421,18 +556,25 @@ const CoachMirror = (() => {
                 <button class="closing-more"></button>
               </div>
             </div>
+            </div>
+            <div class="col right">
             <div class="preview-zone">
               <div class="preview-head">
                 <span class="preview-title"></span>
+                <button class="edit-link"></button>
+                <button class="done-link"></button>
                 <button class="recompile"></button>
                 <a class="method-link" target="_blank" rel="noreferrer">?</a>
               </div>
+              <div class="preview-render"></div>
               <textarea class="preview" spellcheck="false"></textarea>
+              <p class="sr-status" aria-live="polite"></p>
               <div class="buttons">
                 <button class="send"></button>
                 <button class="anyway"></button>
               </div>
               <button class="pause-link"></button>
+            </div>
             </div>
           </div>
         </div>
@@ -470,6 +612,9 @@ const CoachMirror = (() => {
       el(".llm-note").hidden = false;
     }
     el(".recompile").textContent = t("modalRecompile");
+    el(".edit-link").textContent = t("modalPreviewEdit");
+    el(".edit-link").title = t("modalPreviewEditTitle");
+    el(".done-link").textContent = t("modalPreviewDone");
     el(".send").textContent = t("modalSend");
     el(".anyway").textContent = t("modalSendAnyway");
     // Transparence : le « ? » ouvre la page publique qui explique le barème.
@@ -493,6 +638,18 @@ const CoachMirror = (() => {
         return;
       }
       previewTitle.append(`${t("modalPreviewHead")} `);
+      // La fleche n'apparait QUE si les deux chiffres different : a l'ouverture
+      // ils sont egaux par construction, et « 7 → 7 » se lirait comme un echec.
+      const before = opts.scoreBefore;
+      if (before !== null && before !== undefined && before !== scores.total) {
+        const b = document.createElement("span");
+        b.className = "score-before";
+        b.textContent = before;
+        previewTitle.append(b, " → ");
+        previewTitle.title = t("modalScoreProgress", before, scores.total);
+      } else {
+        previewTitle.title = "";
+      }
       const s = document.createElement("span");
       s.className = "score";
       s.textContent = scores.total;
@@ -503,9 +660,11 @@ const CoachMirror = (() => {
       previewTitle.append(detail);
     }
 
-    function bubble(kind, text, badge) {
+    function bubble(kind, text, badge, key) {
       const b = document.createElement("div");
       b.className = `bubble ${kind}`;
+      // La cle est ce qui apparie une bulle et le bloc qu'elle a produit.
+      if (key) b.dataset.key = key;
       if (badge) {
         const tag = document.createElement("span");
         tag.className = "llm-badge";
@@ -518,10 +677,93 @@ const CoachMirror = (() => {
       return b;
     }
 
-    function updatePreview() {
+    const renderBox = el(".preview-render");
+
+    // Seul propriétaire de state.editing / state.previewFrozen et des deux
+    // classes qui les reflètent. Passer par ici partout est ce qui garantit
+    // l'invariant « gelé ⇒ en édition ».
+    function setPreviewMode(next = {}) {
+      if (next.frozen !== undefined) state.previewFrozen = next.frozen;
+      if (next.editing !== undefined) state.editing = next.editing;
+      if (state.previewFrozen) state.editing = true;
+      const zone = el(".preview-zone");
+      zone.classList.toggle("editing", state.editing);
+      zone.classList.toggle("frozen", state.previewFrozen);
+      // Le focus après un changement de display doit attendre le prochain
+      // rendu, sinon il porte sur un élément encore invisible.
+      if (next.focus) requestAnimationFrame(() => preview.focus());
+    }
+
+    // La colonne droite en vue construite. Reconstruite en entier à chaque
+    // appel (donc surtout PAS d'aria-live ici : l'annonce passe par .sr-status,
+    // sinon le lecteur d'écran relirait le prompt entier à chaque réponse).
+    function renderPreview(highlightKey) {
+      renderBox.textContent = "";
+      const filled = state.answers.filter((a) => a.answer && a.answer.trim());
+      const parts =
+        typeof opts.compileParts === "function"
+          ? opts.compileParts(opts.promptText, state.answers)
+          : // Repli défensif si l'appelant n'a pas fourni compileParts : l'ordre
+            // sera celui des réponses, donc potentiellement différent du texte.
+            { original: (opts.promptText || "").trim(), header: "",
+              lines: filled.map((a) => ({ key: a.key, axis: a.axis, label: a.label, text: a.answer.trim() })) };
+
+      // Numérotation CHRONOLOGIQUE (elle doit correspondre au fil), alors que
+      // l'ORDRE des blocs suit parts.lines (il doit correspondre au textarea).
+      const rank = new Map();
+      filled.forEach((a, i) => rank.set(a.key, i + 1));
+
+      const cap = document.createElement("span");
+      cap.className = "pv-cap";
+      cap.textContent = t("modalPreviewOriginal");
+      const orig = document.createElement("div");
+      orig.className = "pv-original";
+      orig.textContent = parts.original;
+      renderBox.append(cap, orig);
+
+      if (!parts.lines.length) {
+        const empty = document.createElement("p");
+        empty.className = "pv-empty";
+        empty.textContent = t("modalPreviewEmpty");
+        renderBox.appendChild(empty);
+        return;
+      }
+
+      if (parts.header) {
+        const h = document.createElement("div");
+        h.className = "pv-header";
+        h.textContent = parts.header;
+        renderBox.appendChild(h);
+      }
+      for (const line of parts.lines) {
+        const block = document.createElement("div");
+        block.className = line.key === highlightKey ? "pv-line fresh" : "pv-line";
+        if (line.key) block.dataset.key = line.key;
+        const n = rank.get(line.key);
+        if (n) block.dataset.n = n;
+        const label = document.createElement("span");
+        label.className = "pv-cap";
+        label.textContent = line.label;
+        const text = document.createElement("div");
+        text.className = "pv-text";
+        text.textContent = line.text;
+        block.append(label, text);
+        renderBox.appendChild(block);
+      }
+    }
+
+    // Met en évidence la bulle ET le bloc qui portent la même clé.
+    function setLinked(key) {
+      for (const n of shadow.querySelectorAll(".linked")) n.classList.remove("linked");
+      if (!key) return;
+      for (const n of shadow.querySelectorAll(`[data-key="${CSS.escape(key)}"]`)) n.classList.add("linked");
+    }
+
+    function updatePreview(highlightKey) {
       if (state.previewFrozen) return;
       preview.value = opts.compile(opts.promptText, state.answers);
       setPreviewScore(opts.rescore(preview.value));
+      renderPreview(highlightKey);
     }
 
     // Bibliothèque publiée par l'organisation. On ne garde que les entrées
@@ -575,11 +817,9 @@ const CoachMirror = (() => {
         // le dialogue », déjà présent, est l'annulation en un clic.
         btn.addEventListener("click", () => {
           preview.value = p.body;
-          state.previewFrozen = true;
-          el(".preview-zone").classList.add("frozen");
+          setPreviewMode({ editing: true, frozen: true, focus: true });
           setPreviewScore(opts.rescore(preview.value));
           el(".library").open = false;
-          preview.focus();
         });
         list.appendChild(btn);
       }
@@ -649,7 +889,7 @@ const CoachMirror = (() => {
       if (!extra.reroll) state.rerollsForCurrent = 0;
       // Le badge ne marque QUE les questions effectivement générées par le
       // LLM : un repli local dans une session LLM reste sans badge.
-      bubble("coach", q.question, q.source === "llm" ? t("modalLlmBadge") : null);
+      bubble("coach", q.question, q.source === "llm" ? t("modalLlmBadge") : null, q.key);
       // Banque locale épuisée (questions adaptées toutes posées) : la relance
       // n'a plus de matière, sauf si le LLM peut toujours générer.
       if (q.recycled && !opts.llmActive) {
@@ -685,10 +925,18 @@ const CoachMirror = (() => {
     function submitAnswer(text) {
       if (!state.current) return;
       const answer = text.trim();
+      const key = state.current.key;
+      const label = state.current.label;
       state.answers.push({ ...state.current, answer });
-      bubble(answer ? "user" : "skip", answer || t("modalSkipped"));
+      const b = bubble(answer ? "user" : "skip", answer || t("modalSkipped"), null, key);
+      // Une question passée ne reçoit PAS de pastille : c'est le signal honnête
+      // que rien n'a atterri dans la colonne de droite.
+      if (answer) {
+        b.dataset.n = state.answers.filter((a) => a.answer && a.answer.trim()).length;
+        el(".sr-status").textContent = t("modalPreviewAdded", label);
+      }
       answerBox.value = "";
-      updatePreview();
+      updatePreview(answer ? key : null);
       askNext();
     }
 
@@ -704,14 +952,29 @@ const CoachMirror = (() => {
     });
 
     // Édition manuelle de l'aperçu → gel de la recompilation automatique.
+    // Ouvrir le texte brut NE GÈLE PAS : on peut le lire puis revenir répondre.
+    // Seule la frappe gèle. C'est cette distinction que les deux booléens
+    // préservent, et la confondre est la régression à ne pas réintroduire.
+    el(".edit-link").addEventListener("click", () => setPreviewMode({ editing: true, focus: true }));
+    el(".done-link").addEventListener("click", () => setPreviewMode({ editing: false }));
+    renderBox.addEventListener("click", () => setPreviewMode({ editing: true, focus: true }));
+
+    // Survol et focus clavier : la bulle et son bloc s'allument ensemble.
+    const linkFrom = (e) => {
+      const holder = e.target && e.target.closest ? e.target.closest("[data-key]") : null;
+      setLinked(holder ? holder.dataset.key : null);
+    };
+    el(".modal").addEventListener("mouseover", linkFrom);
+    el(".modal").addEventListener("focusin", linkFrom);
+    el(".modal").addEventListener("mouseout", () => setLinked(null));
+
     preview.addEventListener("input", () => {
-      state.previewFrozen = true;
-      el(".preview-zone").classList.add("frozen");
+      setPreviewMode({ editing: true, frozen: true });
       setPreviewScore(opts.rescore(preview.value));
     });
     el(".recompile").addEventListener("click", () => {
-      state.previewFrozen = false;
-      el(".preview-zone").classList.remove("frozen");
+      // Rendre la main au dialogue : on dégèle ET on repasse en vue construite.
+      setPreviewMode({ editing: false, frozen: false });
       updatePreview();
     });
 
@@ -737,6 +1000,28 @@ const CoachMirror = (() => {
       closeModal();
       if (opts.onPause) opts.onPause(m);
     });
+    // aria-modal="true" etait affirme sans etre tenu : rien ne retenait le
+    // focus, qui partait donc dans la page derriere. La refonte double le
+    // nombre de controles, ce qui rend l'omission plus couteuse. On filtre sur
+    // getClientRects() : le textarea cache par le mode courant ne doit pas
+    // capturer la tabulation.
+    el(".modal").addEventListener("keydown", (e) => {
+      if (e.key !== "Tab") return;
+      const focusables = [...shadow.querySelectorAll("button, textarea, a[href], summary, [tabindex]:not([tabindex='-1'])")]
+        .filter((n) => !n.disabled && n.getClientRects().length > 0);
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = shadow.activeElement;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
+
     el(".overlay").addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         const m = meta();

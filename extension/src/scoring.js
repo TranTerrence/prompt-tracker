@@ -684,22 +684,40 @@ const CoachScoring = (() => {
   // pendant le dialogue, regroupée par axe. La tentative de l'utilisateur (axe
   // hypothèse) passe en tête : c'est elle que l'IA doit renforcer, pas remplacer.
   // Les réponses vides sont ignorées.
-  function compilePrompt(originalPrompt, answers, lang = "fr") {
+  //
+  // compileParts rend la même chose DÉCOMPOSÉE. La vue construite de la modale
+  // dessine un bloc par réponse et doit pouvoir le rattacher à sa question :
+  // reparser le texte compilé serait fragile, et surtout l'ordre des lignes
+  // n'est PAS celui des réponses (hypothèse remontée, puis regroupement par
+  // libellé). Une modale qui parcourrait state.answers afficherait donc un
+  // ordre différent de celui du texte qui part — inacceptable dans un produit
+  // dont l'argument est la transparence. compilePrompt n'est donc plus qu'une
+  // jointure sur ces parts : les deux ne peuvent plus diverger, et
+  // tests/scoring.test.js verrouille l'égalité.
+  function compileParts(originalPrompt, answers, lang = "fr") {
+    const original = (originalPrompt || "").trim();
+    const header = COMPILE_HEADERS[lang] || COMPILE_HEADERS.fr;
     const filled = (answers || []).filter((a) => a.answer && a.answer.trim());
-    if (!filled.length) return originalPrompt;
+    if (!filled.length) return { original, header, lines: [] };
     const ordered = [...filled.filter((a) => a.axis === "hypothese"), ...filled.filter((a) => a.axis !== "hypothese")];
     const fallbackLabel = (BANKS[lang] || BANKS.fr).approfondissement.label;
     const byLabel = new Map();
     for (const a of ordered) {
       const label = a.label || fallbackLabel;
       if (!byLabel.has(label)) byLabel.set(label, []);
-      byLabel.get(label).push(a.answer.trim());
+      byLabel.get(label).push({ key: a.key, axis: a.axis, label, text: a.answer.trim() });
     }
     const lines = [];
-    for (const [label, items] of byLabel) {
-      for (const item of items) lines.push(`- ${label} : ${item}`);
-    }
-    return `${originalPrompt.trim()}\n\n${COMPILE_HEADERS[lang] || COMPILE_HEADERS.fr}\n${lines.join("\n")}`;
+    for (const items of byLabel.values()) lines.push(...items);
+    return { original, header, lines };
+  }
+
+  function compilePrompt(originalPrompt, answers, lang = "fr") {
+    const { original, header, lines } = compileParts(originalPrompt, answers, lang);
+    // Rien de rempli : on rend le prompt TEL QUEL, sans même le trim — ne pas
+    // toucher au texte de l'utilisateur quand on n'a rien à y ajouter.
+    if (!lines.length) return originalPrompt;
+    return `${original}\n\n${header}\n${lines.map((l) => `- ${l.label} : ${l.text}`).join("\n")}`;
   }
 
   /* ---------- Miroir d'après (une fois la réponse IA reçue) ---------- */
@@ -818,6 +836,7 @@ const CoachScoring = (() => {
     socraticSuggestion,
     nextQuestion,
     compilePrompt,
+    compileParts,
     postQuestion,
     firstDraftScore,
     adaptiveThreshold,
