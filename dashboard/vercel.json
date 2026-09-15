@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://ibe3.vercel.app/extension",
+      "permanent": false
+    }
+  ]
+}

@@ -2,6 +2,13 @@
 
 Document de conception. Chaque choix est relié à ses sources (papiers académiques, docs officielles, données produit). Rédigé en juillet 2026.
 
+> **Lecture en septembre 2026** : le produit s'appelle désormais I-BE³
+> Companion et son backend est la base de l'app du même nom (voir le
+> [README](../README.md)). Les parties de cette feuille de route qui
+> supposaient un backend multi-organisations, une API et un dashboard propres
+> sont caduques ; la pédagogie (dialogue qui rend la main, indicateurs sans
+> contenu, consentement) est ce qui a été livré.
+
 ## 1. Pourquoi ce produit est le bon combat
 
 La recherche récente documente précisément le problème que Prompt Tracker attaque, et valide son mécanisme (sources détaillées dans [RESEARCH.md](RESEARCH.md)) :

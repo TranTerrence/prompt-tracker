@@ -3,6 +3,14 @@
 Un seul code source (`extension/`), trois paquets. `./scripts/package.sh` produit
 les trois d'un coup dans `dist/` :
 
+> **Au lancement (1.0.0, septembre 2026), seul le paquet Chrome est soumis.**
+> Le même zip s'installe sur tout Chromium (Edge, Brave, Arc) ; Edge Add-ons
+> et Firefox AMO attendent un signal de demande. Les noms de fichiers
+> (`prompt-tracker-…`) et l'id Gecko (`prompt-tracker@track-prompt.vercel.app`)
+> sont des **identifiants**, pas des liens : ils restent alors que la marque
+> est devenue I-BE³ Companion et que le domaine disparaît - les changer
+> créerait un autre add-on.
+
 | Paquet | Cible | Différence avec Chrome |
 |---|---|---|
 | `prompt-tracker-<v>.zip` | Chrome Web Store | référence |

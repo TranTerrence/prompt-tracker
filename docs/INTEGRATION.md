@@ -1,4 +1,15 @@
-# Contrat d'intégration Prompt Tracker (v1.2)
+# Contrat d'intégration Prompt Tracker (v1.2) — retiré
+
+> **Retiré le 15 septembre 2026.** Ce contrat décrivait comment une
+> application tierce consommait les données de Prompt Tracker (API, CSV,
+> widgets, synchronisation). Avec la fusion des deux bases, il n'y a plus
+> d'application tierce : l'extension écrit dans la base d'I-BE³ Companion,
+> dont le schéma, le modèle de consentement et les fonctions sont documentés
+> dans `ibe3-companion/docs/database.md`. Ce qui survit du contrat : la règle
+> de consentement (le contenu n'est stocké que si le programme le demande ET
+> que l'étudiant l'accorde, sinon la colonne est nulle à l'insertion) et la
+> rétention (90 jours pour le contenu, 12 mois pour les lignes). Conservé pour
+> mémoire.
 
 Comment brancher votre application (SI pédagogique, journal réflexif, entrepôt
 de données, LMS) sur les données produites par l'extension Prompt Tracker.

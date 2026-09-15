@@ -1,5 +1,12 @@
 # Spec POC : Coach IA / Miroir Socratique (extension Chrome)
 
+> **Document historique (juillet 2026).** C'est la spécification du POC
+> d'une semaine, conservée telle quelle. Ce qui a été livré depuis - cinq
+> sites, interception sous le seuil, dialogue socratique qui rend la main,
+> compte et appairage via l'app I-BE³ Companion - est décrit dans le
+> [README](README.md) ; la méthode de scoring, dans `extension/src/scoring.js`
+> et sur `https://ibe3.vercel.app/help#method`.
+
 ## Promesse utilisateur
 « Ton copilote pour mieux prompter et garder ton esprit critique. » L'utilisateur installe volontairement l'extension ; elle observe ses prompts sur ChatGPT, lui montre sa progression et lui glisse des questions socratiques **sans jamais bloquer** son envoi.
 

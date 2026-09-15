@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# dashboard/ — l'ancien site de Prompt Tracker (retiré)
 
-## Getting Started
+Ce dossier est le dashboard Next.js qui servait `track-prompt.vercel.app` :
+tableau de bord, journal des dialogues, page « Méthode », notice de
+confidentialité, API d'organisation, migrations du backend Prompt Tracker
+(`supabase/migrations/`).
 
-First, run the development server:
+**Il n'est plus déployé ni maintenu depuis le 15 septembre 2026.** Avec la
+fusion des deux bases, tout ce qu'il montrait vit dans l'app I-BE³ Companion
+(`ibe3.vercel.app`) :
+
+| Ici (avant) | Là-bas (maintenant) |
+|---|---|
+| Journal des dialogues | `/prompts` (chaque entrée se déplie) |
+| Page « Méthode » | `/help#method` |
+| Notice de confidentialité | `/extension/privacy` |
+| Appairage de l'extension | `/extension/pair` |
+| Réglages de partage | `/settings` → My data |
+| Administration d'organisation | `/admin/tracker` |
+| API d'organisation, widgets | retirés (`docs/API.md`) |
+| `supabase/migrations/` | portées dans `ibe3-companion/supabase/migrations/20260916*` (copies dans `ibe3-companion/docs/tracker-origin/`) |
+
+Le code est gardé pour mémoire (l'historique git le conserve de toute façon).
+Ne pas le relancer contre la base d'I-BE³ : son schéma est celui de l'ancien
+backend.
+
+## Ce qu'il reste à faire de ce dossier
+
+**Rediriger l'ancien domaine**, puis l'éteindre. Le `vercel.json` de ce
+dossier renvoie toute URL de `track-prompt.vercel.app` vers
+`https://ibe3.vercel.app/extension` (307). À déployer sur le projet Vercel
+`prompt-tracker` **après la recette réelle** de l'app (lot D du plan de
+bascule) :
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd dashboard && vercel deploy --prod
+curl -I https://track-prompt.vercel.app/     # → 307 vers ibe3.vercel.app/extension
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Trente jours plus tard : supprimer le projet Vercel `prompt-tracker` et le
+projet Supabase `ovbvwawzrciwpudnaysp` (167 événements de test, rien à
+garder). Le dossier peut alors disparaître du dépôt.

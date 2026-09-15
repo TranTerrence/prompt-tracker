@@ -1,4 +1,13 @@
-# API d'organisation Prompt Tracker (v1)
+# API d'organisation Prompt Tracker (v1) — retirée
+
+> **Retirée le 15 septembre 2026.** L'extension écrit désormais directement
+> dans la base de l'app I-BE³ Companion (fusion des deux bases) ; le dashboard
+> qui servait cette API n'est plus déployé et `track-prompt.vercel.app`
+> disparaît. Il n'y a plus de clé `pt_live_…`, plus d'endpoints `/api/v1/*`,
+> plus de widgets embarqués. Les données se consultent dans l'app : l'étudiant
+> sur `/prompts`, le tuteur sur `/care` (sous consentement), l'admin en
+> agrégats sur `/admin`. Le texte ci-dessous décrit ce qui existait, pour
+> mémoire ; les liens `track-prompt.vercel.app` ne répondent plus.
 
 **La référence complète vit désormais dans une spec OpenAPI 3.1, source de
 vérité du contrat.**
