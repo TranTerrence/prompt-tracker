@@ -109,8 +109,11 @@ export default function ConsentForm({
             {state.error && <span className="text-sm text-danger">{state.error}</span>}
           </div>
           <p className="text-xs leading-relaxed text-muted">
-            Décocher révoque : le contenu correspondant cesse d&apos;être
-            accessible, y compris l&apos;historique déjà envoyé.
+            Décocher arrête la collecte immédiatement, et coupe l&apos;accès de
+            ton organisation à cette catégorie. Le contenu déjà envoyé reste
+            stocké jusqu&apos;à son effacement : le bouton ci-dessous le supprime
+            tout de suite, et la conservation s&apos;en charge sinon au bout de
+            90 jours.
           </p>
         </form>
       )}

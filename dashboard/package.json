@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test lib/*.test.mts"
   },
   "dependencies": {
     "@scalar/nextjs-api-reference": "^0.11.12",

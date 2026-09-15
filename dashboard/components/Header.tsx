@@ -50,6 +50,7 @@ export default function Header({
           )}
           {profile.role === "teacher" && <NavLink href="/teacher">Mes classes</NavLink>}
           <NavLink href="/me">Ma progression</NavLink>
+          <NavLink href="/me/journal">Journal</NavLink>
         </nav>
 
         <div className="flex items-center gap-3 text-sm">

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { averageFirstDraft, averageScore, fmt, fmtDate } from "@/lib/stats";
+import { DialogueTurns } from "@/components/DialogueTurns";
 import {
   OUTCOME_LABELS,
   POST_KEYS,
@@ -251,19 +252,7 @@ export default async function StudentPage({
                   {fmtDate(e.ts)} · {e.site ?? ""}
                 </p>
                 {e.text && <p className="mt-2 whitespace-pre-wrap">{e.text}</p>}
-                {e.dialogue && e.dialogue.length > 0 && (
-                  <div className="mt-3 space-y-2 border-t border-card-border pt-3">
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted">
-                      Raisonnement socratique
-                    </p>
-                    {e.dialogue.map((turn, i) => (
-                      <div key={i}>
-                        <p className="text-xs text-muted">{turn.q}</p>
-                        <p className="text-sm">{turn.a}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {e.dialogue && <DialogueTurns turns={e.dialogue} />}
               </div>
             ))}
           </div>

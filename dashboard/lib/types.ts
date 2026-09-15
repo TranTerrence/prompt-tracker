@@ -221,6 +221,19 @@ export const SOCRATIC_LABELS: Record<(typeof SOCRATIC_KEYS)[number], string> = {
   critique: "Critique",
 };
 
+/**
+ * Rétention, telle qu'appliquée par `apply_retention()`
+ * (supabase/migrations/0014_retention.sql, cron nocturne) : le CONTENU est mis
+ * à null passé 90 jours, la ligne entière disparaît à 12 mois.
+ *
+ * Ces deux nombres sont affichés à l'étudiant à plusieurs endroits ET servent à
+ * décider, ligne à ligne, si un contenu absent l'est par rétention ou par
+ * purge. Les tenir ici est ce qui empêche le nombre montré et le nombre testé
+ * de diverger.
+ */
+export const RETENTION_CONTENT_DAYS = 90;
+export const RETENTION_EVENTS_MONTHS = 12;
+
 export const OUTCOME_LABELS: Record<string, string> = {
   sent: "Envoyé",
   improved: "Amélioré",

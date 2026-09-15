@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { average, averageScore, averageFirstDraft, computeResponseKpis, dayStreakInfo, firstDraftOf, fmt, fmtDate, fmtDuration, fmtPct, linkStateOf, scoreOf, weekKey } from "@/lib/stats";
@@ -353,9 +354,14 @@ export default async function MePage() {
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
-        <h2 className="border-b border-card-border px-5 py-4 font-display text-lg font-semibold tracking-tight">
-          Historique des interceptions
-        </h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-card-border px-5 py-4">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            Historique des interceptions
+          </h2>
+          <Link href="/me/journal" className="text-sm text-accent hover:underline">
+            Voir le journal complet →
+          </Link>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

@@ -1,4 +1,4 @@
-import type { Profile, PromptEvent } from "@/lib/types";
+import { RETENTION_CONTENT_DAYS, type Profile, type PromptEvent } from "@/lib/types";
 
 export function scoreOf(e: Pick<PromptEvent, "scores">): number | null {
   const t = e.scores?.total;
@@ -51,6 +51,31 @@ export function fmtDate(ts: string): string {
     month: "short",
     year: "numeric",
   });
+}
+
+/**
+ * « 12 mars 2026, 14:32 ». fmtDate suffit à un tableau ; un journal a besoin de
+ * l'heure, sans quoi deux échanges du même jour deviennent indiscernables.
+ */
+export function fmtDateTime(ts: string): string {
+  return new Date(ts).toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * Le contenu de cet événement est-il passé sous la barre de rétention ?
+ *
+ * Sert à distinguer, ligne à ligne, un contenu absent PARCE QU'IL A EXPIRÉ d'un
+ * contenu jamais partagé ou effacé à la demande. C'est la différence entre
+ * « le produit a mangé mon journal » et « c'est exactement ce qu'on m'avait dit ».
+ */
+export function contentExpired(ts: string, days = RETENTION_CONTENT_DAYS): boolean {
+  return Date.now() - Date.parse(ts) > days * 86400_000;
 }
 
 /** Médiane : les temps de lecture ont une queue lourde, la moyenne ment. */
