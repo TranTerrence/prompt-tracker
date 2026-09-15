@@ -16,7 +16,7 @@ ok()   { printf '✓  %s\n' "$1"; }
 
 MANIFEST="$EXT/manifest.json"
 VERSION="$(python3 -c "import json;print(json.load(open('$MANIFEST'))['version'])")"
-echo "── Prompt Tracker $VERSION — pré-vol Chrome Web Store ──"
+echo "── I-BE³ Companion $VERSION — pré-vol Chrome Web Store ──"
 
 # 1. Version strictement supérieure au dernier paquet. Le Store refuse un envoi
 #    dont la version n'augmente pas ; c'est le rejet le plus bête.

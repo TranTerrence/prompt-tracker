@@ -1,10 +1,10 @@
-# Prompt Tracker : fiche Chrome Web Store (FR)
+# I-BE³ Companion : fiche Chrome Web Store (FR)
 
 ## Résumé (132 caractères max)
-Une pause réfléchie avant tes prompts IA : dialogue socratique local sur ChatGPT, Claude, Gemini, Mistral et Grok.
+Une pause réfléchie avant tes prompts IA : un dialogue socratique pour penser par toi-même. ChatGPT, Claude, Gemini, Mistral, Grok.
 
 ## Description
-Comme les applications qui t'aident à décrocher de ton téléphone, **Prompt Tracker** ajoute un peu de friction, et beaucoup de réflexion, avant tes prompts IA.
+Comme les applications qui t'aident à décrocher de ton téléphone, **I-BE³ Companion** ajoute un peu de friction, et beaucoup de réflexion, avant tes prompts IA.
 
 🪞 **Le miroir socratique**
 Quand ta demande est trop vague (« fais mes devoirs »), l'envoi est retenu AVANT d'atteindre l'IA. Un dialogue s'ouvre, une question à la fois : qu'as-tu déjà tenté ? quelle est ton hypothèse ? comment vérifieras-tu ? Quand tu as couvert l'essentiel, le dialogue te rend la main de lui-même — il ne t'enchaîne pas des questions sans fin —, et tu peux toujours en demander une de plus. C'est TOUJOURS toi qui décides : envoyer ta version enrichie de ta réflexion, ou ta demande initiale telle quelle.
@@ -21,12 +21,11 @@ Chaque prompt est scoré localement, ventilation affichée en direct (clarté, c
 🔒 **Données et confidentialité**
 Rien n'est enregistré tant que tu n'as pas accepté l'écran de divulgation affiché au premier lancement : l'extension reste inactive avant ton accord explicite.
 • **En local, après ton accord** : scores de qualité, catégorie, nombre de mots, site, date, issue (envoyé, amélioré, annulé), tes réponses au dialogue et tes réflexions d'après-réponse, plus des mesures sur la réponse de l'IA — sa longueur, sa durée, le modèle utilisé et le temps que tu prends avant d'enchaîner. Le texte des réponses est compté puis oublié : jamais enregistré. Le texte complet de tes prompts n'est enregistré que si tu actives l'option dédiée. Tout reste sur ton ordinateur : pas de compte requis.
-• **Ton compte est provisionné par le programme** (I-BE³ Companion), avec ton organisation déjà rattachée : tu connectes l'extension en approuvant, sur l'application web, le code d'appairage affiché dans le popup. Un second écran te dit exactement ce qui sera partagé (les indicateurs ci-dessus, jamais aucun texte) et tu confirmes d'un bouton. Ton email de compte t'identifie auprès de ton organisation.
+• **Ton compte est créé par le programme** (I-BE³ Companion), avec ton organisation déjà rattachée : tu lies l'extension en approuvant, sur l'app (ibe3.vercel.app/extension/pair), le code d'appairage affiché dans le popup. Aucun mot de passe n'est jamais saisi dans l'extension. Un second écran te dit exactement ce qui sera partagé (les indicateurs ci-dessus, jamais aucun texte) et tu confirmes d'un bouton. Ton email de compte t'identifie auprès de ton programme.
 • **Les contenus** (texte des prompts, dialogues, réflexions, fils de conversation) ne sont partagés que si ton organisation les demande avec un motif ET que tu consens, catégorie par catégorie. Interrupteurs désactivés par défaut, révocables à tout moment ; le serveur efface tout contenu non consenti dès réception.
 • **Questions IA sur mesure (option)** : si ton organisation l'active et que tu as consenti au partage de ton texte et de ton raisonnement, ton prompt transite par Anthropic pour générer la question suivante, sans être stocké.
 • **Conservation** : contenus effacés au bout de 90 jours, indicateurs supprimés au bout de 12 mois. Effacement et export possibles à tout moment. Aucune vente, aucune publicité, aucun entraînement d'IA.
-Politique complète : <APP_URL>/extension/privacy
-<!-- replace <APP_URL> at release, see SUBMISSION.md -->
+Politique complète : https://ibe3.vercel.app/extension/privacy
 
 Pour qui ?
 • Étudiants : apprendre AVEC l'IA sans qu'elle pense à ta place
@@ -36,13 +35,13 @@ Pour qui ?
 Fonctionne sur ChatGPT, Claude, Gemini, Mistral (Le Chat) et Grok, avec Chrome et les navigateurs Chromium sur ordinateur. Pas de version iPhone/iPad ou Android à ce stade (les navigateurs mobiles n'acceptent pas les extensions).
 
 ## Single purpose (déclaration Google)
-Prompt Tracker aide l'utilisateur à améliorer la qualité de ses prompts sur les interfaces de chat IA (ChatGPT, Claude, Gemini, Mistral, Grok) : il le fait réfléchir avant l'envoi — au besoin en lui montrant des prompts éprouvés — et lui restitue l'effet obtenu.
+I-BE³ Companion aide l'utilisateur à améliorer la qualité de ses prompts sur les interfaces de chat IA (ChatGPT, Claude, Gemini, Mistral, Grok) : il le fait réfléchir avant l'envoi — au besoin en lui montrant des prompts éprouvés — et lui restitue l'effet obtenu.
 
 > Cette phrase doit rester **identique** à celle de `store/SUBMISSION.md`. Deux formulations différentes dans deux fichiers, c'est une divergence qui finit dans le formulaire.
 
 ## Justification des permissions
 - `storage` : conserver localement les réglages (thème, seuil, profil), l'accord de divulgation et les indicateurs de prompts (scores, catégories), uniquement après acceptation de l'écran de divulgation.
-- `alarms` : synchronisation périodique des indicateurs pour les utilisateurs ayant rejoint un espace organisation (optionnel) ; les alarmes ne s'arment qu'après l'accord de divulgation.
+- `alarms` : synchronisation périodique des indicateurs pour les utilisateurs ayant lié leur compte du programme (optionnel) ; les alarmes ne s'arment qu'après l'accord de divulgation.
 - Hôte `https://chatgpt.com/*` : lire le champ de saisie pour le scoring local avant envoi et afficher le dialogue de réflexion sur ChatGPT.
 - Hôte `https://chat.openai.com/*` : domaine historique de ChatGPT, même usage.
 - Hôte `https://claude.ai/*` : même usage sur Claude.
@@ -54,8 +53,8 @@ Le contenu du champ de saisie est analysé localement, avant envoi ; il n'est tr
 
 ## Onglet « Pratiques de confidentialité » (Console développeur) : checklist
 Types de données à déclarer :
-- [x] **Informations permettant d'identifier personnellement** : adresse email (création de compte optionnelle).
-- [x] **Informations d'authentification** : mot de passe (authentification du compte optionnel).
+- [x] **Informations permettant d'identifier personnellement** : adresse email (identifie l'étudiant auprès de son programme, uniquement après appairage du compte).
+- [ ] **Informations d'authentification** : **non** — aucun mot de passe ne transite par l'extension depuis la 1.0.0 (le formulaire de repli a été retiré ; l'appairage par code sur l'app est la seule entrée).
 - [x] **Activité de l'utilisateur** : indicateurs d'interaction avec les sites d'IA (scores de qualité, catégories, nombres de mots, issues, horodatages, longueur et durée des réponses, modèle utilisé, délai de lecture).
 - [x] **Contenu de sites web** : texte des prompts, dialogues socratiques, réflexions, collectés uniquement avec le consentement opt-in, catégorie par catégorie (à déclarer malgré tout).
 
@@ -64,13 +63,13 @@ Certifications à cocher :
 - [x] Les données ne sont ni utilisées ni transférées à des fins sans rapport avec la finalité unique de l'élément.
 - [x] Les données ne sont ni utilisées ni transférées pour déterminer la solvabilité ou à des fins de prêt.
 
-URL de la politique de confidentialité : https://track-prompt.vercel.app/privacy
+URL de la politique de confidentialité : https://ibe3.vercel.app/extension/privacy
 
 ## Note au reviewer (champ « notes » de la soumission)
 Cette version met en place une divulgation bien visible à deux niveaux, conformément à la politique User Data Privacy :
-1. **Au premier lancement** (capture d'écran 1) : un écran de divulgation détaille les données enregistrées, leur finalité, leur destination et leur conservation, avec un lien vers la politique de confidentialité. L'extension reste totalement inactive (aucune collecte, même locale) jusqu'au clic sur « J'accepte et j'active Prompt Tracker ».
-2. **Au moment de rejoindre une organisation** (capture d'écran 6) : un second écran énumère les indicateurs qui seront partagés et exige un accord explicite (« Rejoindre et partager ces indicateurs »). Les contenus (texte, dialogues, réflexions) restent soumis à un consentement séparé, catégorie par catégorie, désactivé par défaut, avec application côté serveur (tout contenu non consenti est effacé à la réception).
+1. **Au premier lancement** (capture d'écran 1) : un écran de divulgation détaille les données enregistrées, leur finalité, leur destination et leur conservation, avec un lien vers la politique de confidentialité. L'extension reste totalement inactive (aucune collecte, même locale) jusqu'au clic sur « J'accepte et j'active I-BE³ Companion ».
+2. **Au moment de lier son compte** (capture d'écran 5) : un second écran énumère les indicateurs qui seront partagés et exige un accord explicite (« Accepter et activer le partage »). Les contenus (texte, dialogues, réflexions) restent soumis à un consentement séparé, catégorie par catégorie, désactivé par défaut, avec application côté serveur (tout contenu non consenti est effacé à la réception).
 Conservation : contenus 90 jours, indicateurs 12 mois (purge automatique côté serveur). L'utilisateur peut effacer et exporter ses données à tout moment.
 
 ## Privacy policy
-https://track-prompt.vercel.app/privacy
+https://ibe3.vercel.app/extension/privacy

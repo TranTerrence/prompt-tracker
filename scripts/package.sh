@@ -11,6 +11,24 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="$(python3 -c "import json; print(json.load(open('$ROOT/extension/manifest.json'))['version'])")"
 
+# Garde-fou : les trois constantes de src/supabase.js doivent viser la
+# production (https). Un paquet empaqueté avec la stack locale de dev serait
+# muet chez tous les étudiants, et c'est exactement le genre d'erreur qu'on
+# ne voit qu'après la revue du store.
+python3 - "$ROOT/extension/src/supabase.js" <<'PY'
+import re, sys
+src = open(sys.argv[1], encoding="utf-8").read()
+bad = []
+for name in ("SUPABASE_URL", "APP_URL"):
+    m = re.search(r'const %s = "([^"]*)"' % name, src)
+    if not m or not m.group(1).startswith("https://"):
+        bad.append(f"{name} = {m.group(1) if m else '<introuvable>'}")
+if bad:
+    print("✗  src/supabase.js pointe sur une stack non-https : " + ", ".join(bad), file=sys.stderr)
+    print("   Remettre les valeurs de production avant d'empaqueter.", file=sys.stderr)
+    sys.exit(1)
+PY
+
 mkdir -p "$ROOT/dist"
 
 # --- Chrome (référence) ---
@@ -52,15 +70,17 @@ echo "→ $OUT_FIREFOX"
 cd "$ROOT/extension"
 unzip -l "$OUT_CHROME" | tail -3
 
-# Copie servie par le dashboard : téléchargement direct depuis /install
-# (alias stable, mis à jour à chaque paquet ; penser à redéployer).
-mkdir -p "$ROOT/dashboard/public/downloads"
-cp "$OUT_CHROME" "$ROOT/dashboard/public/downloads/prompt-tracker-latest.zip"
-echo "→ dashboard/public/downloads/prompt-tracker-latest.zip"
-
-# La version affichée sur /install vient de ce fichier, généré ici depuis le
-# manifest. Elle était codée en dur dans la page et a pris trois versions de
-# retard sans que rien ne le signale : le paquet et le numéro voyagent
-# désormais ensemble, dans le même commit.
-printf '{\n  "version": "%s"\n}\n' "$VERSION" > "$ROOT/dashboard/lib/extension-version.json"
-echo "→ dashboard/lib/extension-version.json ($VERSION)"
+# Le zip Chrome est servi aux étudiants par l'app I-BE³ Companion
+# (ibe3.vercel.app/extension lit public/prompt-tracker-<version>.zip et
+# lib/extension-release.ts). Le dashboard de ce dépôt n'est plus déployé :
+# plus de copie vers dashboard/public ni de extension-version.json.
+# Si IBE3_PUBLIC_DIR pointe sur le dossier public/ de l'app, on y dépose le
+# paquet ; sinon on imprime le chemin, à copier à la main.
+if [ -n "${IBE3_PUBLIC_DIR:-}" ]; then
+  mkdir -p "$IBE3_PUBLIC_DIR"
+  cp "$OUT_CHROME" "$IBE3_PUBLIC_DIR/prompt-tracker-$VERSION.zip"
+  echo "→ $IBE3_PUBLIC_DIR/prompt-tracker-$VERSION.zip (penser à ready: true dans lib/extension-release.ts, puis déployer)"
+else
+  echo "Paquet Chrome à déposer dans public/ de l'app I-BE³ Companion : $OUT_CHROME"
+  echo "(ou relancer avec IBE3_PUBLIC_DIR=/chemin/vers/ibe3-companion/public)"
+fi

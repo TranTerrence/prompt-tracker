@@ -12,9 +12,10 @@ fichier **dans le même commit**.
 
 ## Objectif unique (single purpose)
 
-> Prompt Tracker aide l'utilisateur à améliorer la qualité de ses prompts sur
-> les interfaces de chat IA : il le fait réfléchir avant l'envoi — au besoin en
-> lui montrant des prompts éprouvés — et lui restitue l'effet obtenu.
+> I-BE³ Companion aide l'utilisateur à améliorer la qualité de ses prompts sur
+> les interfaces de chat IA (ChatGPT, Claude, Gemini, Mistral, Grok) : il le
+> fait réfléchir avant l'envoi — au besoin en lui montrant des prompts
+> éprouvés — et lui restitue l'effet obtenu.
 
 Une seule phrase, un seul verbe. Toute fonctionnalité qui ne se rattache pas à
 cette phrase doit être retirée ou la phrase réécrite — le Store rejette les
@@ -62,7 +63,7 @@ Recopier ces textes dans le champ « justification » de chaque permission.
 | Permission | Justification à coller |
 |---|---|
 | `storage` | Stocke localement les réglages de l'utilisateur (seuil, thème, consentements) et l'historique de ses scores de prompts, qui alimente le tableau de bord de progression affiché dans la popup. Aucune de ces données ne quitte l'appareil sans consentement explicite. |
-| `alarms` | Planifie la synchronisation périodique en arrière-plan pour les utilisateurs dont le compte est lié (l'organisation est rattachée au compte dès l'inscription, il n'y a plus de jonction séparée). Sans elle, les indicateurs consentis ne remonteraient qu'à l'ouverture de la popup. |
+| `alarms` | Planifie la synchronisation périodique en arrière-plan pour les utilisateurs dont le compte est lié (l'organisation est rattachée au compte créé par le programme, il n'y a plus de jonction séparée). Sans elle, les indicateurs consentis ne remonteraient qu'à l'ouverture de la popup. |
 | `optional_host_permissions` : `https://*/*` | **Facultative, jamais accordée à l'installation.** Un établissement scolaire peut publier une bibliothèque de prompts pédagogiques à sa propre adresse ; l'extension ne peut pas connaître cette adresse à l'avance, elle varie d'un établissement à l'autre. Elle n'est donc PAS déclarée dans `host_permissions` : elle est demandée à l'exécution, par `chrome.permissions.request`, sur la **seule origine** configurée par l'établissement de l'utilisateur, et uniquement après un clic explicite de celui-ci dans la popup. Tant que l'utilisateur n'accorde rien, aucune requête n'est émise. L'appel est une simple lecture `GET` en `credentials: "omit"`, sans en-tête d'authentification et sans aucun paramètre dérivé du compte : aucune donnée utilisateur ne part vers cet hôte. Refuser la permission ne dégrade aucune autre fonction. |
 
 **Match patterns des content scripts** (`chatgpt.com`, `chat.openai.com`,
@@ -88,10 +89,10 @@ Cocher exactement ceci — et rien de plus :
 
 | Catégorie | Collectée ? | Pourquoi |
 |---|---|---|
-| Informations personnelles identifiables | **Oui** — email | Identifie l'élève auprès de son enseignant, uniquement après avoir rejoint une classe |
+| Informations personnelles identifiables | **Oui** — email | Identifie l'étudiant auprès de son programme, uniquement après appairage du compte |
 | Activité de l'utilisateur | **Oui** | Scores, catégorie, nombre de mots, issue, plus les mesures de réponse (longueur, durée de génération, modèle utilisé, délai avant le prompt suivant) — le cœur du tableau de bord |
 | Contenu du site web | **Oui** | Le texte du prompt, **seulement** si l'utilisateur active l'option et consent catégorie par catégorie |
-| Informations d'authentification | **Oui** — mot de passe | Le popup conserve un formulaire e-mail / mot de passe, replié sous « Se connecter avec un mot de passe ». Il appelle `token?grant_type=password` et transmet donc un mot de passe. Google range cela dans « Authentication information ». |
+| Informations d'authentification | **Non** | Depuis la 1.0.0, aucun mot de passe ne transite par l'extension : le formulaire e-mail / mot de passe a été retiré du popup, `CoachApi.login()` / `signup()` n'existent plus (`token?grant_type=password` et `signup` ne sont plus appelés). La seule entrée est l'appairage par code, approuvé sur l'app où l'utilisateur est déjà connecté ; l'extension ne reçoit qu'un jeton de session (`redeem_pairing`), qu'elle rafraîchit ensuite. Voir la note 0.7.0 plus bas : la condition qu'elle posait pour revenir à « Non » est remplie. |
 | Santé, financier, localisation, communications personnelles | **Non** | — |
 
 **Le texte de la réponse de l'IA n'est pas collecté.** Il est lu dans la page
@@ -114,7 +115,7 @@ Les trois certifications à cocher sont vraies et doivent le rester : pas de
 vente à des tiers, pas d'usage étranger à l'objectif unique, pas d'usage pour
 déterminer une solvabilité.
 
-**Politique de confidentialité :** https://track-prompt.vercel.app/privacy
+**Politique de confidentialité :** https://ibe3.vercel.app/extension/privacy
 (doit répondre 200 et nommer l'extension — vérifié par `scripts/webstore-check.sh`).
 
 ## Notes au relecteur (champ « Testing instructions »)
@@ -137,20 +138,29 @@ divulgation n'est pas accepté.
 > **Aucun compte n'est nécessaire pour tester la fonctionnalité principale** :
 > les étapes 1 à 4 se font entièrement hors ligne, toute l'analyse est locale.
 >
-> La liaison de compte est optionnelle pour tester la fonctionnalité
-> principale. Elle se fait par le web : le bouton « Lier mon compte » du
-> popup ouvre un onglet sur la page `/extension/pair` de l'app I-BE³
-> Companion (domaine de production à renseigner avant l'envoi — voir
-> tâche 18) où l'utilisateur, une fois connecté, autorise le navigateur.
-> Aucun mot de passe n'est saisi dans l'extension par ce chemin. Un
-> formulaire e-mail / mot de passe reste disponible dans le popup, replié
-> sous « Se connecter avec un mot de passe », pour tester sans quitter
-> l'extension. Compte de démonstration : <À FOURNIR AVANT ENVOI>.
+> **Pour tester la liaison de compte et le partage** (optionnel), un compte
+> de test est provisionné sur l'application du programme :
 >
-> **Depuis la 1.0.0, il n'existe plus de code de classe.** Les comptes sont
-> provisionnés avec leur organisation par le programme dès l'inscription : il
-> n'y a rien à saisir ni à rejoindre côté élève, et le champ correspondant a
-> disparu du popup.
+> - Application : https://ibe3.vercel.app/login
+> - Identifiant : <À FOURNIR AVANT ENVOI>
+> - Mot de passe temporaire : <À FOURNIR AVANT ENVOI>
+>
+> 5. Se connecter sur https://ibe3.vercel.app/login avec ce compte.
+> 6. Dans le popup de l'extension, cliquer « Lier mon compte » : un onglet
+>    s'ouvre sur `https://ibe3.vercel.app/extension/pair?c=XXXX` avec le
+>    code déjà rempli ; vérifier qu'il correspond à celui du popup, puis
+>    « Autoriser ». Le popup se met à jour seul (« Tout est synchronisé »).
+>    Aucun mot de passe n'est saisi dans l'extension : c'est la seule entrée,
+>    il n'y a pas de formulaire de connexion ni d'inscription dans le popup.
+> 7. Envoyer un prompt vague sur https://chatgpt.com : le dialogue s'ouvre ;
+>    répondre à une ou deux questions, envoyer. Le prompt et son dialogue
+>    apparaissent dans https://ibe3.vercel.app/prompts.
+> 8. « 🔒 Mes données partagées » (popup) ouvre les réglages de partage,
+>    interrupteurs de contenu désactivés par défaut.
+>
+> **Il n'existe pas de code de classe ni d'inscription libre.** Les comptes
+> sont créés par le programme avec leur organisation déjà rattachée : il n'y
+> a rien à saisir ni à rejoindre côté étudiant.
 >
 > **À propos de la permission d'hôte facultative `https://*/*` (nouveauté 0.8.0).**
 > Elle n'est **jamais accordée à l'installation** : vous pouvez le constater sur
@@ -160,7 +170,7 @@ divulgation n'est pas accepté.
 > (fonction du bouton « Activer la bibliothèque ») et passe l'**origine exacte**
 > publiée par l'établissement de l'utilisateur, jamais un motif large.
 >
-> Cette fonction est **invisible sans compte de classe**, et c'est voulu : la
+> Cette fonction est **invisible sans compte lié**, et c'est voulu : la
 > carte d'activation ne s'affiche que si l'organisation de l'utilisateur a
 > renseigné une adresse de bibliothèque. Sans compte, il n'y a donc rien à voir,
 > et aucune requête n'est jamais émise. Le chemin complet est lisible dans le
@@ -181,53 +191,71 @@ divulgation n'est pas accepté.
 > cliquer copie le prompt dans le presse-papiers, localement. Aucune requête
 > supplémentaire, aucune injection dans une page, aucun envoi.
 
-⚠️ Remplacer `<À FOURNIR AVANT ENVOI>` par un vrai compte de démonstration, ou
-supprimer la phrase. Un relecteur bloqué sur un login rejette sans appel.
+⚠️ Remplacer les deux `<À FOURNIR AVANT ENVOI>` par le compte de test créé
+sur ibe3.vercel.app (`/admin/users`, rôle étudiant, mot de passe temporaire),
+ou supprimer les étapes 5 à 8. Un relecteur bloqué sur un login rejette sans
+appel. Le compte doit exister AVANT la soumission et survivre à la revue
+(2 à 7 jours) : ne pas le supprimer avec les comptes de démonstration.
 
 ### Ce que le passage en 1.0.0 change pour la revue
 
+- **Nouveau nom, même fiche, même identifiant.** « Prompt Tracker » devient
+  **« I-BE³ Companion »** (`_locales/{fr,en}/messages.json`, `manifest.json`
+  `action.default_title`, popup, onboarding, consentement, modale). C'est une
+  mise à jour de l'élément existant, pas un nouvel envoi : l'ID de l'extension
+  et l'historique de la fiche sont conservés. Le nom ne contient aucune marque
+  tierce.
 - **Backend changé, pas la fonctionnalité.** L'extension ne parle plus au
   projet Supabase autonome de Prompt Tracker (`ovbvwawzrciwpudnaysp`) mais à
-  la base fusionnée du programme I-BE³ Companion : même surface PostgREST /
-  GoTrue, mêmes RPC d'appairage et de consentement (`create_pairing_request`,
+  la base du programme I-BE³ Companion, Supabase hébergé à Paris
+  (`kbbrkrvacazkxraudvng.supabase.co`) : même surface PostgREST / GoTrue,
+  mêmes RPC d'appairage et de consentement (`create_pairing_request`,
   `redeem_pairing`, `ack_baseline_consent`, `purge_my_content`…). Les deux
-  Edge Functions (`pair-extension`, `socratic-llm`) deviennent deux routes
-  Next.js de l'app (`/api/tracker/pair`, `/api/tracker/socratic`), avec le
-  même contrat (corps, réponse, CORS `*`). Rien de visible ne change pour
-  l'utilisateur côté appairage : le bouton « Lier mon compte » fonctionne à
-  l'identique, il ouvre désormais un onglet sur la page `/extension/pair` de
-  l'app I-BE³ Companion au lieu du dashboard `track-prompt.vercel.app`.
-- **Les codes de classe disparaissent.** Décision du programme : les comptes
-  sont désormais provisionnés avec leur organisation dès l'inscription, il
-  n'y a donc plus rien à « rejoindre ». Le champ de code et son bouton sont
-  retirés du popup (`extension/popup/popup.html`, `popup.js`) ainsi que leurs
-  chaînes de traduction FR/EN (`extension/src/i18n.js`). La fonction cliente
-  `CoachApi.joinGroup` reste dans `supabase.js` (elle appelle toujours le RPC
-  `join_group_with_code`, qui répond désormais `{"status":"not_available"}`)
-  mais plus rien dans l'UI ne l'appelle : aucune régression fonctionnelle,
-  juste du code mort documenté comme tel.
-- **Aucune nouvelle catégorie de données, aucune nouvelle destination.** Les
-  mêmes indicateurs partent vers le même type de plateforme (PostgREST /
-  GoTrue derrière RLS) ; seul l'hébergeur change. La divulgation de l'usage
-  des données ci-dessus reste valable telle quelle, sans modification.
-- **Permissions : entrées de développement à retirer avant l'envoi au
-  Store.** Pour la vérification locale de cette tâche,
-  `extension/manifest.json` déclare temporairement `http://localhost:3200/*`
-  et `http://127.0.0.1:54421/*` dans `optional_host_permissions`, en plus de
-  `https://*/*` (qui suffit déjà à couvrir tout domaine de production en
-  HTTPS). Ces deux entrées `http://` n'ont aucune utilité en production et
-  **doivent être retirées** du paquet soumis au Web Store — sinon un
-  relecteur verra deux hôtes non chiffrés injustifiés dans la liste des
-  permissions facultatives. À traiter avec les valeurs de production
-  (tâche 18).
-- **Constantes encore locales.** `SUPABASE_URL`, `SUPABASE_KEY` et `APP_URL`
-  (`extension/src/supabase.js`) pointent vers la stack `pnpm dev` locale
-  d'I-BE³ (`http://127.0.0.1:54421` / `http://localhost:3200`) le temps de la
-  vérification de cette tâche — un commentaire dans le code le rappelle. À
-  remplacer par les valeurs de production avant tout paquet destiné au Store
-  (tâche 18). Le lien vers la politique de confidentialité ci-dessus
-  (`track-prompt.vercel.app/privacy`) n'a pas été touché pour la même
-  raison : le domaine définitif n'est pas encore connu.
+  Edge Functions (`pair-extension`, `socratic-llm`) sont deux routes de l'app
+  (`/api/tracker/pair`, `/api/tracker/socratic`), même contrat. Le bouton
+  « Lier mon compte » ouvre `https://ibe3.vercel.app/extension/pair` au lieu
+  de l'ancien dashboard `track-prompt.vercel.app`, qui disparaît.
+- **Le formulaire e-mail / mot de passe est retiré.** Plus de
+  `<details id="auth-fallback">` dans `popup/popup.html`, plus de
+  `handleAuth()` dans `popup.js`, plus de `CoachApi.login()` / `signup()` dans
+  `src/supabase.js` (rien d'autre ne les appelait ; `background.js` vérifié).
+  Conséquence directe sur la divulgation : **« Informations
+  d'authentification » repasse à Non**, condition posée dans la note 0.7.0
+  ci-dessous. L'appairage par code est la seule entrée ; l'inscription libre
+  est fermée côté serveur (Supabase → « Allow new users to sign up » OFF).
+- **Les codes de classe disparaissent.** Les comptes sont créés par le
+  programme avec leur organisation déjà rattachée : il n'y a plus rien à
+  « rejoindre ». Le champ de code et son bouton sont retirés du popup, ainsi
+  que leurs chaînes FR/EN. `CoachApi.joinGroup` reste dans `supabase.js` (le
+  RPC `join_group_with_code` répond `{"status":"not_available"}`) mais plus
+  rien ne l'appelle : code mort documenté comme tel. Le vocabulaire de
+  l'interface suit (« ton tuteur CARE », « l'app I-BE³ Companion », plus de
+  « classe » ni d'« enseignant »).
+- **Tous les liens sortants pointent sur l'app du programme**, dérivés d'une
+  seule constante (`CoachApi.APP_URL`) : méthode et barème
+  `https://ibe3.vercel.app/help#method` (popup, tuile score, « ? » de la
+  modale), politique de confidentialité
+  `https://ibe3.vercel.app/extension/privacy` (popup, onboarding), accueil de
+  l'app (bouton « Ouvrir l'app I-BE³ Companion »).
+- **Permissions : inchangées, moins les hôtes de développement.**
+  `optional_host_permissions` revient à `["https://*/*"]` seul : les deux
+  entrées `http://localhost:3200/*` et `http://127.0.0.1:54421/*` qui
+  servaient à la vérification locale sont retirées du manifest. `storage` +
+  `alarms` et les cinq `matches` de content scripts sont identiques.
+  `src/supabase.js` est désormais aussi chargé dans les content scripts (il
+  fournit `APP_URL` au lien « ? » de la modale) : aucun effet de bord au
+  chargement, aucune requête nouvelle depuis ces pages.
+- **Vue construite de la modale.** La colonne de droite montre le prompt en
+  train de se fabriquer (demande d'origine, puis un bloc par réponse), avec
+  « modifier le texte » pour voir et éditer les octets bruts. Même contenu
+  qu'avant, autre présentation ; le texte envoyé est strictement celui
+  affiché (verrouillé par `tests/scoring.test.js`).
+- **Aucune nouvelle catégorie de données, aucune nouvelle destination
+  autre que l'hébergeur.** Les mêmes indicateurs partent vers le même type de
+  plateforme (PostgREST / GoTrue derrière RLS) ; l'hébergeur est Supabase
+  (Paris), l'app tourne sur Vercel (Paris). La politique de confidentialité
+  de l'app le dit explicitement. `DISCLOSURE_VERSION` inchangé : le texte de
+  divulgation change de vocabulaire (compte lié, tuteur), pas de périmètre.
 
 ### Ce que le passage en 0.9.1 change pour la revue
 
@@ -311,7 +339,8 @@ supprimer la phrase. Un relecteur bloqué sur un login rejette sans appel.
   ouverture du popup, sans repasser l'extension en veille. Même finalité,
   mêmes catégories de données ; couper des classes en cours d'année serait
   disproportionné.
-- ✅ **Tranché le 25/08/2026 : « authentification » passe à Oui.** Le tableau
+- ✅ **Tranché le 25/08/2026 : « authentification » passe à Oui — et
+  repasse à Non en 1.0.0, formulaire retiré (voir plus haut).** Le tableau
   ci-dessus déclarait « Non » alors que `store/description-fr.md` cochait
   « Oui » — deux fichiers, deux déclarations opposées, dont une fausse. Le
   formulaire de repli existe toujours (`popup/popup.html`, `#auth-password`) et

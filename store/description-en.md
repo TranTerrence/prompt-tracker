@@ -1,10 +1,10 @@
-# Prompt Tracker : Chrome Web Store listing (EN)
+# I-BE³ Companion: Chrome Web Store listing (EN)
 
 ## Summary (max 132 chars)
-A thoughtful pause before your AI prompts: local Socratic dialogue on ChatGPT, Claude, Gemini, Mistral and Grok.
+A thoughtful pause before your AI prompts: a Socratic dialogue to think for yourself. ChatGPT, Claude, Gemini, Mistral, Grok.
 
 ## Description
-Like the apps that help you unglue from your phone, **Prompt Tracker** adds a little friction, and a lot of thinking, before your AI prompts.
+Like the apps that help you unglue from your phone, **I-BE³ Companion** adds a little friction, and a lot of thinking, before your AI prompts.
 
 🪞 **The Socratic mirror**
 When your request is too vague ("do my homework"), sending is held BEFORE it reaches the AI. A dialogue opens, one question at a time: what have you tried? what's your hypothesis? how will you verify? Once you have covered the essentials, the dialogue hands back on its own — it does not chain endless questions at you — and you can always ask for one more. YOU always decide: send your version enriched with your reasoning, or your original request as is.
@@ -21,12 +21,11 @@ Every prompt is scored locally, with a live breakdown (clarity, context, critica
 🔒 **Data and privacy**
 Nothing is recorded until you accept the disclosure screen shown on first launch: the extension stays inactive before your explicit consent.
 • **Locally, after your consent**: quality scores, category, word count, site, date, outcome (sent, improved, cancelled), your dialogue answers and post-response reflections, plus measurements of the AI's answer — its length, its duration, the model used, and how long you take before sending the next prompt. The text of those answers is counted then forgotten: never recorded. The full text of your prompts is only recorded if you enable the dedicated setting. Everything stays on your computer: no account required.
-• **Your account is provisioned by the programme** (I-BE³ Companion), already attached to your organization: you connect the extension by approving, on the web app, the pairing code shown in the popup. A second screen tells you exactly what will be shared (the indicators above, never any text) and you confirm with a button. Your account email identifies you to your organization.
+• **Your account is created by the programme** (I-BE³ Companion), already attached to your organization: you link the extension by approving, in the app (ibe3.vercel.app/extension/pair), the pairing code shown in the popup. No password is ever typed into the extension. A second screen tells you exactly what will be shared (the indicators above, never any text) and you confirm with a button. Your account email identifies you to your programme.
 • **Content** (prompt text, dialogues, reflections, conversation threads) is shared only if your organization requests it with a stated purpose AND you consent, category by category. Toggles off by default, revocable at any time; the server erases any non-consented content upon receipt.
 • **Tailored AI questions (optional)**: if your organization enables it and you consented to sharing your text and reasoning, your prompt transits through Anthropic to generate the next question, without being stored.
 • **Retention**: content erased after 90 days, indicators deleted after 12 months. Erase and export at any time. No selling, no advertising, no AI training.
-Full policy: <APP_URL>/extension/privacy
-<!-- replace <APP_URL> at release, see SUBMISSION.md -->
+Full policy: https://ibe3.vercel.app/extension/privacy
 
 Who is it for?
 • Students: learn WITH AI without it thinking for you
@@ -36,13 +35,13 @@ Who is it for?
 Works on ChatGPT, Claude, Gemini, Mistral (Le Chat) and Grok, with Chrome and Chromium browsers on desktop. No iPhone/iPad or Android version at this stage (mobile browsers do not accept extensions).
 
 ## Single purpose
-Prompt Tracker helps the user improve the quality of their prompts on AI chat interfaces (ChatGPT, Claude, Gemini, Mistral, Grok): it makes them think before sending — showing proven prompts where useful — and reflects back the effect obtained.
+I-BE³ Companion helps the user improve the quality of their prompts on AI chat interfaces (ChatGPT, Claude, Gemini, Mistral, Grok): it makes them think before sending — showing proven prompts where useful — and reflects back the effect obtained.
 
 > This sentence must stay **identical** to the one in `store/SUBMISSION.md`. Two different wordings in two files is a divergence that ends up in the form.
 
 ## Permissions justification
 - `storage`: keep settings (theme, threshold, profile), the disclosure acceptance and prompt indicators (scores, categories) locally, only after the disclosure screen is accepted.
-- `alarms`: periodic sync of indicators for users who joined an organization space (optional); alarms are only armed after the disclosure is accepted.
+- `alarms`: periodic sync of indicators for users who linked their programme account (optional); alarms are only armed after the disclosure is accepted.
 - Host `https://chatgpt.com/*`: read the input field for local, pre-send scoring and display the reflection dialogue on ChatGPT.
 - Host `https://chat.openai.com/*`: legacy ChatGPT domain, same use.
 - Host `https://claude.ai/*`: same use on Claude.
@@ -54,8 +53,8 @@ The input field content is analyzed locally, before sending; it is not transmitt
 
 ## "Privacy practices" tab (Developer Console): checklist
 Data types to declare:
-- [x] **Personally identifiable information**: email address (optional account creation).
-- [x] **Authentication information**: password (optional account authentication).
+- [x] **Personally identifiable information**: email address (identifies the student to their programme, only after pairing the account).
+- [ ] **Authentication information**: **no** — no password passes through the extension since 1.0.0 (the fallback form was removed; code pairing on the app is the only entry).
 - [x] **User activity**: interaction indicators on AI sites (quality scores, categories, word counts, outcomes, timestamps, response length and duration, model used, reading delay).
 - [x] **Website content**: prompt text, Socratic dialogues, reflections, collected only with opt-in, category-by-category consent (must still be declared).
 
@@ -64,13 +63,13 @@ Certifications to check:
 - [x] Data is not used or transferred for purposes unrelated to the item's single purpose.
 - [x] Data is not used or transferred to determine creditworthiness or for lending purposes.
 
-Privacy policy URL: https://track-prompt.vercel.app/privacy
+Privacy policy URL: https://ibe3.vercel.app/extension/privacy
 
 ## Reviewer note (submission "notes" field)
 This version implements a two-level prominent disclosure, per the User Data Privacy policy:
-1. **On first launch** (screenshot 1): a disclosure screen details the data recorded, its purpose, destination and retention, with a link to the privacy policy. The extension stays fully inactive (no collection, not even locally) until the user clicks "I accept and turn on Prompt Tracker".
-2. **When joining an organization** (screenshot 6): a second screen enumerates the indicators that will be shared and requires explicit agreement ("Join and share these indicators"). Content (text, dialogues, reflections) remains subject to a separate, category-by-category consent, off by default, enforced server-side (any non-consented content is erased upon receipt).
+1. **On first launch** (screenshot 1): a disclosure screen details the data recorded, its purpose, destination and retention, with a link to the privacy policy. The extension stays fully inactive (no collection, not even locally) until the user clicks "I accept and turn on I-BE³ Companion".
+2. **When linking the account** (screenshot 5): a second screen enumerates the indicators that will be shared and requires explicit agreement ("Accept and enable sharing"). Content (text, dialogues, reflections) remains subject to a separate, category-by-category consent, off by default, enforced server-side (any non-consented content is erased upon receipt).
 Retention: content 90 days, indicators 12 months (automatic server-side purge). Users can erase and export their data at any time.
 
 ## Privacy policy
-https://track-prompt.vercel.app/privacy
+https://ibe3.vercel.app/extension/privacy
