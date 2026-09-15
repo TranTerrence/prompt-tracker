@@ -5,7 +5,7 @@
 const CoachI18n = (() => {
   const MESSAGES = {
     fr: {
-      brandDefault: "Prompt Tracker",
+      brandDefault: "I-BE³ Companion",
       // Badge
       badgeActive: (name, threshold) =>
         `${name} actif : au premier message d'un fil, un prompt sous ${threshold}/100 ouvre le dialogue de réflexion ; ensuite je te laisse la main. Clique pour replier.`,
@@ -135,17 +135,9 @@ const CoachI18n = (() => {
       // Alerte douce : le coaching marche, seules les mesures manquent.
       popupHealthMetrics: (sites) => `Mesures de réponse indisponibles sur : ${sites}. Le coaching fonctionne normalement.`,
       popupCoverage: (pct) => `${pct} % des envois récents ont produit une mesure de réponse`,
-      authEmail: "Email",
-      authPassword: "Mot de passe",
-      authLogin: "Se connecter",
-      authSignup: "Créer un compte",
-      authRequired: "Email et mot de passe requis.",
-      authInvalid: "Identifiants invalides.",
-      authConfirm: "Compte créé. Confirme ton email puis connecte-toi.",
-      authHint: "Sans compte, tout reste local sur cet ordinateur.",
       authNoOrg: "aucune organisation rattachée",
       popupConsentLink: "🔒 Mes données partagées",
-      popupInertBanner: "Prompt Tracker est en veille : rien n'est enregistré tant que tu n'as pas accepté la divulgation des données.",
+      popupInertBanner: "I-BE³ Companion est en veille : rien n'est enregistré tant que tu n'as pas accepté la divulgation des données.",
       popupInertCta: "Voir et activer",
       disclosureUpdate:
         "Nouveau en 0.7 : l'extension mesure aussi la réponse de l'IA — sa longueur, sa durée, le modèle utilisé et le temps que tu prends avant d'enchaîner. Le texte des réponses est compté puis oublié, jamais enregistré ni transmis.",
@@ -190,16 +182,16 @@ const CoachI18n = (() => {
         "Rien n'est encore partagé avec ton organisation : il manque ton accord pour envoyer tes indicateurs (scores, catégories, compteurs). Aucun texte de prompt n'est concerné ici.",
       syncCtaBaseline: "Accepter et activer le partage",
       syncBlockedNoOrg:
-        "Ton compte n'est rattaché à aucune organisation : ta progression reste sur cet ordinateur. Vérifie ton compte sur le dashboard.",
-      syncCtaNoOrg: "Ouvrir le dashboard",
+        "Ton compte n'est rattaché à aucune organisation : ta progression reste sur cet ordinateur. Vérifie ton compte dans l'app.",
+      syncCtaNoOrg: "Ouvrir l'app",
       syncBlockedNoAuth:
-        "Tu n'es pas connecté : ta progression reste sur cet ordinateur et ne remonte pas à ta classe.",
+        "Tu n'es pas connecté : ta progression reste sur cet ordinateur et ne remonte pas dans l'app I-BE³ Companion.",
       syncCtaNoAuth: "Lier mon compte",
       // Distinct de « pas connecté » : l'utilisateur ÉTAIT lié, sa session a
       // expiré. Le dire, sinon il glisse en mode local sans s'en apercevoir et
-      // sa classe cesse de recevoir quoi que ce soit.
+      // son programme cesse de recevoir quoi que ce soit.
       syncBlockedExpired:
-        "Ta session a expiré : tes prompts continuent d'être analysés sur cet ordinateur, mais ils ne remontent plus à ta classe. Rien n'est perdu, tout repartira à la reconnexion.",
+        "Ta session a expiré : tes prompts continuent d'être analysés sur cet ordinateur, mais ils ne remontent plus dans l'app I-BE³ Companion. Rien n'est perdu, tout repartira à la reconnexion.",
       syncCtaExpired: "Me reconnecter",
       syncBlockedError: (msg) => `La synchronisation a échoué : ${msg}. Nouvel essai automatique dans une minute.`,
       syncPending: (n) => `${n} événement(s) en attente.`,
@@ -216,17 +208,14 @@ const CoachI18n = (() => {
       pairExpired: "Demande expirée ou déjà utilisée. Relance « Lier mon compte ».",
       pairFailed: "La liaison a échoué. Réessaie dans un instant.",
       pairRetrying: "Connexion au serveur difficile, nouvel essai en cours…",
-      authFallback: "Se connecter avec un mot de passe",
-      authPendingSignup: (email) =>
-        `Compte créé pour ${email}. Confirme ton adresse depuis ta boîte mail, puis connecte-toi ici.`,
-      authDashboard: "📊 Ouvrir le dashboard",
-      authDashboardHint: "Le dashboard s'ouvre avec les mêmes identifiants (email et mot de passe) que l'extension.",
+      authDashboard: "📊 Ouvrir l'app I-BE³ Companion",
+      authDashboardHint: "L'app s'ouvre avec ton compte du programme.",
       authLogout: "Déconnexion",
       // Onboarding
-      obTitle: "Bienvenue dans Prompt Tracker",
+      obTitle: "Bienvenue dans I-BE³ Companion",
       obSubtitle: "Le garde-fou de ton prompting : un peu de friction, beaucoup de réflexion.",
       obPitch:
-        "Comme les applications qui t'aident à décrocher de ton téléphone, Prompt Tracker ajoute une pause réfléchie avant tes prompts IA. Quand ta demande est trop vague, elle est retenue avant l'envoi et un dialogue socratique t'aide à penser par toi-même. Puis c'est toujours toi qui décides d'envoyer.",
+        "Comme les applications qui t'aident à décrocher de ton téléphone, I-BE³ Companion ajoute une pause réfléchie avant tes prompts IA. Quand ta demande est trop vague, elle est retenue avant l'envoi et un dialogue socratique t'aide à penser par toi-même. Puis c'est toujours toi qui décides d'envoyer.",
       obHow: "Comment ça marche",
       obStep1: "Écris ton prompt sur ChatGPT, Claude, Gemini, Mistral ou Grok, comme d'habitude.",
       obStep2: "Sous le seuil de qualité, l'envoi est retenu : questions socratiques, une par une, aussi longtemps que tu veux.",
@@ -239,15 +228,15 @@ const CoachI18n = (() => {
         "Sur ChatGPT, Claude, Gemini, Mistral et Grok, l'extension enregistre pour chaque prompt : des scores de qualité, la catégorie, le nombre de mots, le site, la date, l'issue (envoyé, amélioré, annulé), tes réponses au dialogue socratique et tes réflexions d'après-réponse. Elle mesure aussi la réponse de l'IA — sa longueur, sa durée de génération, le modèle utilisé et le temps que tu prends avant d'enchaîner. Le texte de ces réponses est compté puis oublié : il n'est jamais enregistré. Le texte complet de tes prompts, lui, n'est enregistré que si tu actives l'option dédiée dans les réglages.",
       obDiscPurposeTitle: "Pourquoi",
       obDiscPurpose:
-        "Uniquement pour te montrer ta progression (miroir socratique, premiers jets, séries) et, si tu choisis de rejoindre une classe, la partager avec ton enseignant.",
+        "Uniquement pour te montrer ta progression (miroir socratique, premiers jets, séries) et, si tu lies ton compte, la partager avec ton tuteur CARE.",
       obDiscWhereTitle: "Où ça va",
       obDiscWhere:
-        "Tout reste sur cet ordinateur. Un envoi vers un serveur suppose deux choix de ta part : créer un compte, puis rejoindre une organisation. À ce moment-là, un second écran te demandera ton accord explicite avant tout partage.",
+        "Tout reste sur cet ordinateur. Un envoi vers un serveur suppose un choix explicite : lier l'extension à ton compte I-BE³ Companion, créé par le programme. À ce moment-là, un second écran te demandera ton accord explicite avant tout partage.",
       obDiscRetentionTitle: "Conservation et droits",
       obDiscRetention:
         "Données locales : supprimables à tout moment depuis le popup (« Effacer les données »). Données partagées avec une organisation : contenu conservé 90 jours maximum, indicateurs 12 mois, effaçables à tout moment.",
       obDiscPolicyLink: "Politique de confidentialité",
-      obAccept: "J'accepte et j'active Prompt Tracker",
+      obAccept: "J'accepte et j'active I-BE³ Companion",
       obAccepted: "Activé ✓",
       obLater: "Plus tard (l'extension reste inactive)",
       obThemeTitle: "Ton thème",
@@ -269,17 +258,17 @@ const CoachI18n = (() => {
       // script tant qu'ils n'ont pas été rechargés (cf. src/stale-tabs.js).
       staleTabsBanner: (n) =>
         n === 1
-          ? "Un onglet IA était déjà ouvert avant l'installation : Prompt Tracker n'y est pas encore actif."
-          : `${n} onglets IA étaient déjà ouverts avant l'installation : Prompt Tracker n'y est pas encore actif.`,
+          ? "Un onglet IA était déjà ouvert avant l'installation : I-BE³ Companion n'y est pas encore actif."
+          : `${n} onglets IA étaient déjà ouverts avant l'installation : I-BE³ Companion n'y est pas encore actif.`,
       staleTabsCta: (n) => (n === 1 ? "Recharger cet onglet" : "Recharger ces onglets"),
       staleTabsDone: "Onglets rechargés ✓",
       obReload: (n) =>
         n === 1
-          ? "Un onglet IA était déjà ouvert : recharge-le pour que Prompt Tracker s'y active."
-          : `${n} onglets IA étaient déjà ouverts : recharge-les pour que Prompt Tracker s'y active.`,
+          ? "Un onglet IA était déjà ouvert : recharge-le pour que I-BE³ Companion s'y active."
+          : `${n} onglets IA étaient déjà ouverts : recharge-les pour que I-BE³ Companion s'y active.`,
     },
     en: {
-      brandDefault: "Prompt Tracker",
+      brandDefault: "I-BE³ Companion",
       badgeActive: (name, threshold) =>
         `${name} active: on the first message of a thread, a prompt under ${threshold}/100 opens the reflection dialogue; after that, you're in charge. Click to collapse.`,
       badgeActiveNoScore: (name) =>
@@ -391,17 +380,9 @@ const CoachI18n = (() => {
       // Soft warning: coaching works, only the measurements are missing.
       popupHealthMetrics: (sites) => `Response measurements unavailable on: ${sites}. Coaching works as usual.`,
       popupCoverage: (pct) => `${pct}% of recent sends produced a response measurement`,
-      authEmail: "Email",
-      authPassword: "Password",
-      authLogin: "Sign in",
-      authSignup: "Create account",
-      authRequired: "Email and password required.",
-      authInvalid: "Invalid credentials.",
-      authConfirm: "Account created. Confirm your email, then sign in.",
-      authHint: "Without an account, everything stays local on this computer.",
       authNoOrg: "no organization attached",
       popupConsentLink: "🔒 My shared data",
-      popupInertBanner: "Prompt Tracker is on standby: nothing is recorded until you accept the data disclosure.",
+      popupInertBanner: "I-BE³ Companion is on standby: nothing is recorded until you accept the data disclosure.",
       popupInertCta: "Review and enable",
       disclosureUpdate:
         "New in 0.7: the extension also measures the AI's answer — its length, how long it took, the model used, and how long you take before sending the next prompt. The text of those answers is counted then forgotten, never recorded or transmitted.",
@@ -443,13 +424,13 @@ const CoachI18n = (() => {
         "Nothing is shared with your organisation yet: your agreement is missing to send your indicators (scores, categories, counters). No prompt text is involved here.",
       syncCtaBaseline: "Accept and enable sharing",
       syncBlockedNoOrg:
-        "Your account isn't linked to any organization: your progress stays on this computer. Check your account on the dashboard.",
-      syncCtaNoOrg: "Open dashboard",
+        "Your account isn't linked to any organization: your progress stays on this computer. Check your account in the app.",
+      syncCtaNoOrg: "Open the app",
       syncBlockedNoAuth:
-        "You're not signed in: your progress stays on this computer and doesn't reach your class.",
+        "You're not signed in: your progress stays on this computer and doesn't reach the I-BE³ Companion app.",
       syncCtaNoAuth: "Link my account",
       syncBlockedExpired:
-        "Your session has expired: your prompts are still analyzed on this computer, but they no longer reach your class. Nothing is lost, everything will be sent again once you reconnect.",
+        "Your session has expired: your prompts are still analyzed on this computer, but they no longer reach the I-BE³ Companion app. Nothing is lost, everything will be sent again once you reconnect.",
       syncCtaExpired: "Reconnect",
       syncBlockedError: (msg) => `Sync failed: ${msg}. Automatic retry in one minute.`,
       syncPending: (n) => `${n} event(s) pending.`,
@@ -464,16 +445,13 @@ const CoachI18n = (() => {
       pairExpired: "Request expired or already used. Start « Link my account » again.",
       pairFailed: "Linking failed. Try again in a moment.",
       pairRetrying: "Trouble reaching the server, retrying…",
-      authFallback: "Sign in with a password",
-      authPendingSignup: (email) =>
-        `Account created for ${email}. Confirm your address from your inbox, then sign in here.`,
-      authDashboard: "📊 Open dashboard",
-      authDashboardHint: "The dashboard uses the same email and password as the extension.",
+      authDashboard: "📊 Open the I-BE³ Companion app",
+      authDashboardHint: "The app opens with your programme account.",
       authLogout: "Sign out",
-      obTitle: "Welcome to Prompt Tracker",
+      obTitle: "Welcome to I-BE³ Companion",
       obSubtitle: "The guardrail for your prompting: a little friction, a lot of thinking.",
       obPitch:
-        "Like the apps that help you unglue from your phone, Prompt Tracker adds a thoughtful pause before your AI prompts. When your request is too vague, it is held before sending and a Socratic dialogue helps you think for yourself. Then you always decide when to send.",
+        "Like the apps that help you unglue from your phone, I-BE³ Companion adds a thoughtful pause before your AI prompts. When your request is too vague, it is held before sending and a Socratic dialogue helps you think for yourself. Then you always decide when to send.",
       obHow: "How it works",
       obStep1: "Write your prompt on ChatGPT, Claude, Gemini, Mistral or Grok, as usual.",
       obStep2: "Below the quality threshold, sending is held: Socratic questions, one at a time, for as long as you want.",
@@ -484,15 +462,15 @@ const CoachI18n = (() => {
         "On ChatGPT, Claude, Gemini, Mistral and Grok, the extension records for each prompt: quality scores, the category, the word count, the site, the date, the outcome (sent, improved, cancelled), your answers to the Socratic dialogue and your post-response reflections. It also measures the AI's answer — its length, how long it took to generate, the model used, and how long you take before sending the next prompt. The text of those answers is counted then forgotten: it is never recorded. The full text of your prompts is only recorded if you enable the dedicated setting.",
       obDiscPurposeTitle: "Why",
       obDiscPurpose:
-        "Solely to show you your progress (Socratic mirror, first drafts, streaks) and, if you choose to join a class, to share it with your teacher.",
+        "Solely to show you your progress (Socratic mirror, first drafts, streaks) and, if you link your account, to share it with your CARE tutor.",
       obDiscWhereTitle: "Where it goes",
       obDiscWhere:
-        "Everything stays on this computer. Sending anything to a server takes two choices on your part: creating an account, then joining an organization. At that point, a second screen will ask for your explicit consent before any sharing.",
+        "Everything stays on this computer. Sending anything to a server takes one explicit choice: linking the extension to your I-BE³ Companion account, created by the programme. At that point, a second screen will ask for your explicit consent before any sharing.",
       obDiscRetentionTitle: "Retention and rights",
       obDiscRetention:
         "Local data: deletable at any time from the popup (\"Clear data\"). Data shared with an organization: content kept 90 days maximum, indicators 12 months, erasable at any time.",
       obDiscPolicyLink: "Privacy policy",
-      obAccept: "I accept and turn on Prompt Tracker",
+      obAccept: "I accept and turn on I-BE³ Companion",
       obAccepted: "Enabled ✓",
       obLater: "Later (the extension stays off)",
       obThemeTitle: "Your theme",
@@ -512,14 +490,14 @@ const CoachI18n = (() => {
       obTry: "Try it now: open ChatGPT and type \"do my homework\".",
       staleTabsBanner: (n) =>
         n === 1
-          ? "One AI tab was already open before you installed: Prompt Tracker isn't active there yet."
-          : `${n} AI tabs were already open before you installed: Prompt Tracker isn't active there yet.`,
+          ? "One AI tab was already open before you installed: I-BE³ Companion isn't active there yet."
+          : `${n} AI tabs were already open before you installed: I-BE³ Companion isn't active there yet.`,
       staleTabsCta: (n) => (n === 1 ? "Reload that tab" : "Reload those tabs"),
       staleTabsDone: "Tabs reloaded ✓",
       obReload: (n) =>
         n === 1
-          ? "One AI tab was already open: reload it so Prompt Tracker switches on there."
-          : `${n} AI tabs were already open: reload them so Prompt Tracker switches on there.`,
+          ? "One AI tab was already open: reload it so I-BE³ Companion switches on there."
+          : `${n} AI tabs were already open: reload them so I-BE³ Companion switches on there.`,
     },
   };
 

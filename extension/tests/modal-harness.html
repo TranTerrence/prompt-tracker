@@ -26,6 +26,7 @@
   <script src="../src/i18n.js"></script>
   <script src="../src/theme.js"></script>
   <script src="../src/scoring.js"></script>
+  <script src="../src/supabase.js"></script>
   <script src="../src/mirror.js"></script>
   <script>
     // Modes : (défaut) modale d'interception ; ?post=1 : miroir d'après ;
@@ -89,6 +90,7 @@
         promise: true,
         intention: "Si mon prompt est vague, alors je précise mon intention et mon contexte avant d'envoyer.",
         branding: null,
+        methodUrl: `${CoachApi.APP_URL}/help#method`,
         llmActive: llm,
         rescore: (t) => CoachScoring.score(CoachScoring.stripScaffolding(t)),
         compile: (o, a) => CoachScoring.compilePrompt(o, a, "fr"),

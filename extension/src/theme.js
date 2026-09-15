@@ -1,4 +1,4 @@
-// Design system « éditorial calme » de Prompt Tracker, partagé par toutes les
+// Design system « éditorial calme » d'I-BE³ Companion, partagé par toutes les
 // surfaces injectées (modale, toast, badge). Light par défaut ; l'utilisateur
 // choisit light / dark / système dans le popup (settings.theme).
 // L'accent reste 100 % white-label : injecté par l'organisation, sinon sauge.

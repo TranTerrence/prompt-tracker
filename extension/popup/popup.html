@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Prompt Tracker</title>
+  <title>I-BE³ Companion</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
@@ -10,7 +10,7 @@
   <header>
     <div class="brand-row">
       <img id="brand-logo" src="../icons/icon48.png" alt="" width="24" height="24" />
-      <h1 id="brand-title">Prompt Tracker</h1>
+      <h1 id="brand-title">I-BE³ Companion</h1>
       <div class="theme-switch" role="radiogroup" aria-label="Thème">
         <button data-theme-choice="light" title="Clair">☀️</button>
         <button data-theme-choice="dark" title="Sombre">🌙</button>
@@ -33,8 +33,9 @@
 
   <!-- Nouveautés de la divulgation. NON BLOQUANT à dessein : les indicateurs
        ajoutés en 0.7 servent la même finalité et sont de la même nature (aucun
-       contenu). Remettre les comptes existants en veille couperait des classes
-       en cours d'année ; on informe, on ne redemande pas d'accord. -->
+       contenu). Remettre les comptes existants en veille couperait des
+       étudiants en cours de programme ; on informe, on ne redemande pas
+       d'accord. -->
   <section id="disclosure-update" class="inert" hidden>
     <p id="disclosure-update-text"></p>
     <button id="disclosure-update-ok"></button>
@@ -74,21 +75,9 @@
         </div>
       </div>
       <p id="pair-error" class="auth-error" hidden></p>
-
-      <!-- Repli : connexion par mot de passe. Conservée pour permettre un test
-           complet sans quitter l'extension (relecture Web Store notamment). -->
-      <details id="auth-fallback">
-        <summary id="auth-fallback-summary"></summary>
-        <input type="email" id="auth-email" autocomplete="email" />
-        <input type="password" id="auth-password" autocomplete="current-password" />
-        <div class="auth-buttons">
-          <button id="auth-login"></button>
-          <button id="auth-signup" class="secondary"></button>
-        </div>
-        <p id="auth-error" class="auth-error" hidden></p>
-        <p id="pending-signup" class="auth-hint" hidden></p>
-        <p class="auth-hint" data-i18n="authHint"></p>
-      </details>
+      <!-- Aucun autre chemin : ni mot de passe ni inscription ici. Les comptes
+           sont créés par le programme, et l'inscription libre est fermée côté
+           serveur. Le relecteur du store reçoit un compte de test (SUBMISSION.md). -->
     </div>
     <div id="auth-connected" hidden>
       <p><span id="auth-user"></span> · <span id="auth-org" class="muted"></span></p>
@@ -130,7 +119,7 @@
 
   <section class="stats">
     <div class="stat"><span class="value" id="stat-count">0</span><span class="label" data-i18n="popupPrompts"></span></div>
-    <a class="stat" id="stat-score-tile" href="https://track-prompt.vercel.app/methode" target="_blank" rel="noreferrer"><span class="value" id="stat-score">–</span><span class="label" data-i18n="popupAvgScore"></span></a>
+    <a class="stat" id="stat-score-tile" target="_blank" rel="noreferrer"><span class="value" id="stat-score">–</span><span class="label" data-i18n="popupAvgScore"></span></a>
     <div class="stat" id="stat-trend-tile"><span class="value" id="stat-trend">–</span><span class="label" data-i18n="popupTrend"></span></div>
     <div class="stat"><span class="value" id="stat-mirror">–</span><span class="label" data-i18n="popupMirror"></span></div>
   </section>
@@ -163,7 +152,9 @@
     <button id="export"></button>
     <button id="reset" class="danger"></button>
   </footer>
-  <p class="privacy-link"><a id="method-link" href="https://track-prompt.vercel.app/methode" target="_blank" rel="noreferrer"></a> · <a id="privacy-link" href="https://track-prompt.vercel.app/privacy" target="_blank" rel="noreferrer"></a></p>
+  <!-- Les cibles (méthode, confidentialité) sont écrites par popup.js depuis
+       CoachApi.APP_URL : un seul endroit à changer si le domaine bouge. -->
+  <p class="privacy-link"><a id="method-link" target="_blank" rel="noreferrer"></a> · <a id="privacy-link" target="_blank" rel="noreferrer"></a></p>
 
   <script src="../src/i18n.js"></script>
   <script src="../src/stale-tabs.js"></script>

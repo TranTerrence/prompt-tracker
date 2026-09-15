@@ -1,5 +1,5 @@
 // Repère visuel dans l'UI du chat : pastille éditoriale en bas à droite qui
-// montre que Prompt Tracker est actif (aux couleurs white-label de l'org).
+// montre que I-BE³ Companion est actif (aux couleurs white-label de l'org).
 // Cliquable pour se replier ; ambre si la sonde de santé détecte un changement
 // d'UI du site (capture peut-être cassée). Thème light/dark via CoachTheme.
 // Porte aussi l'interrupteur d'interception : on coupe/rallume là où l'état est

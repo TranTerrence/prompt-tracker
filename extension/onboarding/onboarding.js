@@ -43,6 +43,9 @@ const STRINGS = {
   "theme-system": "themeSystem",
 };
 for (const [id, key] of Object.entries(STRINGS)) document.getElementById(id).textContent = t(key);
+// La notice de confidentialité vit dans l'app : cible dérivée d'APP_URL
+// (src/supabase.js), comme les liens du popup et de la modale.
+document.getElementById("ob-disc-policy").href = `${CoachApi.APP_URL}/extension/privacy`;
 document.documentElement.lang = CoachI18n.lang;
 
 function applyTheme(setting) {
@@ -108,9 +111,9 @@ function offerReload() {
 
 chrome.storage.local.get(["settings", "disclosure", "orgConfig"], (data) => {
   const settings = { theme: "light", threshold: 40, profile: null, ...(data.settings || {}) };
-  // Ré-ouverture après rattachement à une classe : si l'organisation masque
-  // le score, le curseur de seuil (« 40/100 ») n'a plus lieu d'être — c'est
-  // un score déguisé, et il est de toute façon imposé par l'org.
+  // Ré-ouverture après appairage du compte : si le programme masque le
+  // score, le curseur de seuil (« 40/100 ») n'a plus lieu d'être — c'est un
+  // score déguisé, et il est de toute façon imposé par l'organisation.
   if (data.orgConfig && data.orgConfig.showScore === false) {
     document.getElementById("threshold-card").hidden = true;
   }

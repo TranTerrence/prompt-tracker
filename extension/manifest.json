@@ -15,9 +15,7 @@
     "alarms"
   ],
   "optional_host_permissions": [
-    "https://*/*",
-    "http://localhost:3200/*",
-    "http://127.0.0.1:54421/*"
+    "https://*/*"
   ],
   "background": {
     "service_worker": "src/background.js"
@@ -37,6 +35,7 @@
         "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/chatgpt.js",
+        "src/supabase.js",
         "src/content.js"
       ],
       "run_at": "document_idle"
@@ -54,6 +53,7 @@
         "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/claude.js",
+        "src/supabase.js",
         "src/content.js"
       ],
       "run_at": "document_idle"
@@ -71,6 +71,7 @@
         "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/gemini.js",
+        "src/supabase.js",
         "src/content.js"
       ],
       "run_at": "document_idle"
@@ -88,6 +89,7 @@
         "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/mistral.js",
+        "src/supabase.js",
         "src/content.js"
       ],
       "run_at": "document_idle"
@@ -105,6 +107,7 @@
         "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/grok.js",
+        "src/supabase.js",
         "src/content.js"
       ],
       "run_at": "document_idle"
@@ -112,7 +115,7 @@
   ],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Prompt Tracker",
+    "default_title": "I-BE³ Companion",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

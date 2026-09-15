@@ -3,17 +3,22 @@
 // La clé publishable est publique par conception ; la sécurité repose sur RLS.
 
 const CoachApi = (() => {
-  // La base fusionnée I-BE³ Companion (2026-09) : PostgREST/GoTrue derrière la
-  // même surface que l'ancien projet Prompt Tracker. Les trois valeurs sont
-  // des valeurs LOCALES (stack `pnpm dev` d'I-BE³) le temps de la vérification
-  // de la tâche 16 — à remplacer par celles de la stack de production au
-  // moment de la release ; voir store/SUBMISSION.md.
-  const SUPABASE_URL = "http://127.0.0.1:54421";
-  const SUPABASE_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
-  // Le web app I-BE³ sert désormais les deux routes qui étaient des Edge
-  // Functions (pair-extension, socratic-llm). Même remarque : valeur locale.
-  const APP_URL = "http://localhost:3200";
+  // La base I-BE³ Companion (2026-09) : Supabase hébergé, projet
+  // kbbrkrvacazkxraudvng (Paris, eu-west-3), derrière PostgREST/GoTrue. La clé
+  // est la clé PUBLISHABLE du projet : publique par conception, la sécurité
+  // repose sur RLS. Le web app (ibe3.vercel.app) sert l'appairage
+  // (/extension/pair), la question socratique LLM, et toutes les pages vers
+  // lesquelles l'extension renvoie (/help#method, /extension/privacy).
+  //
+  // Ce sont les TROIS SEULES valeurs à changer pour viser une autre stack :
+  // en dev, la stack locale d'I-BE³ (`pnpm dev` dans ibe3-companion) écoute
+  // sur 127.0.0.1:54421 (Supabase, avec la clé anon de `supabase start`) et
+  // sur localhost:3200 (app) — voir le README, section « Développement ».
+  // Ne jamais empaqueter avec des valeurs locales : scripts/package.sh
+  // refuse ces constantes si elles ne sont pas en https.
+  const SUPABASE_URL = "https://kbbrkrvacazkxraudvng.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_9VP7D7EGppB4a6722ylTrg_CuUbaHhN";
+  const APP_URL = "https://ibe3.vercel.app";
 
   const storage = {
     get: (keys) => new Promise((r) => chrome.storage.local.get(keys, r)),
@@ -58,19 +63,14 @@ const CoachApi = (() => {
       .then(() => session);
   }
 
-  async function login(email, password) {
-    return saveSession(await authRequest("token?grant_type=password", { email, password }));
-  }
-
-  async function signup(email, password) {
-    const data = await authRequest("signup", { email, password });
-    if (data.access_token) return saveSession(data);
-    return null; // confirmation email requise
-  }
+  // Plus de login(email, mot de passe) ni de signup() depuis 1.0.0 : les
+  // comptes sont créés par le programme et l'inscription libre est fermée côté
+  // serveur. L'appairage ci-dessous est la seule façon d'obtenir une session ;
+  // authRequest ne sert plus qu'au rafraîchissement du jeton.
 
   // --- Appairage avec le web (device-code) --------------------------------
   // L'extension fabrique un secret et attend qu'une session AUTHENTIFIÉE, sur
-  // le dashboard, l'approuve. Aucun mot de passe n'est saisi ici, et le sens
+  // l'app, l'approuve. Aucun mot de passe n'est saisi ici, et le sens
   // de circulation fait que connaître le code affiché ne suffit à rien.
 
   async function rpcAnon(fn, body) {
@@ -609,8 +609,6 @@ const CoachApi = (() => {
   }
 
   return {
-    login,
-    signup,
     logout,
     ensureSession,
     startPairing,

@@ -1,7 +1,8 @@
-// Popup : login, stats rapides, réglages (dont thème), export CSV.
-// Les stats détaillées vivent dans le dashboard web ; ici, l'essentiel.
-// L'URL du dashboard vient de CoachApi.APP_URL (extension/src/supabase.js) :
-// une seule valeur à changer au moment de la bascule en production.
+// Popup : appairage du compte, stats rapides, réglages (dont thème), export CSV.
+// Les stats détaillées vivent dans l'app I-BE³ Companion ; ici, l'essentiel.
+// Toutes les URL vers l'app (appairage, méthode, confidentialité, accueil)
+// dérivent de CoachApi.APP_URL (extension/src/supabase.js) : un seul endroit
+// à changer si le domaine bouge.
 
 // Garde-fou : une erreur d'init ne doit jamais laisser un popup vide et muet
 // (retour terrain). i18n peut être la cause : message bilingue en dur.
@@ -44,21 +45,22 @@ let lastRenderedThreshold = 40;
 /* ---------- i18n ---------- */
 
 for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = t(el.dataset.i18n);
-document.getElementById("auth-email").placeholder = t("authEmail");
-document.getElementById("auth-password").placeholder = t("authPassword");
-document.getElementById("auth-login").textContent = t("authLogin");
-document.getElementById("auth-signup").textContent = t("authSignup");
 document.getElementById("pair-intro").textContent = t("pairIntro");
 document.getElementById("pair-start").textContent = t("pairStart");
 document.getElementById("pair-reopen").textContent = t("pairReopen");
 document.getElementById("pair-cancel").textContent = t("pairCancel");
-document.getElementById("auth-fallback-summary").textContent = t("authFallback");
 document.getElementById("open-dashboard").textContent = t("authDashboard");
 document.getElementById("auth-logout").textContent = t("authLogout");
 document.getElementById("export").textContent = t("popupExport");
 document.getElementById("reset").textContent = t("popupReset");
 document.getElementById("privacy-link").textContent = t("popupPrivacyLink");
 document.getElementById("method-link").textContent = t("popupMethodLink");
+// Cibles publiques de l'app, dérivées d'APP_URL comme pairUrl() plus bas :
+// la méthode (comment le Miroir décide d'intervenir) et la notice de
+// confidentialité de l'extension.
+document.getElementById("method-link").href = `${CoachApi.APP_URL}/help#method`;
+document.getElementById("stat-score-tile").href = `${CoachApi.APP_URL}/help#method`;
+document.getElementById("privacy-link").href = `${CoachApi.APP_URL}/extension/privacy`;
 document.getElementById("inert-text").textContent = t("popupInertBanner");
 document.getElementById("inert-cta").textContent = t("popupInertCta");
 
@@ -206,8 +208,9 @@ document.getElementById("open-consent").addEventListener("click", () => {
 
 /* ---------- Appairage avec le web ---------- */
 
-// Le popup fabrique une demande, ouvre le dashboard pour l'approbation, puis
-// interroge l'état. Aucun mot de passe ne transite ici.
+// Le popup fabrique une demande, ouvre l'app pour l'approbation, puis
+// interroge l'état. Aucun mot de passe ne transite ici : c'est la seule
+// entrée, le formulaire mot de passe / inscription a disparu en 1.0.0.
 const PAIR_POLL_MS = 3000;
 let pairTimer = null;
 
@@ -307,51 +310,9 @@ chrome.storage.local.get("pairing", (data) => {
   pairTimer = setInterval(pollPairingOnce, PAIR_POLL_MS);
 });
 
-function authError(message) {
-  const el = document.getElementById("auth-error");
-  el.textContent = message;
-  el.hidden = !message;
-}
-
-// Impasse corrigée : une inscription avec confirmation d'e-mail renvoyait
-// « vérifie ta boîte mail » et s'arrêtait là, sans aucun chemin de retour.
-// On mémorise l'adresse et on affiche la reprise à la réouverture du popup.
-function renderPendingSignup() {
-  chrome.storage.local.get("pendingSignup", (data) => {
-    const el = document.getElementById("pending-signup");
-    if (!data.pendingSignup) {
-      el.hidden = true;
-      return;
-    }
-    el.textContent = t("authPendingSignup", data.pendingSignup.email);
-    el.hidden = false;
-    document.getElementById("auth-email").value = data.pendingSignup.email;
-    document.getElementById("auth-fallback").open = true;
-  });
-}
-
-async function handleAuth(kind) {
-  authError("");
-  const email = document.getElementById("auth-email").value.trim();
-  const password = document.getElementById("auth-password").value;
-  if (!email || !password) return authError(t("authRequired"));
-  try {
-    const session = kind === "login" ? await CoachApi.login(email, password) : await CoachApi.signup(email, password);
-    if (!session) {
-      await new Promise((r) =>
-        chrome.storage.local.set({ pendingSignup: { email, at: Date.now() } }, r)
-      );
-      renderPendingSignup();
-      return authError(t("authConfirm"));
-    }
-    await new Promise((r) => chrome.storage.local.remove("pendingSignup", r));
-    renderPendingSignup();
-    chrome.runtime.sendMessage({ type: "sync-now" }, () => refreshAuthUi());
-  } catch (e) {
-    authError(e.message === "Invalid login credentials" ? t("authInvalid") : e.message);
-  }
-}
-renderPendingSignup();
+// Une inscription entamée avec une version d'avant 1.0.0 a pu laisser un
+// `pendingSignup` en stockage : il ne sert plus à rien, on le nettoie.
+chrome.storage.local.remove("pendingSignup");
 
 /* ---------- Bannière de synchronisation ---------- */
 
@@ -378,7 +339,7 @@ const SYNC_ACTIONS = {
   },
   // Ne devrait plus se produire (comptes provisionnés avec leur organisation
   // dès l'inscription) mais reste géré défensivement : plus de champ de code
-  // à mettre en avant ici, le dashboard est le seul recours.
+  // à mettre en avant ici, l'app est le seul recours.
   no_org: {
     text: "syncBlockedNoOrg",
     cta: "syncCtaNoOrg",
@@ -446,8 +407,6 @@ function refreshAuthUi() {
   renderSyncBanner();
 }
 
-document.getElementById("auth-login").addEventListener("click", () => handleAuth("login"));
-document.getElementById("auth-signup").addEventListener("click", () => handleAuth("signup"));
 document.getElementById("auth-logout").addEventListener("click", async () => {
   await CoachApi.logout();
   refreshAuthUi();
