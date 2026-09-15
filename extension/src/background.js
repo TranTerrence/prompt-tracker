@@ -4,8 +4,10 @@
 // Les alarmes réveillent le worker même s'il a été déchargé par Chrome.
 
 // Chrome/Safari : service worker → importScripts. Firefox : event page (le
-// manifest Firefox charge src/supabase.js via background.scripts, cf. package.sh).
-if (typeof importScripts === "function") importScripts("/src/supabase.js");
+// manifest Firefox charge src/config.js puis src/supabase.js via
+// background.scripts, cf. package.sh). config.js d'abord : supabase.js y lit
+// ses constantes.
+if (typeof importScripts === "function") importScripts("/src/config.js", "/src/supabase.js");
 
 chrome.runtime.onInstalled.addListener((details) => {
   setupAlarms();

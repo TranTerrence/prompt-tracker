@@ -232,7 +232,7 @@ appel. Le compte doit exister AVANT la soumission et survivre à la revue
   l'interface suit (« ton tuteur CARE », « l'app I-BE³ Companion », plus de
   « classe » ni d'« enseignant »).
 - **Tous les liens sortants pointent sur l'app du programme**, dérivés d'une
-  seule constante (`CoachApi.APP_URL`) : méthode et barème
+  seule constante (`CoachConfig.APP_URL`, `src/config.js`) : méthode et barème
   `https://ibe3.vercel.app/help#method` (popup, tuile score, « ? » de la
   modale), politique de confidentialité
   `https://ibe3.vercel.app/extension/privacy` (popup, onboarding), accueil de
@@ -241,10 +241,13 @@ appel. Le compte doit exister AVANT la soumission et survivre à la revue
   `optional_host_permissions` revient à `["https://*/*"]` seul : les deux
   entrées `http://localhost:3200/*` et `http://127.0.0.1:54421/*` qui
   servaient à la vérification locale sont retirées du manifest. `storage` +
-  `alarms` et les cinq `matches` de content scripts sont identiques.
-  `src/supabase.js` est désormais aussi chargé dans les content scripts (il
-  fournit `APP_URL` au lien « ? » de la modale) : aucun effet de bord au
-  chargement, aucune requête nouvelle depuis ces pages.
+  `alarms` et les cinq `matches` de content scripts sont identiques. Les
+  content scripts chargent en plus `src/config.js` : un objet de trois
+  constantes (URL Supabase, clé publishable, URL de l'app), sans fonction ni
+  requête, dont ils ne lisent qu'`APP_URL` pour le lien « ? » de la modale.
+  Le client REST/Auth (`src/supabase.js`) n'est pas chargé dans les pages
+  des sites IA : il reste confiné au worker, au popup et à la page de
+  consentement, comme avant.
 - **Vue construite de la modale.** La colonne de droite montre le prompt en
   train de se fabriquer (demande d'origine, puis un bloc par réponse), avec
   « modifier le texte » pour voir et éditer les octets bruts. Même contenu

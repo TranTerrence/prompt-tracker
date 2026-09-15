@@ -11,20 +11,20 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="$(python3 -c "import json; print(json.load(open('$ROOT/extension/manifest.json'))['version'])")"
 
-# Garde-fou : les trois constantes de src/supabase.js doivent viser la
+# Garde-fou : les trois constantes de src/config.js doivent viser la
 # production (https). Un paquet empaqueté avec la stack locale de dev serait
 # muet chez tous les étudiants, et c'est exactement le genre d'erreur qu'on
 # ne voit qu'après la revue du store.
-python3 - "$ROOT/extension/src/supabase.js" <<'PY'
+python3 - "$ROOT/extension/src/config.js" <<'PY'
 import re, sys
 src = open(sys.argv[1], encoding="utf-8").read()
 bad = []
 for name in ("SUPABASE_URL", "APP_URL"):
-    m = re.search(r'const %s = "([^"]*)"' % name, src)
+    m = re.search(r'%s: "([^"]*)"' % name, src)
     if not m or not m.group(1).startswith("https://"):
         bad.append(f"{name} = {m.group(1) if m else '<introuvable>'}")
 if bad:
-    print("✗  src/supabase.js pointe sur une stack non-https : " + ", ".join(bad), file=sys.stderr)
+    print("✗  src/config.js pointe sur une stack non-https : " + ", ".join(bad), file=sys.stderr)
     print("   Remettre les valeurs de production avant d'empaqueter.", file=sys.stderr)
     sys.exit(1)
 PY
@@ -45,8 +45,8 @@ echo "→ $OUT_EDGE"
 
 # --- Firefox : manifest event page (pas de service worker d'extension chez
 # Gecko) + browser_specific_settings. Tout le reste du code est partagé :
-# background.js garde importScripts sous garde, supabase.js passe par
-# background.scripts. ---
+# background.js garde importScripts sous garde, config.js puis supabase.js
+# passent par background.scripts. ---
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 rsync -a --exclude ".DS_Store" --exclude "tests" --exclude "prompt-tracker-logo" --exclude "*.zip" "$ROOT/extension/" "$STAGE/"
@@ -54,7 +54,7 @@ python3 - "$STAGE/manifest.json" <<'PY'
 import json, sys
 path = sys.argv[1]
 m = json.load(open(path))
-m["background"] = {"scripts": ["src/supabase.js", "src/background.js"]}
+m["background"] = {"scripts": ["src/config.js", "src/supabase.js", "src/background.js"]}
 # 127 minimum : optional_host_permissions n'existe chez Gecko que depuis
 # Firefox 127 — en dessous, la clé est ignorée et permissions.request sur une
 # origine (bibliothèque de prompts) est rejeté comme non déclaré.

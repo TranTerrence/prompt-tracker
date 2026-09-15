@@ -548,8 +548,8 @@
         intention,
         branding: orgConfig && orgConfig.branding,
         // Le « ? » de l'aperçu ouvre la méthode dans l'app ; une seule source
-        // pour le domaine (supabase.js), comme le popup et l'onboarding.
-        methodUrl: `${CoachApi.APP_URL}/help#method`,
+        // pour le domaine (src/config.js), comme le popup et l'onboarding.
+        methodUrl: `${CoachConfig.APP_URL}/help#method`,
         // Ouverture de fil : promesse de tranquillité. Ré-entrée : honnêteté
         // sur la raison (3 décrochages), jamais de reproche.
         // L'organisation peut masquer tout ce qui est chiffré : la modale

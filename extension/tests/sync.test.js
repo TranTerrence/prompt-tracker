@@ -66,7 +66,11 @@ function makeApi(seed = {}) {
     Date, Math, JSON, Object, Promise, Error, TypeError, Boolean, Number, Array, Set, Map,
     setTimeout, clearTimeout, AbortController, console,
   };
-  const src = fs.readFileSync(path.join(__dirname, "..", "src", "supabase.js"), "utf8");
+  // config.js d'abord : supabase.js lit ses constantes dans self.CoachConfig.
+  const src =
+    fs.readFileSync(path.join(__dirname, "..", "src", "config.js"), "utf8") +
+    "\n" +
+    fs.readFileSync(path.join(__dirname, "..", "src", "supabase.js"), "utf8");
   const keys = Object.keys(sandbox);
   const api = new Function(...keys, `${src}\nreturn CoachApi;`)(...keys.map((k) => sandbox[k]));
 

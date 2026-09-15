@@ -6,9 +6,13 @@
 > de se construire (deux colonnes, un bloc par réponse) et tous les liens
 > pointent sur `ibe3.vercel.app`. Les fichiers présents dans ce dossier
 > montrent l'ancienne extension : les envoyer, c'est une fiche qui ne
-> correspond pas au paquet, motif de rejet n°1. Le dossier contient aussi
-> 8 fichiers alors que la fiche n'en accepte que 5 — ne garder que les cinq
-> ci-dessous, supprimer le reste.
+> correspond pas au paquet, motif de rejet n°1. **Aucun des cinq noms du
+> tableau n'existe encore** : l'ancienne capture de divulgation, qui portait
+> déjà le nom `shot-01-disclosure.png` (vieux nom « Prompt Tracker », mention
+> « rejoindre une classe »), a été renommée `old-shot-01-disclosure.png` pour
+> qu'elle ne puisse pas passer pour la nouvelle. Le dossier contient 8 anciens
+> fichiers alors que la fiche n'en accepte que 5 — les supprimer une fois les
+> cinq nouvelles captures faites.
 >
 > Ces captures ne peuvent pas être produites depuis un harnais de
 > développement : ce serait une maquette, pas l'extension à l'œuvre. Elles
@@ -35,4 +39,16 @@ divulgation au premier lancement et le consentement granulaire.
 6. Si l'organisation a publié une bibliothèque : « Activer la bibliothèque » dans le popup, déplier → capture 4.
 7. « 🔒 Mes données partagées » → capture 5.
 
-Anciennes captures à supprimer avant l'envoi : `shot-01-interception.png`, `shot-02-dialogue.png`, `shot-02-interception.png`, `shot-03-miroir-apres.png`, `shot-04-miroir-apres.png`, `shot-04-popup.png`, `shot-05-onboarding.png`, `shot-05-popup.png`, `shot-06-consentement.png` (toutes celles qui ne portent pas un des cinq noms du tableau).
+## À refaire (les 8 fichiers actuels sont tous périmés)
+| Fichier actuel | Pourquoi il ne peut pas servir | Remplacé par |
+|---|---|---|
+| `old-shot-01-disclosure.png` | divulgation « Prompt Tracker », « rejoindre une classe » — portait le nom final, renommée pour ne pas piéger la soumission | `shot-01-disclosure.png` (à refaire) |
+| `shot-01-interception.png` | modale 0.5.0, ancien nom | `shot-03-dialogue.png` |
+| `shot-02-dialogue.png` | modale 0.5.0 sans vue construite | `shot-03-dialogue.png` |
+| `shot-03-miroir-apres.png` | miroir d'après, non retenu dans les 5 | — |
+| `shot-04-popup.png` | popup 0.5.0 avec formulaire mot de passe | `shot-02-popup.png` |
+| `shot-05-onboarding.png` | onboarding 0.5.0, ancien nom | `shot-01-disclosure.png` |
+| `shot-05-popup.png` | popup 0.7 avec code de classe | `shot-02-popup.png` |
+| `shot-06-consentement.png` | écran « classe », ancien nom | `shot-05-consentement.png` |
+
+Supprimer ces huit fichiers avant l'envoi, une fois les cinq du tableau du haut produits : `scripts/webstore-check.sh` avertit tant que le dossier en compte plus de cinq.

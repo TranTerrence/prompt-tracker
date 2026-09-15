@@ -35,7 +35,7 @@
         "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/chatgpt.js",
-        "src/supabase.js",
+        "src/config.js",
         "src/content.js"
       ],
       "run_at": "document_idle"
@@ -53,7 +53,7 @@
         "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/claude.js",
-        "src/supabase.js",
+        "src/config.js",
         "src/content.js"
       ],
       "run_at": "document_idle"
@@ -71,7 +71,7 @@
         "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/gemini.js",
-        "src/supabase.js",
+        "src/config.js",
         "src/content.js"
       ],
       "run_at": "document_idle"
@@ -89,7 +89,7 @@
         "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/mistral.js",
-        "src/supabase.js",
+        "src/config.js",
         "src/content.js"
       ],
       "run_at": "document_idle"
@@ -107,7 +107,7 @@
         "src/models.js",
         "src/adapters/factory.js",
         "src/adapters/grok.js",
-        "src/supabase.js",
+        "src/config.js",
         "src/content.js"
       ],
       "run_at": "document_idle"

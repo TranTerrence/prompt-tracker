@@ -1,7 +1,7 @@
 // Popup : appairage du compte, stats rapides, réglages (dont thème), export CSV.
 // Les stats détaillées vivent dans l'app I-BE³ Companion ; ici, l'essentiel.
 // Toutes les URL vers l'app (appairage, méthode, confidentialité, accueil)
-// dérivent de CoachApi.APP_URL (extension/src/supabase.js) : un seul endroit
+// dérivent de CoachConfig.APP_URL (extension/src/config.js) : un seul endroit
 // à changer si le domaine bouge.
 
 // Garde-fou : une erreur d'init ne doit jamais laisser un popup vide et muet
@@ -58,9 +58,9 @@ document.getElementById("method-link").textContent = t("popupMethodLink");
 // Cibles publiques de l'app, dérivées d'APP_URL comme pairUrl() plus bas :
 // la méthode (comment le Miroir décide d'intervenir) et la notice de
 // confidentialité de l'extension.
-document.getElementById("method-link").href = `${CoachApi.APP_URL}/help#method`;
-document.getElementById("stat-score-tile").href = `${CoachApi.APP_URL}/help#method`;
-document.getElementById("privacy-link").href = `${CoachApi.APP_URL}/extension/privacy`;
+document.getElementById("method-link").href = `${CoachConfig.APP_URL}/help#method`;
+document.getElementById("stat-score-tile").href = `${CoachConfig.APP_URL}/help#method`;
+document.getElementById("privacy-link").href = `${CoachConfig.APP_URL}/extension/privacy`;
 document.getElementById("inert-text").textContent = t("popupInertBanner");
 document.getElementById("inert-cta").textContent = t("popupInertCta");
 
@@ -221,7 +221,7 @@ function pairError(message) {
 }
 
 function pairUrl(userCode) {
-  return `${CoachApi.APP_URL}/extension/pair?c=${encodeURIComponent(userCode)}`;
+  return `${CoachConfig.APP_URL}/extension/pair?c=${encodeURIComponent(userCode)}`;
 }
 
 function stopPairPolling() {
@@ -343,7 +343,7 @@ const SYNC_ACTIONS = {
   no_org: {
     text: "syncBlockedNoOrg",
     cta: "syncCtaNoOrg",
-    run: async () => chrome.tabs.create({ url: CoachApi.APP_URL }),
+    run: async () => chrome.tabs.create({ url: CoachConfig.APP_URL }),
   },
   not_authenticated: {
     text: "syncBlockedNoAuth",
@@ -412,7 +412,7 @@ document.getElementById("auth-logout").addEventListener("click", async () => {
   refreshAuthUi();
 });
 document.getElementById("open-dashboard").addEventListener("click", () => {
-  chrome.tabs.create({ url: CoachApi.APP_URL });
+  chrome.tabs.create({ url: CoachConfig.APP_URL });
 });
 refreshAuthUi();
 
@@ -843,7 +843,7 @@ document.getElementById("export").addEventListener("click", () => {
     const blob = new Blob(["﻿" + toCsv(data.events || [])], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `prompt-tracker-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `ibe3-companion-export-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
   });

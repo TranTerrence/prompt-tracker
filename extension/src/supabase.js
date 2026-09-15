@@ -1,24 +1,17 @@
 // Client Supabase minimaliste (REST + Auth) sans dépendance : utilisable depuis
-// le popup (balise script) et le service worker (importScripts).
-// La clé publishable est publique par conception ; la sécurité repose sur RLS.
+// le popup et la page de consentement (balise script) et le service worker
+// (importScripts). La clé publishable est publique par conception ; la
+// sécurité repose sur RLS.
+//
+// Ce fichier n'est PAS chargé dans les content scripts des sites IA : ils
+// n'ont besoin que d'APP_URL, qu'ils lisent dans src/config.js.
 
 const CoachApi = (() => {
-  // La base I-BE³ Companion (2026-09) : Supabase hébergé, projet
-  // kbbrkrvacazkxraudvng (Paris, eu-west-3), derrière PostgREST/GoTrue. La clé
-  // est la clé PUBLISHABLE du projet : publique par conception, la sécurité
-  // repose sur RLS. Le web app (ibe3.vercel.app) sert l'appairage
-  // (/extension/pair), la question socratique LLM, et toutes les pages vers
-  // lesquelles l'extension renvoie (/help#method, /extension/privacy).
-  //
-  // Ce sont les TROIS SEULES valeurs à changer pour viser une autre stack :
-  // en dev, la stack locale d'I-BE³ (`pnpm dev` dans ibe3-companion) écoute
-  // sur 127.0.0.1:54421 (Supabase, avec la clé anon de `supabase start`) et
-  // sur localhost:3200 (app) — voir le README, section « Développement ».
-  // Ne jamais empaqueter avec des valeurs locales : scripts/package.sh
-  // refuse ces constantes si elles ne sont pas en https.
-  const SUPABASE_URL = "https://kbbrkrvacazkxraudvng.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_9VP7D7EGppB4a6722ylTrg_CuUbaHhN";
-  const APP_URL = "https://ibe3.vercel.app";
+  // Les trois constantes de stack (URL Supabase, clé publishable, URL de
+  // l'app) vivent dans src/config.js, chargé avant ce fichier partout où il
+  // l'est (manifest, popup.html, consent.html, importScripts du worker,
+  // background.scripts chez Firefox). Un seul endroit à changer.
+  const { SUPABASE_URL, SUPABASE_KEY, APP_URL } = self.CoachConfig;
 
   const storage = {
     get: (keys) => new Promise((r) => chrome.storage.local.get(keys, r)),

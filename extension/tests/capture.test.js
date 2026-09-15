@@ -94,10 +94,10 @@ function makeEnv({ settings = {}, orgConfig = null, consents = {}, disclosure = 
     CoachTheme: { set() {}, DEFAULT_ACCENT: "#000" },
     CoachBadge: { render() {}, remove() {} },
     CoachModels: { VERSION: 1 },
-    // Doublure de src/supabase.js : content.js n'en lit que APP_URL, pour
+    // Doublure de src/config.js : content.js n'en lit que APP_URL, pour
     // dériver le lien « méthode » de la modale (1.0.0 : plus rien n'est codé
     // en dur côté UI, le domaine vit à un seul endroit).
-    CoachApi: { APP_URL: "https://app.example" },
+    CoachConfig: { APP_URL: "https://app.example" },
     CoachMirror: {
       show(msg) { captured.toast = msg; },
       flash(msg) { captured.flash = msg; },
@@ -165,7 +165,7 @@ async function testQuatreIssues() {
     env.adapter.handlers.onIntercept(faible);
     const m = env.captured.modal;
     assert.ok(m, "la modale est ouverte");
-    assert.strictEqual(m.methodUrl, "https://app.example/help#method", "le lien « méthode » dérive de CoachApi.APP_URL");
+    assert.strictEqual(m.methodUrl, "https://app.example/help#method", "le lien « méthode » dérive de CoachConfig.APP_URL");
     const final = faible + "\n\nMa réflexion préalable :\n- Ma tentative : je dirais que 2x+3=7";
     m.onSend(final, { rounds: 4, answersCount: 4, rerolls: 0, answers: [{ q: "Q", a: "R", axis: "hypothese" }] });
     await tick();

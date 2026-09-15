@@ -44,8 +44,8 @@ const STRINGS = {
 };
 for (const [id, key] of Object.entries(STRINGS)) document.getElementById(id).textContent = t(key);
 // La notice de confidentialité vit dans l'app : cible dérivée d'APP_URL
-// (src/supabase.js), comme les liens du popup et de la modale.
-document.getElementById("ob-disc-policy").href = `${CoachApi.APP_URL}/extension/privacy`;
+// (src/config.js), comme les liens du popup et de la modale.
+document.getElementById("ob-disc-policy").href = `${CoachConfig.APP_URL}/extension/privacy`;
 document.documentElement.lang = CoachI18n.lang;
 
 function applyTheme(setting) {

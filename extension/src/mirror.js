@@ -237,7 +237,7 @@ const CoachMirror = (() => {
   //   subtitle (remplace le sous-titre : ré-entrée honnête),
   //   promise (bool : afficher la promesse « je ne t'interromprai plus »),
   //   methodUrl (page publique qui explique le barème ; l'appelant la dérive
-  //     de CoachApi.APP_URL — sans elle, le « ? » n'est pas affiché),
+  //     de CoachConfig.APP_URL — sans elle, le « ? » n'est pas affiché),
   //   rescore(text) -> scores, compile(originalPrompt, answers) -> string,
   //   compileParts(originalPrompt, answers) -> {original, header, lines:[{key, axis, label, text}]}
   //     (même source que compile : la vue construite en dessine un bloc par
@@ -621,7 +621,7 @@ const CoachMirror = (() => {
     el(".anyway").textContent = t("modalSendAnyway");
     // Transparence : le « ? » ouvre la page publique qui explique le barème
     // (/help#method de l'app). La cible n'est pas codée ici : content.js la
-    // dérive de CoachApi.APP_URL, un seul endroit à changer si le domaine bouge.
+    // dérive de CoachConfig.APP_URL, un seul endroit à changer si le domaine bouge.
     if (opts.methodUrl) el(".method-link").href = opts.methodUrl;
     el(".method-link").title = t("modalMethodTitle");
     el(".method-link").hidden = !showScore || !opts.methodUrl;

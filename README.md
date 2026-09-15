@@ -35,7 +35,7 @@ git worktree add /tmp/pt-release feat/ibe3-merged-backend
 (cd /tmp/pt-release && ./scripts/package.sh)   # → dist/prompt-tracker[-edge|-firefox]-<version>.zip
 # IBE3_PUBLIC_DIR=/chemin/vers/ibe3-companion/public ./scripts/package.sh
 #   dépose directement le zip Chrome dans public/ de l'app (sinon le chemin
-#   est imprimé). Le script refuse d'empaqueter si src/supabase.js ne vise
+#   est imprimé). Le script refuse d'empaqueter si src/config.js ne vise
 #   pas une stack https.
 ./scripts/webstore-check.sh                  # pré-vol Chrome Web Store (curl la politique de confidentialité)
 
@@ -56,7 +56,7 @@ L'extension embarque les valeurs de **production** : Supabase hébergé
 `kbbrkrvacazkxraudvng` (clé *publishable*, publique par conception) et
 `https://ibe3.vercel.app`. Pour travailler contre la stack locale de l'app
 (`pnpm dev` dans `ibe3-companion`, qui lance aussi `supabase start`), modifier
-**les trois constantes en tête de [`extension/src/supabase.js`](extension/src/supabase.js)** :
+**les trois constantes de [`extension/src/config.js`](extension/src/config.js)** (le seul fichier de configuration ; `supabase.js` les y lit) :
 
 | Constante | Production (embarquée) | Dev local |
 |---|---|---|
@@ -65,8 +65,11 @@ L'extension embarque les valeurs de **production** : Supabase hébergé
 | `APP_URL` | `https://ibe3.vercel.app` | `http://localhost:3200` |
 
 Toutes les URL de l'extension (appairage, « Ouvrir l'app », méthode, notice de
-confidentialité, lien « ? » de la modale) dérivent de `APP_URL` : rien d'autre
-à toucher. Ne jamais commiter ni empaqueter les valeurs locales — `package.sh`
+confidentialité, lien « ? » de la modale) dérivent de `CoachConfig.APP_URL` :
+rien d'autre à toucher. `config.js` est chargé partout, y compris dans les
+content scripts des sites IA (qui n'ont besoin que d'`APP_URL`) ; le client
+REST/Auth (`supabase.js`) ne l'est que dans le worker, le popup et la page de
+consentement. Ne jamais commiter ni empaqueter les valeurs locales — `package.sh`
 s'y refuse. Recharger l'extension dans `chrome://extensions` après modification.
 
 Ajouter un site IA = un fichier `extension/src/adapters/<site>.js` (sélecteurs du composeur et du bouton d'envoi) + une entrée `content_scripts` dans le manifest : toute la mécanique est partagée par [`factory.js`](extension/src/adapters/factory.js).
