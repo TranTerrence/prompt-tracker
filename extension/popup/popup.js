@@ -139,6 +139,40 @@ function renderStaleBanner() {
   });
 }
 
+/* ---------- Worker périmé ---------- */
+
+// Le popup se recharge à chaque ouverture ; le service worker garde le script
+// avec lequel il s'est enregistré jusqu'au rechargement de l'extension. Entre
+// une mise à jour du dossier (installation non empaquetée) et ce rechargement,
+// les deux tournent sur deux versions : le popup appaire sur la nouvelle stack
+// et le worker synchronise vers l'ancienne, avec un jeton qu'elle ne sait pas
+// lire (PGRST301, une fois par minute, 15/09/2026). Le worker répond au `ping`
+// avec SA stack ; pas de réponse du tout = worker d'avant ce message =
+// périmé, par construction.
+//
+// Derrière un clic, jamais automatique : Chrome désactive une extension qui
+// se recharge trop souvent (≈ 5 fois en 10 minutes).
+function renderReloadBanner() {
+  const box = document.getElementById("reload-banner");
+  const text = document.getElementById("reload-text");
+  const cta = document.getElementById("reload-cta");
+  chrome.runtime.sendMessage({ type: "ping" }, (res) => {
+    const lastError = chrome.runtime.lastError; // lu pour ne pas laisser un « unchecked » dans la console
+    workerStale =
+      Boolean(lastError) ||
+      !res ||
+      !res.ok ||
+      res.stack !== CoachConfig.SUPABASE_URL ||
+      res.appUrl !== CoachConfig.APP_URL;
+    box.hidden = !workerStale;
+    if (!workerStale) return;
+    text.textContent = t("reloadBanner");
+    cta.textContent = t("reloadCta");
+    cta.onclick = () => chrome.runtime.reload();
+    renderSyncBanner();
+  });
+}
+
 /* ---------- Thème ---------- */
 
 function applyTheme(setting) {
@@ -320,7 +354,24 @@ chrome.storage.local.remove("pendingSignup");
 // Une raison de blocage → un texte et UNE action qui la lève. Sans ce bloc,
 // une sync qui ne part pas est invisible : c'est ce qui a laissé vivre le
 // blocage `no_baseline_consent` pendant tout le parcours web.
+// Worker périmé (voir renderReloadBanner) : déclaré AVANT le premier
+// refreshAuthUi() plus bas, que renderSyncBanner lit — même contrainte
+// d'ordre que `libraryItems`.
+let workerStale = false;
+
 const SYNC_ACTIONS = {
+  // La session vient d'un autre serveur que celui que vise l'extension
+  // (config.js a changé de projet). Seul geste qui purge une telle session :
+  // celui de l'utilisateur, ici. Jamais le worker — il peut être le périmé.
+  stack_changed: {
+    text: "syncBlockedStack",
+    cta: "syncCtaStack",
+    run: async () => {
+      await CoachApi.logout();
+      refreshAuthUi();
+      document.getElementById("pair-start").click();
+    },
+  },
   // La session a expiré alors que le compte ÉTAIT lié. Distinct de
   // `not_authenticated`, qui est le mode nominal d'un usage 100 % local et
   // n'affiche volontairement rien : ici l'utilisateur perd quelque chose
@@ -354,13 +405,25 @@ const SYNC_ACTIONS = {
 };
 
 function renderSyncBanner() {
-  chrome.storage.local.get(["syncStatus", "session"], (data) => {
+  chrome.storage.local.get(["syncStatus", "session", "sessionExpired"], (data) => {
     const status = data.syncStatus;
     const banner = document.getElementById("sync-banner");
+    // Worker périmé : la cause est le moteur, pas la session. Un seul bandeau,
+    // celui qui propose le rechargement.
+    if (workerStale) {
+      banner.hidden = true;
+      return;
+    }
+    // La raison vient du journal de sync ; à défaut, une session purgée par
+    // un rafraîchissement (refresh-config, pas de journal) vaut « expirée » —
+    // même repli que presence.js pour l'app.
+    let reason = (status && status.reason) || (!data.session && data.sessionExpired ? "session_expired" : null);
+    // Un 401 REST qui n'a pas été traduit (worker d'avant la traduction) est
+    // une session refusée : proposer la reconnexion, pas du JSON PostgREST.
+    if (!reason && status && /^rest_401\b/.test(status.error || "")) reason = "session_expired";
+    if (status && status.error) console.debug("[coach-ia] sync :", status.error);
     // Sans compte, l'usage 100 % local est le mode nominal : ne pas alarmer.
-    const action = status && status.reason && !(status.reason === "not_authenticated" && !data.session)
-      ? SYNC_ACTIONS[status.reason]
-      : null;
+    const action = reason && !(reason === "not_authenticated" && !data.session) ? SYNC_ACTIONS[reason] : null;
     if (!action && !(status && status.error)) {
       banner.hidden = true;
       return;
@@ -370,7 +433,7 @@ function renderSyncBanner() {
       ? t(action.text)
       : t("syncBlockedError", status.error);
     const pendingEl = document.getElementById("sync-banner-pending");
-    if (status.pending) {
+    if (status && status.pending) {
       const since = status.oldestPendingTs
         ? new Date(status.oldestPendingTs).toLocaleDateString(CoachI18n.lang === "en" ? "en-GB" : "fr-FR")
         : null;
@@ -422,6 +485,7 @@ document.getElementById("open-prompts").addEventListener("click", () => {
   chrome.tabs.create({ url: `${CoachConfig.APP_URL}/prompts` });
 });
 refreshAuthUi();
+renderReloadBanner();
 
 // À l'ouverture du popup, on rafraîchit config + sync : c'est le moment où
 // l'utilisateur regarde. Sans ça, quelqu'un qui vient de lier son compte

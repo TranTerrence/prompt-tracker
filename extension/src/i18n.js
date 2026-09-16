@@ -193,6 +193,17 @@ const CoachI18n = (() => {
       syncBlockedExpired:
         "Ta session a expiré : tes prompts continuent d'être analysés sur cet ordinateur, mais ils ne remontent plus dans l'app I-BE³ Companion. Rien n'est perdu, tout repartira à la reconnexion.",
       syncCtaExpired: "Me reconnecter",
+      // Le jeton en poche vient d'un autre serveur que celui que vise
+      // l'extension (mise à jour qui a changé de projet) : seul un nouvel
+      // appairage le remplace, et c'est un geste de l'utilisateur.
+      syncBlockedStack:
+        "L'extension vise désormais un autre serveur que celui de ta session : relie ton compte à nouveau. Rien n'est perdu, la file repartira ensuite.",
+      syncCtaStack: "Relier mon compte à nouveau",
+      // Le moteur de synchronisation (service worker) tourne encore sur une
+      // version antérieure au popup : seul un rechargement l'aligne.
+      reloadBanner:
+        "L'extension a été mise à jour, mais son moteur de synchronisation tourne encore sur l'ancienne version : recharge-la pour que la liaison et la synchronisation reprennent.",
+      reloadCta: "Recharger l'extension",
       syncBlockedError: (msg) => `La synchronisation a échoué : ${msg}. Nouvel essai automatique dans une minute.`,
       syncPending: (n) => `${n} événement(s) en attente.`,
       syncPendingSince: (n, date) => `${n} événement(s) en attente depuis le ${date}.`,
@@ -427,6 +438,12 @@ const CoachI18n = (() => {
       syncBlockedExpired:
         "Your session has expired: your prompts are still analyzed on this computer, but they no longer reach the I-BE³ Companion app. Nothing is lost, everything will be sent again once you reconnect.",
       syncCtaExpired: "Reconnect",
+      syncBlockedStack:
+        "The extension now targets a different server from the one your session came from: link your account again. Nothing is lost, the queue will follow.",
+      syncCtaStack: "Link my account again",
+      reloadBanner:
+        "The extension was updated, but its background sync is still running the old version: reload it so linking and syncing work again.",
+      reloadCta: "Reload the extension",
       syncBlockedError: (msg) => `Sync failed: ${msg}. Automatic retry in one minute.`,
       syncPending: (n) => `${n} event(s) pending.`,
       syncPendingSince: (n, date) => `${n} event(s) pending since ${date}.`,

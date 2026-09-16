@@ -91,6 +91,22 @@ const CLES = ["active", "deviceId", "lastSyncAt", "paired", "pending", "syncReas
   console.log("  ✓ un blocage nommé prime sur le repli session_expired");
 }
 
+// Jeton d'une autre stack : la session est là (paired reste vrai, l'app ne
+// doit pas proposer d'installer ce qui tourne) et la raison est celle sur
+// laquelle l'app branche sa carte « relier à nouveau ». Valeur littérale : c'est
+// un contrat avec lib/extension-status.ts (RECONNECT_REASONS).
+{
+  const a = build({
+    disclosure: { accepted: true, version: 3 },
+    session: { user_id: "u1", access_token: "at1", refresh_token: "rt1", stack: "https://ovbvwawzrciwpudnaysp.supabase.co" },
+    syncStatus: { pending: 3, reason: "stack_changed" },
+  });
+  assert.strictEqual(a.paired, true);
+  assert.strictEqual(a.syncReason, "stack_changed");
+  assert.strictEqual(a.pending, 3);
+  console.log("  ✓ jeton d'une autre stack : paired true, syncReason = stack_changed");
+}
+
 // Entrées dégradées : storage vide, clés à null, version absente.
 {
   for (const bad of [undefined, null, {}, { session: null, syncStatus: null, disclosure: null }]) {

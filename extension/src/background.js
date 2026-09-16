@@ -41,6 +41,7 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === "sync-events") syncInFlight = true;
   try {
     if (alarm.name === "sync-events") {
       await CoachApi.syncEvents();
@@ -58,8 +59,36 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     // syncStatus : il ne peut ni casser ce chemin ni maquiller l'échec.
     if (alarm.name === "sync-events") await CoachApi.heartbeat();
     await refreshActionBadge();
+    if (alarm.name === "sync-events") {
+      syncInFlight = false;
+      if (updatePending) chrome.runtime.reload();
+    }
   }
 });
+
+/* ---------- Mise à jour depuis le store ---------- */
+
+// Chrome n'applique une mise à jour du store qu'au prochain démarrage du
+// navigateur, ou quand l'extension se recharge elle-même. Entre les deux, le
+// popup (rechargé à chaque ouverture) et ce worker (figé jusqu'au rechargement)
+// peuvent tourner sur deux versions : c'est ce qui a envoyé pendant des heures
+// des jetons du nouveau projet Supabase à l'ancien (15/09/2026). On recharge
+// donc dès que Chrome annonce la mise à jour — jamais au milieu d'une sync,
+// une file en cours d'envoi n'a pas à être coupée. Ces deux variables
+// décrivent la vie de CETTE instance du worker : si Chrome l'évince avant,
+// la mise à jour s'applique d'elle-même au réveil suivant.
+//
+// Ne concerne pas une installation « non empaquetée » (dossier chargé à la
+// main) : là, c'est le bandeau du popup (message `ping` ci-dessous) qui
+// propose le rechargement.
+let syncInFlight = false;
+let updatePending = false;
+if (chrome.runtime.onUpdateAvailable) {
+  chrome.runtime.onUpdateAvailable.addListener(() => {
+    if (syncInFlight) updatePending = true;
+    else chrome.runtime.reload();
+  });
+}
 
 // Une file qui grossit sans repartir doit se voir sans ouvrir le popup. Le
 // seuil évite d'alarmer sur un simple passage hors-ligne : c'est la STAGNATION
@@ -198,6 +227,15 @@ async function loadLibrary(force = false) {
 
 // Le popup (après login) ou le content script peuvent demander une action immédiate.
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg && msg.type === "ping") {
+    // Le popup compare avec SON CoachConfig : un worker chargé avant un
+    // changement de config.js répond avec l'ancienne stack — ou ne répond pas
+    // du tout, faute de ce handler. Dans les deux cas le popup propose de
+    // recharger l'extension. Pas de version de manifest ici : les deux
+    // contextes lisent le même manifest chargé, elle ne diffère jamais.
+    sendResponse({ ok: true, stack: CoachApi.SUPABASE_URL, appUrl: CoachApi.APP_URL });
+    return false;
+  }
   if (msg && msg.type === "sync-now") {
     // refreshOrgConfig d'abord, en séquence : c'est lui qui redescend
     // baseline_consent_at du serveur, et syncEvents le lit juste après. En

@@ -110,6 +110,9 @@
       const params = new URLSearchParams(location.search);
       const library = params.get("library");
       const STALE_TABS = Number(params.get("tabs") || 0);
+      // ?stale=1 : le worker ne répond pas au ping (ou avec une autre stack)
+      // → bandeau « recharger l'extension ».
+      const STALE_WORKER = params.get("stale") === "1";
       if (params.has("noscore") || library) {
         store.session = store.session || { email: "lea@lycee-jean-moulin.fr", user_id: "demo", expires_at: now + 36e5 };
         store.profile = store.profile || { org_id: "demo-org", role: "member" };
@@ -181,9 +184,16 @@
         runtime: {
           sendMessage(m, cb) {
             // Routage par type, comme le vrai worker : library-fetch répond
-            // les prompts du cache (ou null), le reste un ok neutre.
+            // les prompts du cache (ou null), ping la stack de la page (lue
+            // tard : config.js se charge après ce stub) — ou `ok: false`
+            // avec ?stale=1, pour voir le bandeau « recharger l'extension » —,
+            // le reste un ok neutre.
             if (m && m.type === "library-fetch")
               return cb && cb({ prompts: store.promptLibrary ? store.promptLibrary.prompts : null });
+            if (m && m.type === "ping")
+              return cb && cb(STALE_WORKER
+                ? { ok: false }
+                : { ok: true, stack: window.CoachConfig.SUPABASE_URL, appUrl: window.CoachConfig.APP_URL });
             cb && cb({ ok: false });
           },
           getURL: (p) => p,

@@ -46,6 +46,11 @@ const CoachApi = (() => {
       expires_at: Date.now() + (data.expires_in || 3600) * 1000,
       user_id: data.user && data.user.id,
       email: data.user && data.user.email,
+      // Le projet Supabase qui a émis ce jeton. ensureSession() refuse de le
+      // présenter à un autre : un jeton signé par un projet est du bruit pour
+      // le PostgREST d'un autre (PGRST301, « no suitable key »), et c'est
+      // exactement ce qu'a produit le changement de stack du 15/09/2026.
+      stack: SUPABASE_URL,
     };
     // Toute authentification réussie efface le marqueur d'expiration : c'est
     // le seul endroit où l'on redevient connecté, quel que soit le chemin
@@ -311,9 +316,18 @@ const CoachApi = (() => {
     return Boolean(e && (e.status === 400 || e.status === 401));
   }
 
-  // Renvoie une session valide (rafraîchie si besoin) ou null.
+  // Purge + marqueur : le SEUL chemin qui retire une session sans geste de
+  // l'utilisateur. Le marqueur est ce qui fait apparaître « Me reconnecter »
+  // dans le popup et `session_expired` dans l'annonce à l'app.
+  async function expireSession(reason) {
+    await storage.remove("session");
+    await storage.set({ sessionExpired: { at: Date.now(), reason } });
+  }
+
+  // Échange le refresh token contre une session neuve. Refus définitif →
+  // purge ; échec passager → attente croissante, session conservée.
   //
-  // DÉFAUT CORRIGÉ, ne pas revenir en arrière : cette fonction retournait null
+  // DÉFAUT CORRIGÉ, ne pas revenir en arrière : ensureSession retournait null
   // sans jamais purger la session morte. `expires_at` restait dans le passé,
   // donc chaque tick d'alarme retentait le même jeton révoqué, échouait, et
   // recommençait — indéfiniment. Mesuré en production le 25/08/2026 : 1134
@@ -321,13 +335,7 @@ const CoachApi = (() => {
   // minute, sans interruption, pour une installation qui ne synchronisait plus
   // rien. Purger est ce qui arrête la boucle ET ce qui rend le problème
   // visible : la bannière du popup propose alors la reconnexion.
-  async function ensureSession() {
-    const { session } = await storage.get("session");
-    if (!session) return null;
-    if (Date.now() < session.expires_at - 60000) return session;
-    // Échec passager précédent : on attend l'échéance au lieu de marteler.
-    if (session.retryAfter && Date.now() < session.retryAfter) return null;
-
+  async function refreshSession(session) {
     try {
       return await saveSession(
         await authRequest("token?grant_type=refresh_token", { refresh_token: session.refresh_token })
@@ -338,8 +346,7 @@ const CoachApi = (() => {
         // lui, le popup retomberait sur « pas connecté », qui est le mode
         // nominal d'un usage 100 % local et n'affiche donc aucune bannière.
         // Quelqu'un qui ÉTAIT connecté doit l'apprendre, pas glisser en silence.
-        await storage.remove("session");
-        await storage.set({ sessionExpired: { at: Date.now(), reason: e.code || "invalid_grant" } });
+        await expireSession(e.code || "invalid_grant");
         return null;
       }
       const failures = (session.refreshFailures || 0) + 1;
@@ -351,10 +358,50 @@ const CoachApi = (() => {
     }
   }
 
-  async function rest(path, { method = "GET", body, headers = {} } = {}) {
-    const session = await ensureSession();
-    if (!session) throw new Error("not_authenticated");
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  // Un seul rafraîchissement en vol par worker : l'alarme et un `sync-now`
+  // venu du popup peuvent tomber ensemble, et deux échanges du même refresh
+  // token font passer le second pour une réutilisation (invalid_grant), donc
+  // une purge à tort. Même motif que deviceIdPromise.
+  let refreshPromise = null;
+
+  // Renvoie une session valide (rafraîchie si besoin) ou null.
+  // `force` : rafraîchir même si l'horloge locale croit le jeton valide —
+  // c'est le serveur qui vient de le refuser (voir rest()).
+  async function ensureSession({ force = false } = {}) {
+    const { session } = await storage.get("session");
+    if (!session) return null;
+    // Jeton d'un autre projet Supabase (config.js a changé de stack). Aucun
+    // appel réseau, et surtout AUCUNE purge : ce worker peut être celui qui
+    // est périmé (chargé avant le changement de config.js, voir `ping` dans
+    // background.js), et la session que le popup vient de créer est la bonne.
+    // Une session d'avant ce marqueur est réputée d'ici.
+    if (session.stack && session.stack !== SUPABASE_URL) return null;
+    if (!force && Date.now() < session.expires_at - 60000) return session;
+    // Échec passager précédent : on attend l'échéance au lieu de marteler.
+    // Vaut aussi pour un refresh forcé : un 401 REST pendant une panne de
+    // GoTrue ne doit pas faire marteler GoTrue.
+    if (session.retryAfter && Date.now() < session.retryAfter) return null;
+    if (!refreshPromise) {
+      refreshPromise = refreshSession(session).finally(() => {
+        refreshPromise = null;
+      });
+    }
+    return refreshPromise;
+  }
+
+  // Pourquoi ensureSession() n'a rien rendu, pour le journal de sync et donc
+  // la bannière du popup. « Jamais connecté » et « session expirée » appellent
+  // des messages différents : le premier est le mode nominal d'un usage local,
+  // le second est une régression que l'utilisateur doit voir. Et « jeton d'une
+  // autre stack » appelle un troisième : relier le compte à nouveau.
+  async function noSessionReason() {
+    const { session, sessionExpired } = await storage.get(["session", "sessionExpired"]);
+    if (session && session.stack && session.stack !== SUPABASE_URL) return "stack_changed";
+    return sessionExpired ? "session_expired" : "not_authenticated";
+  }
+
+  function restFetch(path, session, method, body, headers) {
+    return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
       method,
       headers: {
         apikey: SUPABASE_KEY,
@@ -364,7 +411,35 @@ const CoachApi = (() => {
       },
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok) throw new Error(`rest_${res.status}: ${await res.text()}`);
+  }
+
+  async function rest(path, { method = "GET", body, headers = {} } = {}) {
+    const session = await ensureSession();
+    if (!session) throw new Error("not_authenticated");
+    let res = await restFetch(path, session, method, body, headers);
+    if (res.status === 401) {
+      // Le serveur refuse un jeton que l'horloge locale croit valide (projet
+      // changé, clé de signature tournée, session révoquée) : UN
+      // rafraîchissement forcé, UNE relance, puis on tranche. Sans ça, le
+      // même jeton mort repartait chaque minute jusqu'à son expiration — et
+      // la bannière affichait du JSON PostgREST au lieu de « Me reconnecter ».
+      const fresh = await ensureSession({ force: true });
+      if (fresh) {
+        res = await restFetch(path, fresh, method, body, headers);
+        // Jeton tout neuf et toujours refusé : ce compte n'est plus accepté
+        // ici. Purger, sinon on repartirait chaque minute.
+        if (res.status === 401) await expireSession("rejected_after_refresh");
+      }
+    }
+    if (!res.ok) {
+      const err = new Error(`rest_${res.status}: ${await res.text()}`);
+      err.status = res.status;
+      // 401 et plus de session en storage : c'est ce rest() (ou le refresh
+      // qu'il a forcé) qui vient de la purger. L'appelant journalise alors
+      // « session expirée », pas le corps brut de la réponse.
+      err.sessionExpired = res.status === 401 && !(await storage.get("session")).session;
+      throw err;
+    }
     // Un succès sans corps n'est pas toujours un 204 : PostgREST répond 201
     // vide aux POST `Prefer: return=minimal` (sync, consentements). Décider
     // sur le corps, pas sur le statut.
@@ -550,11 +625,7 @@ const CoachApi = (() => {
   async function syncEvents() {
     const session = await ensureSession();
     if (!session) {
-      // « Jamais connecté » et « session expirée » appellent des messages
-      // différents : le premier est le mode nominal d'un usage local, le
-      // second est une régression que l'utilisateur doit voir.
-      const { sessionExpired } = await storage.get("sessionExpired");
-      const reason = sessionExpired ? "session_expired" : "not_authenticated";
+      const reason = await noSessionReason();
       await recordSync({ reason });
       return { pushed: 0, reason };
     }
@@ -637,7 +708,10 @@ const CoachApi = (() => {
     } catch (e) {
       // Hors-ligne, RLS, trigger de consentement : la file reste intacte et
       // sera repoussée à la prochaine alarme, mais l'échec devient lisible.
-      await recordSync({ error: e.message });
+      // Session purgée par rest() : c'est une raison connue (bannière « Me
+      // reconnecter »), pas un message d'erreur brut.
+      if (e.sessionExpired) console.debug("[coach-ia] sync : jeton refusé :", e.message);
+      await recordSync(e.sessionExpired ? { reason: "session_expired" } : { error: e.message });
       throw e;
     }
 
@@ -658,11 +732,7 @@ const CoachApi = (() => {
   async function syncPostEvents() {
     const session = await ensureSession();
     if (!session) {
-      // « Jamais connecté » et « session expirée » appellent des messages
-      // différents : le premier est le mode nominal d'un usage local, le
-      // second est une régression que l'utilisateur doit voir.
-      const { sessionExpired } = await storage.get("sessionExpired");
-      const reason = sessionExpired ? "session_expired" : "not_authenticated";
+      const reason = await noSessionReason();
       await recordSync({ reason });
       return { pushed: 0, reason };
     }
@@ -709,7 +779,8 @@ const CoachApi = (() => {
         headers: { Prefer: "resolution=ignore-duplicates,return=minimal" },
       });
     } catch (e) {
-      await recordSync({ error: e.message });
+      if (e.sessionExpired) console.debug("[coach-ia] sync : jeton refusé :", e.message);
+      await recordSync(e.sessionExpired ? { reason: "session_expired" } : { error: e.message });
       throw e;
     }
 
