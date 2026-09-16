@@ -29,6 +29,26 @@ if bad:
     sys.exit(1)
 PY
 
+# Même garde-fou pour le manifest : viser la stack locale demande d'ajouter
+# `http://localhost:3200/*` aux permissions d'hôte et aux matches du content
+# script de présence (README, « Viser une autre stack »). Empaqueté, ce motif
+# ferait rejeter la soumission — une permission d'hôte sur localhost est
+# exactement ce que la revue du store lit en premier.
+python3 - "$ROOT/extension/manifest.json" <<'PYMANIFEST'
+import json, sys
+m = json.load(open(sys.argv[1], encoding="utf-8"))
+patterns = []
+for key in ("host_permissions", "optional_host_permissions"):
+    patterns += [(key, p) for p in m.get(key, [])]
+for cs in m.get("content_scripts", []):
+    patterns += [("content_scripts.matches", p) for p in cs.get("matches", [])]
+bad = ["%s → %s" % (key, pat) for key, pat in patterns if pat.startswith("http://")]
+if bad:
+    print("✗  extension/manifest.json déclare des origines en http:// : " + ", ".join(bad), file=sys.stderr)
+    print("   Retirer les motifs de dev avant d'empaqueter.", file=sys.stderr)
+    sys.exit(1)
+PYMANIFEST
+
 mkdir -p "$ROOT/dist"
 
 # --- Chrome (référence) ---

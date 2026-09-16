@@ -93,6 +93,118 @@ const CoachApi = (() => {
     return os ? `${browser} sur ${os}` : browser;
   }
 
+  // --- Battement de présence (extension_devices) ---------------------------
+  // « Est-ce que l'extension est bien installée sur la machine de cet
+  // étudiant, et est-ce qu'elle remonte encore ? » Sans ce battement, l'app ne
+  // sait rien d'une installation tant qu'un prompt n'a pas été synchronisé :
+  // une extension installée mais muette (session expirée, file bloquée) est
+  // indistinguable d'une extension jamais installée.
+  //
+  // Ce qui part : l'identifiant de compte, un identifiant d'appareil tiré au
+  // hasard, la version, l'indice de navigateur déjà montré à l'appairage,
+  // l'heure de la dernière sync réussie et le nombre d'événements en attente.
+  // ÉTAT D'INSTALLATION, rien d'autre : ni contenu, ni adresse e-mail, ni
+  // jeton. `last_seen_at` est estampillé par un trigger côté serveur : on ne
+  // l'envoie jamais, sinon une horloge locale fausse ferait passer un appareil
+  // pour vivant (ou mort) à tort.
+  const HEARTBEAT_MIN_MS = 300000; // 5 min
+
+  function randomUuid() {
+    try {
+      if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+    } catch {
+      /* environnement sans crypto : on retombe plus bas */
+    }
+    // Repli (harnais, vieux runtimes) : la valeur n'a aucune exigence
+    // cryptographique, elle ne sert qu'à distinguer deux installations.
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+    });
+  }
+
+  // Un identifiant d'appareil tiré UNE fois et gardé ensuite, y compris à
+  // travers une déconnexion : logout() n'efface pas `deviceId` (liste
+  // explicite plus bas). Sinon, se déconnecter puis se reconnecter créerait un
+  // second appareil fantôme dans la liste de l'app.
+  async function ensureDeviceId() {
+    const { deviceId } = await storage.get("deviceId");
+    if (deviceId) return deviceId;
+    const fresh = randomUuid();
+    await storage.set({ deviceId: fresh });
+    return fresh;
+  }
+
+  // chrome.runtime n'existe pas partout où ce fichier s'évalue (harnais de
+  // test node) : la version n'est pas une raison de faire échouer un battement.
+  function manifestVersion() {
+    try {
+      return chrome.runtime.getManifest().version || "0.0.0";
+    } catch {
+      return "0.0.0";
+    }
+  }
+
+  // Exactement les six colonnes de extension_devices remplies par le client.
+  // Fonction pure, testée telle quelle : c'est le contrat avec l'app.
+  function buildHeartbeatRow({ session, deviceId, version, hint, syncStatus }) {
+    const sync = syncStatus || {};
+    return {
+      user_id: session.user_id,
+      device_id: deviceId,
+      version,
+      browser_hint: hint,
+      last_sync_at: sync.lastOkAt ? new Date(sync.lastOkAt).toISOString() : null,
+      pending_count: typeof sync.pending === "number" ? sync.pending : 0,
+    };
+  }
+
+  // Renvoie la ligne envoyée, ou null (pas de session, battement inutile,
+  // échec). NE LÈVE JAMAIS et N'ÉCRIT JAMAIS `syncStatus` : ce journal pilote
+  // la bannière du popup et le badge de l'icône (background.js). Un serveur
+  // injoignable ou une table absente ne doit pas se traduire par « sync en
+  // échec » sous les yeux de l'étudiant.
+  async function heartbeat({ force = false } = {}) {
+    try {
+      const session = await ensureSession();
+      if (!session) return null;
+      const deviceId = await ensureDeviceId();
+      const { syncStatus, heartbeatState } = await storage.get(["syncStatus", "heartbeatState"]);
+      const row = buildHeartbeatRow({
+        session,
+        deviceId,
+        version: manifestVersion(),
+        hint: deviceHint(),
+        syncStatus,
+      });
+      // Rien de neuf à dire et le dernier battement est récent : on se tait.
+      // L'alarme bat toutes les minutes ; sans ce frein, une installation au
+      // repos écrirait 1440 lignes par jour pour rien. L'état est en storage,
+      // pas en variable : le worker MV3 est déchargé entre deux alarmes.
+      const fingerprint = [row.user_id, row.version, row.last_sync_at, row.pending_count].join("|");
+      if (
+        !force &&
+        heartbeatState &&
+        heartbeatState.fingerprint === fingerprint &&
+        Date.now() - heartbeatState.at < HEARTBEAT_MIN_MS
+      ) {
+        return null;
+      }
+      await rest("extension_devices?on_conflict=user_id,device_id", {
+        method: "POST",
+        body: [row],
+        headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      });
+      await storage.set({ heartbeatState: { fingerprint, at: Date.now() } });
+      return row;
+    } catch (e) {
+      // Volontairement muet : voir plus haut. La déconnexion laisse la ligne en
+      // base (la rétention la purge, l'app affiche « vu il y a X »).
+      console.debug("[coach-ia] battement différé :", e && e.message);
+      return null;
+    }
+  }
+
   async function startPairing() {
     const data = await rpcAnon("create_pairing_request", {
       p_hint: deviceHint(),
@@ -267,6 +379,10 @@ const CoachApi = (() => {
     return at;
   }
 
+  // Flux de pré-prompts servi par l'app elle-même, défaut de toute
+  // organisation qui n'en publie pas.
+  const defaultLibraryUrl = () => `${APP_URL}/api/prompt-library`;
+
   // Télécharge profil + config de l'organisation → cache chrome.storage.local.
   // content.js lit orgConfig et l'applique en priorité sur les réglages locaux.
   async function refreshOrgConfig() {
@@ -314,8 +430,13 @@ const CoachApi = (() => {
       // le défaut « on affiche » vaut alors, ce qui est le comportement
       // historique et le seul sûr pour les organisations existantes.
       showScore: org.show_score !== false,
-      // URL de la bibliothèque de prompts publiée par l'organisation, ou null.
-      libraryUrl: org.library_url || null,
+      // URL de la bibliothèque de prompts publiée par l'organisation. À défaut,
+      // celle de l'app : depuis la 1.0.2 la permission d'hôte sur
+      // companion.mines.paris est OBLIGATOIRE (manifest), donc le flux de
+      // l'école est lisible sans rien demander de plus et les pré-prompts sont
+      // servis par défaut. Contrepartie assumée : une organisation ne peut plus
+      // couper la bibliothèque en laissant library_url à NULL.
+      libraryUrl: org.library_url || defaultLibraryUrl(),
       templates,
       dataRequests,
     };
@@ -604,6 +725,10 @@ const CoachApi = (() => {
   return {
     logout,
     ensureSession,
+    heartbeat,
+    ensureDeviceId,
+    buildHeartbeatRow,
+    defaultLibraryUrl,
     startPairing,
     pollPairing,
     cancelPairing,

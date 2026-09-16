@@ -11,6 +11,10 @@ if (typeof importScripts === "function") importScripts("/src/config.js", "/src/s
 
 chrome.runtime.onInstalled.addListener((details) => {
   setupAlarms();
+  // Identifiant d'appareil tiré dès l'installation (et à chaque mise à jour,
+  // où il est déjà là et n'est pas retiré) : le premier battement de présence
+  // n'a plus rien à décider.
+  CoachApi.ensureDeviceId().catch(() => {});
   // Première installation : onboarding = divulgation des données + accord
   // explicite. Tant qu'il n'est pas donné, l'extension est inerte.
   if (details.reason === "install") {
@@ -48,6 +52,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     // L'échec est déjà consigné dans syncStatus par CoachApi (mode visible).
     console.debug("[coach-ia] sync différée:", e.message);
   } finally {
+    // Dans le `finally` À DESSEIN : c'est quand la sync vient d'échouer que
+    // l'app a le plus besoin de savoir que l'extension est là et combien
+    // d'événements attendent. heartbeat() ne lève jamais et n'écrit jamais
+    // syncStatus : il ne peut ni casser ce chemin ni maquiller l'échec.
+    if (alarm.name === "sync-events") await CoachApi.heartbeat();
     await refreshActionBadge();
   }
 });
@@ -201,6 +210,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         )
       )
       .catch((e) => ({ ok: false, error: e.message }))
+      // Après la catch : le popup envoie « sync-now » juste après un appairage
+      // réussi (popup.js), et c'est exactement le moment où l'app doit voir
+      // l'appareil apparaître — même si la sync qui précède a échoué.
+      .then((res) => CoachApi.heartbeat({ force: true }).then(() => res))
       .then((res) => refreshActionBadge().then(() => sendResponse(res)));
     return true; // réponse asynchrone
   }
