@@ -24,7 +24,7 @@ const CoachLibrary = (() => {
   // trouver « rédaction », et « Eleve » « élève ». NFD sépare la lettre de
   // son diacritique, la plage U+0300-036F retire le diacritique.
   function normSearch(s) {
-    return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
 
   function tokens(query) {
