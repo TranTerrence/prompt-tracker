@@ -80,9 +80,10 @@ Recopier ces textes dans le champ « justification » de chaque permission.
 > domaine est listé explicitement ; aucune permission large (`<all_urls>`,
 > `*://*/*`) n'est demandée.
 >
-> **`companion.mines.paris` (depuis la 1.0.2) est un sixième domaine, mais un
-> script différent** : `src/presence.js`, à `document_start`, sans aucune
-> interception. Il ne lit ni n'écrit rien de la page ; il pose un attribut DOM,
+> **`companion.mines.paris` (depuis la 1.0.2) est le septième domaine de la
+> liste, par un sixième `content_scripts`, mais un script différent** :
+> `src/presence.js`, à `document_start`, sans aucune interception. Il ne lit
+> ni n'écrit rien de la page ; il pose un attribut DOM,
 > un `CustomEvent` et un `postMessage` (origine explicite, jamais `"*"`) qui
 > portent l'état d'installation décrit dans la permission d'hôte ci-dessus.
 > Seul le message `{ source: "ibe3-companion", type: "status?" }`, reçu sur
@@ -250,14 +251,16 @@ appel. Le compte doit exister AVANT la soumission et survivre à la revue
   `refreshOrgConfig()` (`src/supabase.js`) retombe sur `defaultLibraryUrl()`,
   `{APP_URL}/api/prompt-library`, servie par l'app elle-même et déjà lisible
   sans rien demander de plus puisque `companion.mines.paris` est désormais une
-  permission d'hôte obligatoire. Contrepartie assumée : une organisation ne
-  peut plus désactiver la bibliothèque en laissant le champ vide, elle doit la
-  remplacer explicitement pour la couper.
+  permission d'hôte obligatoire. Le champ vide (`library_url` à `NULL` ou
+  absent) veut donc dire « la bibliothèque du programme » plutôt que « pas de
+  bibliothèque » : toute valeur non vide, une adresse `https://` publiée par
+  l'organisation, la remplace. Il n'existe pas de valeur qui coupe la
+  bibliothèque.
 - **Divulgation version 3** (`DISCLOSURE_VERSION`, `popup.js` et
   `onboarding.js`) : une fois le compte lié, le texte dit maintenant que
   l'état d'installation (version, navigateur, dernière sync, file en attente)
   part vers l'app. Les comptes ayant déjà accepté voient un bandeau
-  d'information non bloquant au prochain ouverture du popup — même motif
+  d'information non bloquant à la prochaine ouverture du popup — même motif
   qu'en 0.7.0, aucun retour en veille.
 - **Popup : deux boutons au lieu d'un.** « Ouvrir l'app » vise désormais
   `/companion` (la page qui montre justement cet état d'installation) au lieu
