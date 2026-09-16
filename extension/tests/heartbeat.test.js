@@ -25,10 +25,11 @@ const assert = require("assert");
 // crypto.randomUUID (l'identifiant d'appareil) et chrome.runtime.getManifest
 // (la version). Les deux manquent au sandbox d'origine, et c'est justement
 // pour ça que le code de production les garde sous try/catch.
-function makeApi(seed = {}) {
+function makeApi(seed = {}, { uuids = null } = {}) {
   const store = { ...seed };
   const calls = [];
   let next = null; // { ok, status, body } ou une Error à lever
+  let uuidIndex = 0; // pour le test de course : un identifiant distinct par appel
 
   const chrome = {
     storage: {
@@ -69,7 +70,7 @@ function makeApi(seed = {}) {
     chrome,
     fetch: fetchStub,
     self: {},
-    crypto: { randomUUID: () => "11111111-2222-4333-8444-555555555555" },
+    crypto: { randomUUID: () => (uuids ? uuids[uuidIndex++] : "11111111-2222-4333-8444-555555555555") },
     Date, Math, JSON, Object, Promise, Error, TypeError, Boolean, Number, Array, Set, Map,
     // console.debug muet : le code de production journalise volontairement un
     // battement raté, ce n'est pas une ligne de résultat de test.
@@ -113,6 +114,20 @@ async function testDeviceIdStable() {
   await env.api.logout();
   assert.strictEqual(env.store.deviceId, a, "deviceId survit à logout()");
   console.log("  ✓ ensureDeviceId : stable, local, conservé à travers logout()");
+}
+
+async function testDeviceIdConcurrent() {
+  // Fraîche installation, deux appelants en même temps (alarme + `sync-now`
+  // du popup) : sans la promesse en vol de module, chacun lirait « rien en
+  // storage » et tirerait SON UUID — deux appareils fantômes pour une seule
+  // machine. Deux identifiants distincts dans la pioche rendent la course
+  // visible : sans le correctif, `a` et `b` diffèrent et le store finit avec
+  // l'un des deux au hasard de l'ordre d'écriture.
+  const env = makeApi(seedConnecte(), { uuids: ["aaaaaaaa-0000-4000-8000-000000000001", "bbbbbbbb-0000-4000-8000-000000000002"] });
+  const [a, b] = await Promise.all([env.api.ensureDeviceId(), env.api.ensureDeviceId()]);
+  assert.strictEqual(a, b, "deux appels concurrents rendent le même identifiant");
+  assert.strictEqual(env.store.deviceId, a, "le store ne contient que celui-là, pas un appareil fantôme");
+  console.log("  ✓ ensureDeviceId : deux appels concurrents ne fabriquent qu'un seul appareil");
 }
 
 async function testPostSixColonnes() {
@@ -200,6 +215,7 @@ async function testEmpreinteEtForce() {
 
 (async () => {
   await testDeviceIdStable();
+  await testDeviceIdConcurrent();
   await testPostSixColonnes();
   await testSansSessionAucunAppel();
   await testEchecMuet();

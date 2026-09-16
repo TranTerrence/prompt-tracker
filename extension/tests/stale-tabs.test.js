@@ -61,11 +61,21 @@ function listSync(mod) {
 {
   const { mod } = load({ tabs: [] });
   const patterns = mod.matchPatterns();
-  const expected = MANIFEST.content_scripts.flatMap((cs) => cs.matches);
-  assert.deepStrictEqual(patterns, expected, "les patterns sont ceux du manifest");
+  const expected = MANIFEST.content_scripts
+    .filter((cs) => !(Array.isArray(cs.js) && cs.js.length === 1 && cs.js[0] === "src/presence.js"))
+    .flatMap((cs) => cs.matches);
+  assert.deepStrictEqual(patterns, expected, "les patterns sont ceux du manifest, hors presence.js");
   assert.ok(patterns.includes("https://chatgpt.com/*"), "ChatGPT couvert");
   assert.ok(patterns.includes("https://claude.ai/*"), "Claude couvert");
   assert.ok(patterns.length >= 5, "les cinq sites du manifest sont là");
+  // Le cœur du correctif : l'origine de l'app (presence.js, injecté seul et à
+  // document_start) ne répond jamais à coach-ping. La compter dans la liste
+  // interrogée déclarerait tout onglet companion.mines.paris périmé pour
+  // toujours dès que presence.js ne s'injecte pas (Firefox, accès au clic).
+  assert.ok(
+    !patterns.includes("https://companion.mines.paris/*"),
+    "l'origine de presence.js est exclue de la liste interrogée"
+  );
 }
 
 /* ---------- Aucun onglet IA ouvert ---------- */

@@ -15,11 +15,18 @@
 
 const CoachStaleTabs = (() => {
   // La liste des sites vient du manifest, jamais d'une constante recopiée ici :
-  // ajouter un adaptateur ne doit pas obliger à penser à ce fichier.
+  // ajouter un adaptateur ne doit pas obliger à penser à ce fichier. On exclut
+  // l'entrée de src/presence.js (companion.mines.paris) : ce script n'y
+  // répond jamais à coach-ping, ce n'est pas lui qui diagnostique un contexte
+  // périmé. Sur un profil où presence.js ne s'injecte pas (Firefox origine
+  // refusée, Chrome « accès au clic »), le compter aurait déclaré cet onglet
+  // périmé pour toujours et la bannière ne se serait jamais effacée.
   function matchPatterns() {
     try {
       const manifest = chrome.runtime.getManifest();
-      return (manifest.content_scripts || []).flatMap((cs) => cs.matches || []);
+      return (manifest.content_scripts || [])
+        .filter((cs) => !(Array.isArray(cs.js) && cs.js.length === 1 && cs.js[0] === "src/presence.js"))
+        .flatMap((cs) => cs.matches || []);
     } catch {
       return [];
     }

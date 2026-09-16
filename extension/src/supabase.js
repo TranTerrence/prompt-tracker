@@ -127,12 +127,33 @@ const CoachApi = (() => {
   // travers une déconnexion : logout() n'efface pas `deviceId` (liste
   // explicite plus bas). Sinon, se déconnecter puis se reconnecter créerait un
   // second appareil fantôme dans la liste de l'app.
+  //
+  // Course lecture-puis-écriture : sur une installation fraîche, l'alarme et
+  // un `sync-now` déclenché depuis le popup peuvent tomber en même temps,
+  // lire tous les deux « rien en storage », et chacun tirer son UUID — deux
+  // appareils fantômes pour une seule machine. Une promesse en vol au niveau
+  // du module fait que le second appelant attend le premier au lieu de
+  // relire un storage pas encore écrit.
+  let deviceIdPromise = null;
   async function ensureDeviceId() {
-    const { deviceId } = await storage.get("deviceId");
-    if (deviceId) return deviceId;
-    const fresh = randomUuid();
-    await storage.set({ deviceId: fresh });
-    return fresh;
+    if (!deviceIdPromise) {
+      deviceIdPromise = (async () => {
+        const { deviceId } = await storage.get("deviceId");
+        if (deviceId) return deviceId;
+        const fresh = randomUuid();
+        await storage.set({ deviceId: fresh });
+        // Relecture après l'écriture : si un autre chemin a posé une valeur
+        // entre-temps (hors de cette promesse), on préfère celle qui a
+        // atterri la première plutôt que la nôtre.
+        const { deviceId: landed } = await storage.get("deviceId");
+        return landed || fresh;
+      })();
+    }
+    try {
+      return await deviceIdPromise;
+    } finally {
+      deviceIdPromise = null;
+    }
   }
 
   // chrome.runtime n'existe pas partout où ce fichier s'évalue (harnais de

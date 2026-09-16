@@ -85,14 +85,22 @@ const CoachPresence = (() => {
       let last = null;
 
       const read = () => {
-        chrome.storage.local.get(KEYS, (data) => {
-          try {
-            last = JSON.stringify(buildAnnouncement(data, manifestVersion()));
-            announce(last);
-          } catch (e) {
-            /* page en train de disparaître, contexte invalidé : rien à faire */
-          }
-        });
+        try {
+          chrome.storage.local.get(KEYS, (data) => {
+            try {
+              last = JSON.stringify(buildAnnouncement(data, manifestVersion()));
+              announce(last);
+            } catch (e) {
+              /* page en train de disparaître, contexte invalidé : rien à faire */
+            }
+          });
+        } catch (e) {
+          // « Extension context invalidated » après une mise à jour : le
+          // handler `message` ci-dessous peut survivre au contexte qui l'a
+          // enregistré et rappeler read(), qui appellerait alors
+          // chrome.storage.local.get — ce qui lève SYNCHRONEMENT dans la page,
+          // hors de tout callback. Se taire est la seule conduite utile.
+        }
       };
 
       chrome.storage.onChanged.addListener((changes, area) => {
