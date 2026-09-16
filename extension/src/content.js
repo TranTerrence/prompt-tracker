@@ -14,6 +14,22 @@
       sendResponse({ ok: true });
       return true;
     }
+    // Raccourci clavier (commande du manifest, relayée par le worker) : même
+    // porte que « // » et que le bouton de la pastille. `ok: false` dit au
+    // worker que rien ne s'est ouvert (veille, modale en cours, composeur
+    // introuvable) ; il n'y a personne pour le lire aujourd'hui, mais le
+    // contrat est là pour un rappel futur.
+    if (msg && msg.type === "picker-open") {
+      sendResponse({ ok: openPicker("shortcut") });
+      return true;
+    }
+    // Le popup demande l'insertion d'un prompt dans CET onglet. Réponse
+    // synchrone : le popup copie lui-même quand l'insertion n'est pas
+    // vérifiée (il tient le geste de clic ; nous, non).
+    if (msg && msg.type === "picker-insert") {
+      sendResponse(insertFromPopup(msg));
+      return true;
+    }
   });
 
   const DEFAULT_SETTINGS = { captureMode: "metadata", interceptEnabled: true, threshold: 40, theme: "light", postMirrorEnabled: true, profile: "student" };
@@ -62,11 +78,18 @@
     if (!disclosureAccepted) return;
     if (!(orgConfig && orgConfig.libraryUrl)) {
       promptLibrary = null;
+      refreshBadge();
       return;
     }
     chrome.runtime.sendMessage({ type: "library-fetch" }, (res) => {
       if (chrome.runtime.lastError) return; // worker endormi : au prochain tour
       promptLibrary = (res && res.prompts) || null;
+      // Le sélecteur a pu s'ouvrir avant la réponse (il affiche alors « pas
+      // encore chargée ») : on lui passe la liste sans qu'il ait à rouvrir.
+      if (CoachPicker.isOpen()) CoachPicker.update(promptLibrary);
+      // Le bouton « Prompts » de la pastille n'a de sens que s'il y a quelque
+      // chose à choisir : il apparaît quand la liste arrive.
+      refreshBadge();
     });
   }
 
@@ -87,8 +110,111 @@
       // L'infobulle cite un seuil sur cent : c'est un score, donc soumis au
       // même réglage d'organisation que le reste du chiffré.
       showScore: effective("showScore") !== false,
+      // Bouton « Prompts » : seulement quand une bibliothèque est chargée.
+      hasLibrary: Boolean(promptLibrary && promptLibrary.length),
+      pickerChord: CoachLibrary.shortcutLabel(typeof navigator !== "undefined" ? navigator.platform : ""),
+      onOpenPicker: () => openPicker("badge"),
     });
   }
+
+  /* ---------- Sélecteur de prompts (1.0.3) ---------- */
+
+  // Une utilisation (insertion ou copie) part au worker, SEUL écrivain de
+  // libraryRecent et seul appelant de la RPC de comptage : le content script
+  // n'a ni la session, ni à connaître la forme de ces deux clés.
+  function notifyUsed(id, action) {
+    if (!id) return;
+    chrome.runtime.sendMessage({ type: "library-used", id, action }, () => {
+      void chrome.runtime.lastError; // worker endormi : l'usage est perdu, pas la page
+    });
+  }
+
+  // Écrit le prompt dans le composeur. Composeur vide : remplacé ; brouillon
+  // en cours : gardé, le gabarit vient après une ligne vide (mergeInsert), pour
+  // ne jamais détruire un texte sans annulation possible. Renvoie si
+  // l'injection a été VÉRIFIÉE : sur false, c'est l'appelant qui tient le
+  // geste (Entrée dans le sélecteur, clic dans le popup) qui copie — jamais
+  // ici, hors geste, le presse-papiers serait refusé. Aucun envoi : ni
+  // keydown Entrée ni clic sur le bouton, handleSendAttempt ne voit rien.
+  function insertPrompt(p, source) {
+    const merged = CoachLibrary.mergeInsert(CoachAdapter.readComposerText(), p.body);
+    const ok = CoachAdapter.setComposerText(merged);
+    if (ok) CoachAdapter.focusComposer();
+    notifyUsed(p.id, ok ? "insert" : "copy");
+    if (!ok) console.debug("[coach-ia] insertion non vérifiée depuis", source);
+    return ok;
+  }
+
+  // Message picker-insert du popup → { ok, method } ou { ok: false, reason }.
+  // `inert` : veille (divulgation non acceptée) ou modale socratique en cours,
+  // l'onglet n'est pas disponible ; `no_composer` : UI du site méconnue ;
+  // `verify_failed` : écrit mais non relu tel quel. Un onglet SANS content
+  // script ne répond pas du tout : c'est runtime.lastError côté popup.
+  function insertFromPopup(msg) {
+    if (!disclosureAccepted || CoachMirror.isModalOpen()) return { ok: false, reason: "inert" };
+    if (!CoachAdapter.healthy()) return { ok: false, reason: "no_composer" };
+    if (CoachPicker.isOpen()) CoachPicker.close("insert");
+    const body = typeof msg.body === "string" ? msg.body : "";
+    if (!body.trim()) return { ok: false, reason: "verify_failed" };
+    const ok = insertPrompt({ id: msg.id, title: msg.title, body }, "popup");
+    return ok ? { ok: true, method: "inserted" } : { ok: false, reason: "verify_failed" };
+  }
+
+  // Ouvre la palette. Même porte pour les trois entrées (« // », raccourci,
+  // pastille) : divulgation acceptée, pas de modale, un composeur trouvé. La
+  // liste en mémoire est montrée tout de suite (ou l'état « pas encore
+  // chargée »), et un fetch part en parallèle : refreshLibrary pousse la
+  // réponse dans le sélecteur ouvert.
+  function openPicker(source) {
+    if (!disclosureAccepted) return false;
+    if (CoachPicker.isOpen()) return true;
+    if (CoachMirror.isModalOpen()) return false;
+    if (!CoachAdapter.healthy()) return false;
+    const opened = CoachPicker.open({
+      prompts: promptLibrary,
+      branding: orgConfig && orgConfig.branding,
+      appUrl: CoachConfig.APP_URL,
+      source,
+      onInsert: (p) => insertPrompt(p, source),
+      onCopy: (p) => notifyUsed(p.id, "copy"),
+      // Quel que soit le motif de fermeture, la main revient au composeur :
+      // après Échap, il est vide (les deux « / » ne sont pas restitués) et
+      // prêt pour la frappe.
+      onClose: () => CoachAdapter.focusComposer(),
+    });
+    if (opened) refreshLibrary();
+    return opened;
+  }
+
+  // Déclencheur « // » : écouté au niveau du document, en phase capture, pour
+  // la même raison que l'interception (factory.js) — les sites re-rendent
+  // leur composeur, un écouteur posé dessus ne survivrait pas. Le texte est
+  // lu APRÈS l'événement ; slashTrigger n'accepte que « // » seul, tapé (pas
+  // collé, pas en composition IME, pas une annulation). Les deux caractères
+  // sont effacés avant l'ouverture, et ne reviennent pas sur Échap.
+  let slashOpenedAt = 0;
+  document.addEventListener(
+    "input",
+    (e) => {
+      if (!disclosureAccepted) return;
+      if (CoachPicker.isOpen() || CoachMirror.isModalOpen()) return;
+      if (!CoachAdapter.isComposerEvent(e)) return;
+      const fired = CoachLibrary.slashTrigger({
+        text: CoachAdapter.readComposerText(),
+        inputType: e.inputType,
+        isComposing: e.isComposing,
+      });
+      if (!fired) return;
+      // Certains éditeurs émettent deux `input` pour une frappe (beforeinput
+      // synthétisé puis natif) : une seule ouverture par demi-seconde.
+      const now = Date.now();
+      if (now - slashOpenedAt < 500) return;
+      slashOpenedAt = now;
+      CoachAdapter.clearComposer();
+      openPicker("slash");
+    },
+    true
+  );
 
   function currentThreshold() {
     return effectiveThreshold !== null ? effectiveThreshold : effective("threshold");
@@ -548,6 +674,9 @@
         settings.intentionPlan && Number.isFinite(intentionAge) && intentionAge < 42 * 24 * 3600 * 1000
           ? settings.intentionPlan
           : null;
+      // Une seule surface modale à la fois : le sélecteur de prompts cède la
+      // place au dialogue (et refuse de s'ouvrir tant qu'il est là).
+      if (CoachPicker.isOpen()) CoachPicker.close("intercept");
       CoachMirror.showModal({
         promptText: text,
         scoreBefore: scores.total,

@@ -1047,5 +1047,12 @@ const CoachMirror = (() => {
     }
   }
 
-  return { show, hide: hideToast, flash, showPost, closePost, showModal, closeModal, onFeedback: null, onClose: null };
+  // Le sélecteur de prompts (src/picker.js) refuse de s'ouvrir tant que le
+  // dialogue socratique est là, et le déclencheur « // » se tait : deux
+  // surfaces modales l'une sur l'autre, c'est deux focus qui se disputent.
+  function isModalOpen() {
+    return Boolean(modalHost);
+  }
+
+  return { show, hide: hideToast, flash, showPost, closePost, showModal, closeModal, isModalOpen, onFeedback: null, onClose: null };
 })();

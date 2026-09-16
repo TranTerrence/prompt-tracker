@@ -196,4 +196,299 @@ assert.strictEqual(L.shortcutLabel("Win32"), "Ctrl+Shift+.");
 assert.strictEqual(L.shortcutLabel("Linux x86_64"), "Ctrl+Shift+.");
 assert.strictEqual(L.shortcutLabel(undefined), "Ctrl+Shift+.");
 
-console.log("picker.test.js : CoachLibrary ✓");
+console.log("  ✓ CoachLibrary : recherche, groupes, fusion, déclencheur, récents");
+
+/* =====================================================================
+   3. content.js : les deux entrées du sélecteur, sans site réel
+   ===================================================================== */
+
+// Même sandbox que capture.test.js : content.js est une IIFE qui parle à
+// chrome.* et aux modules Coach* ; on les simule, on charge le vrai fichier,
+// et on capture ce qu'il enregistre (écouteur `input`, rappels de message,
+// appels à l'adaptateur et au sélecteur).
+function makeContentEnv({ disclosure = true, composerText = "", healthy = true, verify = true, modalOpen = false } = {}) {
+  const store = {
+    settings: { captureMode: "metadata", interceptEnabled: true, threshold: 40, theme: "light" },
+    orgConfig: { orgId: "o", libraryUrl: "https://app.example/api/prompt-library", branding: { name: "École", color: "#123456" } },
+    consents: {},
+    disclosure: disclosure ? { accepted: true, version: 3 } : null,
+    events: [],
+  };
+  const captured = { sent: [], listeners: [], inputListener: null, opened: [], closed: [], cleared: 0, focused: 0, submitted: [] };
+  const composer = { text: composerText, healthy };
+  const picker = { open: false };
+
+  const chrome = {
+    storage: {
+      local: {
+        get(keys, cb) {
+          const out = {};
+          for (const k of Array.isArray(keys) ? keys : [keys]) if (k in store) out[k] = store[k];
+          cb(out);
+        },
+        set(obj, cb) { Object.assign(store, obj); cb && cb(); },
+        remove(keys, cb) { for (const k of Array.isArray(keys) ? keys : [keys]) delete store[k]; cb && cb(); },
+      },
+      onChanged: { addListener() {} },
+    },
+    runtime: {
+      sendMessage(m, cb) {
+        captured.sent.push(m);
+        // library-fetch : le worker répond une liste ; le reste, un ok neutre.
+        if (m && m.type === "library-fetch") return cb && cb({ prompts: ALL, starred: null });
+        cb && cb({ ok: true });
+      },
+      onMessage: { addListener(fn) { captured.listeners.push(fn); } },
+      lastError: null,
+      getURL: (p) => p,
+    },
+  };
+
+  const adapter = {
+    site: "chatgpt",
+    conversationKey: () => "chatgpt:c/abc",
+    isNewConversation: () => false,
+    onResponse() {},
+    armResponseWatch() {},
+    submitText(text) { captured.submitted.push(text); return Promise.resolve(true); },
+    send() { captured.submitted.push("<send>"); return true; },
+    healthy: () => composer.healthy,
+    probe: () => ({ assistant: true, model: true }),
+    init(handlers) { this.handlers = handlers; },
+    readComposerText: () => composer.text.trim(),
+    setComposerText(text) { composer.text = text; return verify; },
+    clearComposer() { captured.cleared++; composer.text = ""; return true; },
+    focusComposer() { captured.focused++; return true; },
+    isComposerEvent: (e) => Boolean(e && e.fromComposer),
+  };
+
+  const sandbox = {
+    chrome,
+    self: {},
+    document: {
+      addEventListener(type, fn, capture) {
+        if (type === "input" && capture === true) captured.inputListener = fn;
+      },
+    },
+    navigator: { platform: "MacIntel" },
+    setTimeout: (fn, ms) => (ms >= 5000 ? null : setTimeout(fn, ms)),
+    clearTimeout,
+    Date, Math, Set, Map, Promise, Boolean, Number, String, Array, Object, JSON, console,
+    CoachAdapter: adapter,
+    CoachTheme: { set() {}, DEFAULT_ACCENT: "#000" },
+    CoachBadge: { render(state) { captured.badge = state; }, remove() {} },
+    CoachModels: { VERSION: 1 },
+    CoachConfig: { APP_URL: "https://app.example" },
+    CoachPicker: {
+      isOpen: () => picker.open,
+      open(opts) { captured.opened.push(opts); picker.open = true; return true; },
+      update(prompts) { captured.updated = prompts; },
+      close(reason) { captured.closed.push(reason); picker.open = false; },
+    },
+    CoachMirror: {
+      show() {}, flash(msg) { captured.flash = msg; }, showPost() {}, closePost() {},
+      showModal(opts) { captured.modal = opts; }, closeModal() {},
+      isModalOpen: () => modalOpen,
+      onFeedback: null, onClose: null, onPause: null,
+    },
+  };
+  const bootstrap = read("src/scoring.js") + "\n" + read("src/i18n.js") + "\n" + read("src/library.js") + "\n" + read("src/content.js");
+  const keys = Object.keys(sandbox);
+  new Function(...keys, bootstrap)(...keys.map((k) => sandbox[k]));
+
+  const message = (msg) => {
+    const responses = [];
+    for (const fn of captured.listeners) fn(msg, {}, (r) => responses.push(r));
+    return responses;
+  };
+  const used = () => captured.sent.filter((m) => m.type === "library-used");
+  return { store, captured, composer, picker, adapter, message, used };
+}
+
+/* ---------- picker-insert : les formes de réponse ---------- */
+
+{
+  const env = makeContentEnv();
+  const res = env.message({ type: "picker-insert", id: P.off1.id, title: P.off1.title, body: P.off1.body });
+  assert.deepStrictEqual(res, [{ ok: true, method: "inserted" }], "composeur vide → inséré");
+  assert.strictEqual(env.composer.text, P.off1.body, "le corps seul, sans ligne vide devant");
+  assert.strictEqual(env.captured.focused, 1, "la main revient au composeur");
+  assert.deepStrictEqual(env.used(), [{ type: "library-used", id: P.off1.id, action: "insert" }], "usage compté comme insertion");
+  assert.deepStrictEqual(env.captured.submitted, [], "RIEN n'est envoyé");
+}
+
+{
+  const env = makeContentEnv({ composerText: "hello  " });
+  env.message({ type: "picker-insert", id: P.off1.id, title: P.off1.title, body: P.off1.body });
+  assert.strictEqual(env.composer.text, `hello\n\n${P.off1.body}`, "brouillon gardé, une ligne vide, puis le corps");
+}
+
+{
+  const env = makeContentEnv({ verify: false });
+  const res = env.message({ type: "picker-insert", id: P.off1.id, title: P.off1.title, body: P.off1.body });
+  assert.deepStrictEqual(res, [{ ok: false, reason: "verify_failed" }], "injection non vérifiée");
+  assert.strictEqual(env.captured.focused, 0, "pas de focus sur un échec");
+  assert.deepStrictEqual(env.used()[0].action, "copy", "le popup va copier : l'usage est compté comme copie");
+}
+
+{
+  const env = makeContentEnv({ disclosure: false });
+  const res = env.message({ type: "picker-insert", id: P.off1.id, body: P.off1.body });
+  assert.deepStrictEqual(res, [{ ok: false, reason: "inert" }], "veille : l'onglet n'insère rien");
+  assert.strictEqual(env.composer.text, "", "le composeur n'est pas touché");
+  assert.deepStrictEqual(env.used(), [], "aucun usage compté");
+}
+
+{
+  const env = makeContentEnv({ modalOpen: true });
+  const res = env.message({ type: "picker-insert", id: P.off1.id, body: P.off1.body });
+  assert.deepStrictEqual(res, [{ ok: false, reason: "inert" }], "dialogue socratique en cours : inerte");
+}
+
+{
+  const env = makeContentEnv({ healthy: false });
+  const res = env.message({ type: "picker-insert", id: P.off1.id, body: P.off1.body });
+  assert.deepStrictEqual(res, [{ ok: false, reason: "no_composer" }], "UI du site méconnue");
+}
+
+{
+  const env = makeContentEnv();
+  const res = env.message({ type: "picker-insert", id: P.off1.id, body: "   " });
+  assert.deepStrictEqual(res, [{ ok: false, reason: "verify_failed" }], "corps vide : rien à insérer");
+  assert.deepStrictEqual(env.used(), [], "et rien n'est compté");
+}
+
+{
+  // Le popup insère pendant que la palette est ouverte : elle se ferme d'abord.
+  const env = makeContentEnv();
+  env.picker.open = true;
+  env.message({ type: "picker-insert", id: P.off1.id, body: P.off1.body });
+  assert.deepStrictEqual(env.captured.closed, ["insert"], "le sélecteur cède la place");
+}
+
+{
+  // Un message inconnu ne reçoit aucune réponse (capture.test.js le vérifie
+  // pour coach-ping ; on le garde vrai avec deux types de plus).
+  const env = makeContentEnv();
+  assert.deepStrictEqual(env.message({ type: "autre-chose" }), []);
+}
+console.log("  ✓ content.js : picker-insert → formes {ok}, fusion, usage compté, jamais d'envoi");
+
+/* ---------- picker-open : la même porte pour le raccourci ---------- */
+
+{
+  const env = makeContentEnv({ disclosure: false });
+  assert.deepStrictEqual(env.message({ type: "picker-open" }), [{ ok: false }], "veille : rien ne s'ouvre");
+  assert.strictEqual(env.captured.opened.length, 0);
+}
+{
+  const env = makeContentEnv({ modalOpen: true });
+  assert.deepStrictEqual(env.message({ type: "picker-open" }), [{ ok: false }], "modale en cours : refus");
+}
+{
+  const env = makeContentEnv({ healthy: false });
+  assert.deepStrictEqual(env.message({ type: "picker-open" }), [{ ok: false }], "sans composeur : refus");
+}
+{
+  const env = makeContentEnv({ composerText: "brouillon" });
+  assert.deepStrictEqual(env.message({ type: "picker-open" }), [{ ok: true }], "ouvert");
+  const opts = env.captured.opened[0];
+  assert.strictEqual(opts.source, "shortcut");
+  assert.strictEqual(opts.appUrl, "https://app.example", "lien « Gérer » dérivé de CoachConfig");
+  assert.deepStrictEqual(opts.prompts, ALL, "la liste en mémoire (chargée au démarrage) est passée");
+  assert.strictEqual(typeof opts.onInsert, "function");
+  assert.strictEqual(typeof opts.onClose, "function");
+  // Le rappel d'insertion du sélecteur suit la même règle de fusion.
+  assert.strictEqual(opts.onInsert(P.peer1), true);
+  assert.strictEqual(env.composer.text, `brouillon\n\n${P.peer1.body}`);
+  assert.deepStrictEqual(env.used().map((m) => m.action), ["insert"]);
+  // Fermeture : la main revient au composeur.
+  opts.onClose("escape");
+  assert.ok(env.captured.focused >= 2);
+  // Déjà ouvert : ok, sans seconde palette.
+  assert.deepStrictEqual(env.message({ type: "picker-open" }), [{ ok: true }]);
+  assert.strictEqual(env.captured.opened.length, 1, "une seule ouverture");
+  assert.deepStrictEqual(env.captured.submitted, [], "RIEN n'est envoyé");
+}
+console.log("  ✓ content.js : picker-open → même porte que « // », rappels câblés");
+
+/* ---------- Le déclencheur « // » ---------- */
+
+{
+  const env = makeContentEnv();
+  const fire = (text, ev = {}) => {
+    env.composer.text = text;
+    env.captured.inputListener({ fromComposer: true, inputType: "insertText", isComposing: false, ...ev });
+  };
+  assert.strictEqual(typeof env.captured.inputListener, "function", "écouteur input en phase capture");
+
+  fire("//");
+  assert.strictEqual(env.captured.opened.length, 1, "« // » ouvre");
+  assert.strictEqual(env.captured.opened[0].source, "slash");
+  assert.strictEqual(env.captured.cleared, 1, "les deux caractères sont effacés avant l'ouverture");
+  assert.strictEqual(env.composer.text, "", "composeur vide");
+
+  // Palette ouverte : la frappe dans sa recherche remonte aussi au document.
+  fire("//");
+  assert.strictEqual(env.captured.opened.length, 1, "déjà ouvert : rien de plus");
+  env.picker.open = false;
+
+  // Double `input` dans la demi-seconde : une seule ouverture.
+  fire("//");
+  assert.strictEqual(env.captured.opened.length, 1, "garde de 500 ms");
+}
+{
+  const env = makeContentEnv();
+  const fire = (text, ev = {}) => {
+    env.composer.text = text;
+    env.captured.inputListener({ fromComposer: true, inputType: "insertText", isComposing: false, ...ev });
+  };
+  fire("//", { inputType: "insertFromPaste" });
+  fire("//", { isComposing: true });
+  fire("//", { inputType: "historyUndo" });
+  fire("//x");
+  fire("x //");
+  fire("https://");
+  fire("/");
+  fire("//", { fromComposer: false });
+  assert.strictEqual(env.captured.opened.length, 0, "collage, IME, annulation, hors composeur, autre texte : jamais");
+  assert.strictEqual(env.captured.cleared, 0, "et rien n'est effacé");
+}
+{
+  const env = makeContentEnv({ modalOpen: true });
+  env.composer.text = "//";
+  env.captured.inputListener({ fromComposer: true, inputType: "insertText" });
+  assert.strictEqual(env.captured.opened.length, 0, "modale socratique ouverte : « // » se tait");
+  assert.strictEqual(env.composer.text, "//", "et ne touche pas au composeur");
+}
+{
+  const env = makeContentEnv({ disclosure: false });
+  env.composer.text = "//";
+  env.captured.inputListener({ fromComposer: true, inputType: "insertText" });
+  assert.strictEqual(env.captured.opened.length, 0, "veille : « // » se tait");
+}
+console.log("  ✓ content.js : « // » ouvre une fois, efface, se tait sur collage / IME / modale / veille");
+
+/* ---------- Une interception ferme la palette ---------- */
+
+{
+  const env = makeContentEnv({ composerText: "fais mes devoirs" });
+  env.picker.open = true;
+  env.adapter.handlers.onIntercept("fais mes devoirs");
+  assert.deepStrictEqual(env.captured.closed, ["intercept"], "le sélecteur cède la place au dialogue");
+  assert.ok(env.captured.modal, "la modale s'ouvre");
+}
+
+/* ---------- La pastille reçoit de quoi ouvrir ---------- */
+
+{
+  const env = makeContentEnv();
+  const badge = env.captured.badge;
+  assert.strictEqual(badge.hasLibrary, true, "liste chargée → bouton « Prompts »");
+  assert.strictEqual(badge.pickerChord, "⌘⇧.", "corde suggérée selon la plateforme");
+  badge.onOpenPicker();
+  assert.strictEqual(env.captured.opened[0].source, "badge");
+}
+console.log("  ✓ content.js : interception ferme la palette, pastille câblée");
+
+console.log("picker.test.js : CoachLibrary, content.js ✓");

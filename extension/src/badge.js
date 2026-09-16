@@ -48,7 +48,14 @@ const CoachBadge = (() => {
           .off { color: var(--muted); font-weight: 400; }
           .badge.collapsed { padding: 7px; gap: 0; }
           .badge.collapsed .name, .badge.collapsed .logo, .badge.collapsed .off,
-          .badge.collapsed .sw { display: none; }
+          .badge.collapsed .prompts, .badge.collapsed .sw { display: none; }
+          /* Bouton « Prompts » (1.0.3) : ouvre le sélecteur de la bibliothèque.
+             Cible d'action distincte du corps repliable, comme l'interrupteur. */
+          .prompts { display: inline-flex; align-items: center; padding: 3px 8px; margin-left: 2px;
+            border-radius: 999px; border: 1px solid var(--border); background: var(--soft);
+            color: var(--ink); font-size: 11.5px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+          .prompts:hover { border-color: var(--accent); color: var(--accent); }
+          .prompts:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
           /* Interrupteur : cible d'action distincte du corps repliable, séparée
              par un filet pour que les deux intentions se lisent d'un coup d'œil. */
           .sw { display: flex; align-items: center; padding: 5px 0 5px 9px; margin-left: 2px;
@@ -115,9 +122,39 @@ const CoachBadge = (() => {
       off.textContent = CoachI18n.t("badgeStandby");
       badge.appendChild(off);
     }
+    // « Prompts » n'a de sens que s'il y a une bibliothèque à ouvrir : sans
+    // liste chargée, le bouton n'existe pas plutôt que d'ouvrir une palette
+    // vide. Le clic ne replie pas la pastille (stopPropagation, comme
+    // l'interrupteur).
+    if (state.hasLibrary && typeof state.onOpenPicker === "function") {
+      badge.appendChild(buildPromptsButton(state.onOpenPicker, state.pickerChord));
+    }
 
     switchOn = state.interceptEnabled !== false;
     badge.appendChild(buildSwitch(Boolean(state.lockedByOrg)));
+  }
+
+  // Bouton d'ouverture du sélecteur de prompts (role=button, clavier). La
+  // corde affichée est celle suggérée par le manifest pour la plateforme ;
+  // l'utilisateur peut l'avoir changée dans chrome://extensions/shortcuts.
+  function buildPromptsButton(onOpen, chord) {
+    const btn = document.createElement("span");
+    btn.className = "prompts";
+    btn.setAttribute("role", "button");
+    btn.tabIndex = 0;
+    btn.textContent = CoachI18n.t("badgePrompts");
+    btn.title = CoachI18n.t("badgePromptsTitle", chord || "Ctrl+Shift+.");
+    btn.setAttribute("aria-label", btn.title);
+    const open = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      onOpen();
+    };
+    btn.addEventListener("click", open);
+    btn.addEventListener("keydown", (e) => {
+      if (e.key === " " || e.key === "Enter") open(e);
+    });
+    return btn;
   }
 
   // Interrupteur d'interception (role=switch, clavier + tooltip explicite).

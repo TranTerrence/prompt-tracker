@@ -58,9 +58,91 @@ function createCoachAdapter(config) {
     sel.addRange(range);
   }
 
+  // L'événement vient-il du composeur ? getComposer reste privé : le content
+  // script n'a pas à connaître l'élément, seulement à savoir si la frappe
+  // qu'il observe au niveau du document est celle de la zone de saisie.
+  function isComposerEvent(e) {
+    const el = getComposer();
+    const target = e && e.target;
+    return Boolean(el && target && (el === target || (el.contains && el.contains(target))));
+  }
+
+  // Curseur en FIN de texte après une injection : sans cela, ProseMirror le
+  // laisse au début (ou là où il était), et l'étudiant qui tape « Bonjour »
+  // après avoir inséré un gabarit l'écrit au milieu. Toujours silencieux :
+  // un échec de sélection n'a pas à casser l'injection qui vient de réussir.
+  function placeCaretAtEnd(el) {
+    if (!el) return;
+    try {
+      if (el.value !== undefined) {
+        el.selectionStart = el.selectionEnd = el.value.length;
+        return;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch {
+      /* sélection impossible (élément détaché, iframe) : sans effet */
+    }
+  }
+
+  // Rend la main au composeur, curseur en fin. Retenté au prochain frame :
+  // sur les sites ProseMirror, le composeur peut être re-rendu juste après
+  // une injection, et le focus posé sur l'ancien nœud se perd.
+  function focusComposer() {
+    const el = getComposer();
+    if (!el) return false;
+    el.focus();
+    placeCaretAtEnd(el);
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => {
+        const again = getComposer();
+        if (!again) return;
+        again.focus();
+        placeCaretAtEnd(again);
+      });
+    }
+    return true;
+  }
+
+  // Vide le composeur, VÉRIFIÉ, sans rien envoyer. Sert au déclencheur « // »
+  // du sélecteur : les deux caractères tapés ne doivent pas rester dans la
+  // zone quand la palette s'ouvre. Textarea : valeur + input ; contenteditable :
+  // tout sélectionner + execCommand('delete') (ProseMirror l'entend comme une
+  // frappe), puis repli DOM avec un paragraphe vide et un input
+  // `deleteContent` pour que l'éditeur resynchronise son état.
+  function clearComposer() {
+    const el = getComposer();
+    if (!el) return false;
+    el.focus();
+    if (el.value !== undefined) {
+      el.value = "";
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      return el.value === "";
+    }
+    try {
+      selectAllIn(el);
+      document.execCommand("delete");
+    } catch {
+      /* repli DOM */
+    }
+    if (!normalized(el.innerText)) return true;
+    el.textContent = "";
+    const p = document.createElement("p");
+    p.appendChild(document.createElement("br"));
+    el.appendChild(p);
+    el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "deleteContent" }));
+    return !normalized(el.innerText);
+  }
+
   // Remplace le contenu du composeur, avec VÉRIFICATION. Trois stratégies dans
   // l'ordre : collage synthétique (ProseMirror gère très bien le multi-lignes),
   // execCommand('insertText'), puis écriture DOM directe en paragraphes.
+  // Chaque branche qui réussit laisse le curseur en fin de texte. N'envoie
+  // jamais : c'est submitText, et lui seul, qui décide d'un envoi.
   function setComposerText(text) {
     const el = getComposer();
     if (!el) return false;
@@ -69,7 +151,9 @@ function createCoachAdapter(config) {
     if (el.value !== undefined) {
       el.value = text;
       el.dispatchEvent(new Event("input", { bubbles: true }));
-      return normalized(el.value) === normalized(text);
+      const ok = normalized(el.value) === normalized(text);
+      if (ok) placeCaretAtEnd(el);
+      return ok;
     }
 
     try {
@@ -80,11 +164,17 @@ function createCoachAdapter(config) {
     } catch {
       /* stratégie suivante */
     }
-    if (normalized(el.innerText) === normalized(text)) return true;
+    if (normalized(el.innerText) === normalized(text)) {
+      placeCaretAtEnd(el);
+      return true;
+    }
 
     selectAllIn(el);
     document.execCommand("insertText", false, text);
-    if (normalized(el.innerText) === normalized(text)) return true;
+    if (normalized(el.innerText) === normalized(text)) {
+      placeCaretAtEnd(el);
+      return true;
+    }
 
     el.textContent = "";
     for (const line of text.split("\n")) {
@@ -94,7 +184,9 @@ function createCoachAdapter(config) {
       el.appendChild(p);
     }
     el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
-    return normalized(el.innerText) === normalized(text);
+    const ok = normalized(el.innerText) === normalized(text);
+    if (ok) placeCaretAtEnd(el);
+    return ok;
   }
 
   // Envoi programmatique, exempté d'interception pendant 1,5 s.
@@ -442,6 +534,9 @@ function createCoachAdapter(config) {
     healthy,
     probe,
     setComposerText,
+    clearComposer,
+    focusComposer,
+    isComposerEvent,
     send,
     submitText,
     readComposerText,

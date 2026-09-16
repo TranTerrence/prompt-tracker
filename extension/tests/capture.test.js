@@ -82,6 +82,10 @@ function makeEnv({ settings = {}, orgConfig = null, consents = {}, disclosure = 
   const sandbox = {
     chrome,
     self: {},
+    // 1.0.3 : content.js pose un écouteur `input` au niveau du document pour
+    // le déclencheur « // » du sélecteur de prompts. Aucun DOM ici : on
+    // l'accepte et on l'oublie, ce test ne tape pas dans un composeur.
+    document: { addEventListener() {} },
     setTimeout: (fn, ms) => (ms >= 5000 ? null : setTimeout(fn, ms)), // on neutralise la sonde de santé
     clearTimeout,
     Date,
@@ -94,6 +98,9 @@ function makeEnv({ settings = {}, orgConfig = null, consents = {}, disclosure = 
     CoachTheme: { set() {}, DEFAULT_ACCENT: "#000" },
     CoachBadge: { render() {}, remove() {} },
     CoachModels: { VERSION: 1 },
+    // Sélecteur de prompts (src/picker.js) : jamais ouvert dans ce test, mais
+    // content.js l'interroge avant d'ouvrir la modale et sur chaque `input`.
+    CoachPicker: { isOpen: () => false, open: () => true, update() {}, close() {} },
     // Doublure de src/config.js : content.js n'en lit que APP_URL, pour
     // dériver le lien « méthode » de la modale (1.0.0 : plus rien n'est codé
     // en dur côté UI, le domaine vit à un seul endroit).
@@ -105,15 +112,16 @@ function makeEnv({ settings = {}, orgConfig = null, consents = {}, disclosure = 
       closePost() {},
       showModal(opts) { captured.modal = opts; },
       closeModal() {},
+      isModalOpen: () => false,
       onFeedback: null,
       onClose: null,
       onPause: null,
     },
   };
 
-  // scoring.js et i18n.js sont chargés pour de vrai : ce sont eux qu'on veut
-  // voir à l'œuvre, pas une doublure.
-  const bootstrap = read("scoring.js") + "\n" + read("i18n.js") + "\n" + read("content.js");
+  // scoring.js, i18n.js et library.js sont chargés pour de vrai : ce sont eux
+  // qu'on veut voir à l'œuvre, pas une doublure.
+  const bootstrap = read("scoring.js") + "\n" + read("i18n.js") + "\n" + read("library.js") + "\n" + read("content.js");
   const keys = Object.keys(sandbox);
   const mods = new Function(...keys, `${bootstrap}\nreturn { CoachScoring, CoachI18n };`)(
     ...keys.map((k) => sandbox[k])
