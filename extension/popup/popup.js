@@ -598,10 +598,18 @@ function copyPrompt(text) {
 // avant que cette ligne s'exécute. Une TDZ ferait tomber le popup ; un `= []`
 // sec viderait la liste déjà rendue.
 var libraryItems = libraryItems || []; // liste triée, source des rendus filtrés
+// Favoris (null tant que le compte n'est pas appairé) et récents, lus dans le
+// storage : le worker en est le seul écrivain (1.0.3). Même `var` défensif.
+var libraryMarks = libraryMarks || { starred: null, recent: [] };
+// Onglet de chat où « Insérer » peut déposer le prompt (1.0.3) : null tant
+// qu'aucun n'est détecté, auquel cas Copier reste l'action principale.
+var insertTab = insertTab || null;
 
-// Recherche insensible aux accents : « redaction » doit trouver « rédaction ».
+// Recherche et tri : une seule logique, partagée avec le sélecteur dans la
+// page et le worker (src/library.js). Les enveloppes restent pour les
+// appelants d'avant ; les corps ont déménagé.
 function normSearch(s) {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return CoachLibrary.normSearch(s);
 }
 
 function libraryState(key) {
@@ -610,70 +618,202 @@ function libraryState(key) {
   el.hidden = !key;
 }
 
-// Même tri que le panneau du dialogue : officiels d'abord, puis reprises.
 function sortLibrary(prompts) {
-  return (Array.isArray(prompts) ? [...prompts] : []).sort((a, b) => {
-    if (a.kind !== b.kind) return a.kind === "official" ? -1 : 1;
-    return (b.copies || 0) - (a.copies || 0);
+  return CoachLibrary.sortLibrary(prompts);
+}
+
+/* ---------- Insérer dans l'onglet actif (1.0.3) ---------- */
+
+// L'onglet ACTIF de la fenêtre courante, s'il est sur l'un des cinq sites ET
+// que son content script répond au ping. Un onglet ouvert avant
+// l'installation ne répond pas — c'est le même diagnostic que le bandeau
+// « recharge tes onglets », et la même raison de ne pas lui promettre une
+// insertion. Les patterns viennent du manifest (CoachStaleTabs), donc aucun
+// site à recopier ici ; `url` dans tabs.query découle des permissions d'hôte
+// déjà accordées, aucune permission nouvelle.
+function detectInsertTab(cb) {
+  const patterns = CoachStaleTabs.matchPatterns();
+  if (!patterns.length || typeof chrome === "undefined" || !chrome.tabs || !chrome.tabs.query) {
+    cb(null);
+    return;
+  }
+  try {
+    chrome.tabs.query({ active: true, currentWindow: true, url: patterns }, (tabs) => {
+      if (chrome.runtime.lastError || !Array.isArray(tabs) || !tabs.length || tabs[0].id === undefined) {
+        cb(null);
+        return;
+      }
+      const tab = tabs[0];
+      chrome.tabs.sendMessage(tab.id, { type: "coach-ping" }, (res) => {
+        const err = chrome.runtime.lastError; // lu, sinon Chrome journalise
+        cb(!err && res && res.ok ? tab.id : null);
+      });
+    });
+  } catch {
+    cb(null);
+  }
+}
+
+// L'usage part au worker, qui tient les récents et compte les reprises. Sur
+// le chemin Insérer, c'est le content script qui l'envoie (il sait si
+// l'injection a été vérifiée) : le popup ne l'envoie lui-même que sur Copier,
+// et quand l'onglet n'a pas répondu du tout — personne d'autre ne l'a vu.
+function notifyLibraryUsed(id, action) {
+  chrome.runtime.sendMessage({ type: "library-used", id, action }, () => {
+    void chrome.runtime.lastError;
   });
 }
 
-function renderLibraryItems() {
-  const q = normSearch(document.getElementById("library-search").value.trim());
-  const items = libraryItems.filter(
-    (p) => !q || normSearch(`${p.title} ${p.body} ${p.category || ""}`).includes(q)
+// Dire le résultat À L'ENDROIT du clic : la méta redevient normale après un
+// battement — pas de toast global dans 360 px.
+function flashMeta(meta, text, metaText, ok, ms) {
+  meta.textContent = text;
+  meta.classList.toggle("copied", Boolean(ok));
+  setTimeout(() => {
+    meta.textContent = metaText;
+    meta.classList.remove("copied");
+  }, ms);
+}
+
+function copyFromPopup(p, meta, metaText, failedKey) {
+  copyPrompt(p.body).then(
+    () => flashMeta(meta, t(failedKey || "libraryCopied"), metaText, !failedKey, failedKey ? 4000 : 1500),
+    () => flashMeta(meta, t("libraryCopyFailed"), metaText, false, 1500)
   );
+}
+
+// picker-insert vers l'onglet détecté. Trois issues : inséré (le popup a
+// fini son travail et se ferme, l'étudiant est déjà dans son chat) ; l'onglet
+// a répondu { ok: false } (veille, modale, composeur méconnu, injection non
+// relue) et le popup copie, avec le message qui dit quoi faire ; l'onglet
+// n'a pas répondu du tout (rechargé ou fermé entre la détection et le clic)
+// et le popup copie aussi, en comptant l'usage lui-même.
+function insertIntoTab(p, meta, metaText) {
+  chrome.tabs.sendMessage(insertTab, { type: "picker-insert", id: p.id, title: p.title, body: p.body }, (res) => {
+    const err = chrome.runtime.lastError;
+    if (err || !res) {
+      notifyLibraryUsed(p.id, "copy");
+      copyFromPopup(p, meta, metaText, "libraryInsertFailed");
+      return;
+    }
+    if (res.ok) {
+      flashMeta(meta, t("libraryInserted"), metaText, true, 2000);
+      setTimeout(() => window.close(), 350);
+      return;
+    }
+    copyFromPopup(p, meta, metaText, "libraryInsertFailed");
+  });
+}
+
+const LIBRARY_GROUP_LABELS = {
+  starred: "pickerGroupStarred",
+  recent: "pickerGroupRecent",
+  official: "pickerGroupOfficial",
+  peer: "pickerGroupPeer",
+};
+
+function buildLibraryRow(p, isStarred) {
+  const row = document.createElement("div");
+  row.className = "lib-item";
+  row.setAttribute("role", "button");
+  row.tabIndex = 0;
+  const title = document.createElement("span");
+  title.className = "lib-title";
+  title.textContent = isStarred ? `★ ${p.title}` : p.title;
+  const meta = document.createElement("span");
+  meta.className = "lib-meta";
+  // Mêmes conventions que la modale : étiquette de provenance, auteur
+  // seulement s'il dit plus que l'étiquette, puis les compteurs. Pas de
+  // filtre de langue ici — il n'y a pas de brouillon dont hériter la
+  // langue, et filtrer par navigateur montrerait des catalogues différents
+  // à deux étudiants de la même classe. Un tag EN/FR suffit quand l'entrée
+  // diffère de la langue de l'interface.
+  const kindLabel = p.kind === "peer" ? t("libraryPeer") : t("libraryOfficial");
+  const bits = [kindLabel];
+  if (p.author && p.author !== kindLabel) bits.push(p.author);
+  if (p.category) bits.push(p.category);
+  if (p.lang && p.lang !== CoachI18n.lang) bits.push(p.lang.toUpperCase());
+  if (p.copies) bits.push(t("libraryCopies", p.copies));
+  if (p.helpful) bits.push(t("libraryHelpful", p.helpful));
+  const metaText = bits.join(" · ");
+  meta.textContent = metaText;
+  const body = document.createElement("span");
+  body.className = "lib-body";
+  body.textContent = p.body;
+
+  // Deux actions, l'ordre dit laquelle est attendue : sur un onglet de chat
+  // vivant, Insérer devant et Copier en retrait ; ailleurs, Copier devant et
+  // Insérer présent mais inerte, avec le pourquoi en infobulle — le bouton
+  // dit que la fonction existe, sans promettre un clic sans effet.
+  const actions = document.createElement("span");
+  actions.className = "lib-actions";
+  const insert = document.createElement("button");
+  insert.type = "button";
+  insert.textContent = t("libraryInsert");
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.textContent = t("libraryCopy");
+  const doCopy = () => {
+    notifyLibraryUsed(p.id, "copy");
+    copyFromPopup(p, meta, metaText);
+  };
+  const doInsert = () => insertIntoTab(p, meta, metaText);
+  let primary;
+  if (insertTab) {
+    copy.className = "lib-alt";
+    actions.append(insert, copy);
+    primary = doInsert;
+  } else {
+    insert.className = "lib-alt";
+    insert.disabled = true;
+    insert.title = t("libraryInsertUnavailable");
+    actions.append(copy, insert);
+    primary = doCopy;
+  }
+  insert.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (insertTab) doInsert();
+  });
+  copy.addEventListener("click", (e) => {
+    e.stopPropagation();
+    doCopy();
+  });
+  row.addEventListener("click", primary);
+  row.addEventListener("keydown", (e) => {
+    if (e.target !== row) return; // Entrée sur un bouton : c'est le bouton
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      primary();
+    }
+  });
+  row.append(title, meta, body, actions);
+  return row;
+}
+
+// Rendu groupé (Favoris / Récents / Programme / Promotion), la même
+// répartition que le sélecteur dans la page : ce que l'étudiant a épinglé
+// dans l'app et repris récemment passe devant.
+function renderLibraryItems() {
+  const q = document.getElementById("library-search").value;
+  const groups = CoachLibrary.groupLibrary({
+    prompts: libraryItems,
+    starred: libraryMarks.starred,
+    recent: libraryMarks.recent,
+    query: q,
+  });
+  const shown = CoachLibrary.flatten(groups).length;
   document.getElementById("library-summary").textContent = t("libraryPanelHead", libraryItems.length);
-  document.getElementById("library-note").textContent = t("libraryPanelNote");
+  document.getElementById("library-note").textContent = t(insertTab ? "libraryPanelNoteInsert" : "libraryPanelNote");
   const list = document.getElementById("library-list");
   list.textContent = "";
-  libraryState(items.length ? null : libraryItems.length ? "libraryNoMatch" : "libraryEmptyPanel");
-  for (const p of items) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "lib-item";
-    const title = document.createElement("span");
-    title.className = "lib-title";
-    title.textContent = p.title;
-    const meta = document.createElement("span");
-    meta.className = "lib-meta";
-    // Mêmes conventions que la modale : étiquette de provenance, auteur
-    // seulement s'il dit plus que l'étiquette, puis les compteurs. Pas de
-    // filtre de langue ici — il n'y a pas de brouillon dont hériter la
-    // langue, et filtrer par navigateur montrerait des catalogues différents
-    // à deux étudiants de la même classe. Un tag EN/FR suffit quand l'entrée
-    // diffère de la langue de l'interface.
-    const kindLabel = p.kind === "peer" ? t("libraryPeer") : t("libraryOfficial");
-    const bits = [kindLabel];
-    if (p.author && p.author !== kindLabel) bits.push(p.author);
-    if (p.category) bits.push(p.category);
-    if (p.lang && p.lang !== CoachI18n.lang) bits.push(p.lang.toUpperCase());
-    if (p.copies) bits.push(t("libraryCopies", p.copies));
-    if (p.helpful) bits.push(t("libraryHelpful", p.helpful));
-    const metaText = bits.join(" · ");
-    meta.textContent = metaText;
-    const body = document.createElement("span");
-    body.className = "lib-body";
-    body.textContent = p.body;
-    btn.append(title, meta, body);
-    // Copier, puis le dire À L'ENDROIT du clic : la méta redevient normale
-    // après un battement — pas de toast global dans 360 px.
-    btn.addEventListener("click", () => {
-      copyPrompt(p.body).then(
-        () => {
-          meta.textContent = t("libraryCopied");
-          meta.classList.add("copied");
-        },
-        () => {
-          meta.textContent = t("libraryCopyFailed");
-        }
-      );
-      setTimeout(() => {
-        meta.textContent = metaText;
-        meta.classList.remove("copied");
-      }, 1500);
-    });
-    list.appendChild(btn);
+  libraryState(shown ? null : libraryItems.length ? "libraryNoMatch" : "libraryEmptyPanel");
+  const starred = new Set(libraryMarks.starred || []);
+  for (const g of groups) {
+    const head = document.createElement("p");
+    head.className = "lib-group";
+    head.textContent = t(LIBRARY_GROUP_LABELS[g.key]);
+    list.appendChild(head);
+    for (const p of g.items) list.appendChild(buildLibraryRow(p, starred.has(p.id)));
   }
 }
 
@@ -689,7 +829,11 @@ function renderLibraryPanel(orgConfig) {
   chrome.permissions.contains({ origins: [origin] }, (granted) => {
     section.hidden = !granted;
     if (!granted) return;
-    chrome.storage.local.get("promptLibrary", (data) => {
+    chrome.storage.local.get(["promptLibrary", "libraryStarred", "libraryRecent"], (data) => {
+      libraryMarks = {
+        starred: data.libraryStarred && Array.isArray(data.libraryStarred.ids) ? data.libraryStarred.ids : null,
+        recent: Array.isArray(data.libraryRecent) ? data.libraryRecent : [],
+      };
       const cached =
         data.promptLibrary && data.promptLibrary.url === orgConfig.libraryUrl
           ? data.promptLibrary.prompts
@@ -709,6 +853,8 @@ function renderLibraryPanel(orgConfig) {
           if (!cached) libraryState("libraryEmptyPanel");
           return;
         }
+        // Favoris du compte appairé (null sinon) : la même réponse les porte.
+        if (res.starred === null || Array.isArray(res.starred)) libraryMarks.starred = res.starred;
         libraryItems = sortLibrary(res.prompts);
         renderLibraryItems();
       });
@@ -719,10 +865,23 @@ function renderLibraryPanel(orgConfig) {
 document.getElementById("library-search").placeholder = t("librarySearch");
 document.getElementById("library-search").addEventListener("input", renderLibraryItems);
 
-// Un fetch déclenché ailleurs (onglet de chat, activation) doit se refléter
-// dans un popup déjà ouvert.
+// Sur un onglet de chat vivant, le popup s'ouvre sur ce qu'on est venu y
+// chercher : panneau déplié, recherche prête à recevoir la frappe. Ailleurs,
+// les stats restent au premier regard, comme avant.
+detectInsertTab((tabId) => {
+  insertTab = tabId;
+  if (libraryItems.length) renderLibraryItems();
+  if (!tabId) return;
+  document.getElementById("library-panel").open = true;
+  const search = document.getElementById("library-search");
+  if (!document.getElementById("library-section").hidden) search.focus();
+});
+
+// Un fetch déclenché ailleurs (onglet de chat, activation), une étoile posée
+// dans l'app ou un prompt repris dans la page doivent se refléter dans un
+// popup déjà ouvert.
 chrome.storage.onChanged.addListener((changes) => {
-  if (!changes.promptLibrary) return;
+  if (!changes.promptLibrary && !changes.libraryStarred && !changes.libraryRecent) return;
   chrome.storage.local.get("orgConfig", (data) => renderLibraryPanel(data.orgConfig));
 });
 

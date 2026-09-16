@@ -90,6 +90,7 @@ const CoachI18n = (() => {
       libraryCopy: "Copier",
       libraryInserted: "Inséré ✓",
       libraryInsertFailed: "Impossible d'insérer dans la page : le prompt a été copié. Colle-le dans la zone de message.",
+      libraryInsertUnavailable: "Ouvre un onglet ChatGPT, Claude, Gemini, Mistral ou Grok pour insérer directement.",
       libraryPanelNoteInsert:
         "Publiés par ton école. « Insérer » dépose le prompt dans le chat ouvert, sans l'envoyer ; « Copier » le met dans le presse-papiers.",
       // Sélecteur de prompts dans la page (1.0.3) : « // » dans un composeur
@@ -371,6 +372,7 @@ const CoachI18n = (() => {
       libraryCopy: "Copy",
       libraryInserted: "Inserted ✓",
       libraryInsertFailed: "Couldn't insert into the page, so the prompt was copied. Paste it into the message box.",
+      libraryInsertUnavailable: "Open a ChatGPT, Claude, Gemini, Mistral or Grok tab to insert directly.",
       libraryPanelNoteInsert:
         "Published by your school. Insert drops the prompt into the open chat without sending it; Copy puts it in the clipboard.",
       pickerTitle: "Prompt Library",
