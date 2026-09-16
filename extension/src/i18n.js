@@ -242,16 +242,10 @@ const CoachI18n = (() => {
       obThemeTitle: "Ton thème",
       obThresholdTitle: "Niveau de friction",
       obThresholdHint: "Les prompts sous ce score déclenchent le dialogue. 40 est un bon départ.",
-      obProfileTitle: "Ton usage principal",
-      obProfileHint: "Les questions parleront ta langue : devoir, livrable ou dossier.",
       obIntentionTitle: "Ton plan quand ça devient vague",
       obIntentionHint:
         "Formuler un plan « si…, alors… » double presque les chances de s'y tenir (Gollwitzer). Il sera rappelé dans le dialogue les premières semaines, puis s'effacera.",
       obIntentionDefault: "Si mon prompt est vague, alors je précise mon intention et mon contexte avant d'envoyer.",
-      profileStudent: "Étudiant",
-      profileConsultant: "Consultant / freelance",
-      profileEmployee: "Salarié",
-      profileOther: "Autre",
       obSites: "Fonctionne sur ChatGPT, Claude, Gemini, Mistral (Le Chat) et Grok.",
       obTry: "Essaye maintenant : ouvre ChatGPT et tape « fais mes devoirs ».",
       // Onglets IA ouverts avant l'installation : ils n'ont pas de content
@@ -476,16 +470,10 @@ const CoachI18n = (() => {
       obThemeTitle: "Your theme",
       obThresholdTitle: "Friction level",
       obThresholdHint: "Prompts under this score trigger the dialogue. 40 is a good start.",
-      obProfileTitle: "Your main use",
-      obProfileHint: "Questions will speak your language: assignment, deliverable or file.",
       obIntentionTitle: "Your plan for when it gets vague",
       obIntentionHint:
         "Writing an \"if…, then…\" plan nearly doubles follow-through (Gollwitzer). It will be shown in the dialogue for the first few weeks, then fade away.",
       obIntentionDefault: "If my prompt is vague, then I state my intent and context before sending.",
-      profileStudent: "Student",
-      profileConsultant: "Consultant / freelancer",
-      profileEmployee: "Employee",
-      profileOther: "Other",
       obSites: "Works on ChatGPT, Claude, Gemini, Mistral (Le Chat) and Grok.",
       obTry: "Try it now: open ChatGPT and type \"do my homework\".",
       staleTabsBanner: (n) =>
@@ -513,7 +501,16 @@ const CoachI18n = (() => {
     }
   }
 
-  const lang = detectLang();
+  // 1.0.1 : l'interface est en anglais pour tout le monde, quelle que soit la
+  // langue du navigateur — comme l'app companion.mines.paris, dont toutes les
+  // pages sont en anglais, et vers laquelle chaque lien de l'extension mène.
+  // Deux langues d'un écran à l'autre, c'est ce qu'on évite. Les chaînes
+  // françaises restent dans MESSAGES et detectLang() reste en place : le
+  // jour où l'app est traduite, une ligne suffit. Le COACHING, lui, suit la
+  // langue du prompt (scoring.js, detectLang(text)) : une question posée en
+  // français à un prompt français, la chrome de la modale en anglais.
+  const lang = "en";
+  void detectLang;
 
   function t(key, ...args) {
     const entry = (MESSAGES[lang] && MESSAGES[lang][key]) || MESSAGES.fr[key];

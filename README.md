@@ -4,17 +4,17 @@
 
 *The guardrail for your prompting: a thoughtful pause before your AI prompts, on ChatGPT, Claude, Gemini, Mistral and Grok. 100% local by default. English description in [store/description-en.md](store/description-en.md).*
 
-**État (15 septembre 2026)** : version **1.0.0**, tag `v1.0.0`, première
-version construite pour la base fusionnée d'I-BE³ ; servie par l'app
-(`https://ibe3.vercel.app/extension`) ; fiche Chrome Web Store en préparation
-(`store/SUBMISSION.md`). Avant la 1.0.0, l'extension s'appelait Prompt Tracker
+**État (16 septembre 2026)** : version **1.0.1** — la 1.0.0 (tag `v1.0.0`)
+est la première version construite pour la base fusionnée d'I-BE³, la 1.0.1
+passe l'interface en anglais (comme l'app), retire le profil d'usage de l'onboarding et vise l'adresse de l'app, `companion.mines.paris` (domaine du
+programme depuis le 16/09) à la place de l'alias `ibe3.vercel.app` ; servie
+par l'app (`https://companion.mines.paris/extension`) ; fiche Chrome Web Store
+en préparation (`store/SUBMISSION.md`). Avant la 1.0.0, l'extension s'appelait Prompt Tracker
 et avait son propre backend et son propre site (`track-prompt.vercel.app`) :
 les deux sont retirés, le nom du dépôt et des zips reste (identifiants).
 
 ## Pour qui ?
-- **Étudiants** : apprendre avec l'IA sans qu'elle pense à leur place
-- **Consultants** : des prompts qui portent leur raisonnement
-- **Entreprises & organismes de formation** : bonnes pratiques, esprit critique, alternative au shadow IT, en marque blanche
+- **Les étudiants du programme I-BE³** : apprendre avec l'IA sans qu'elle pense à leur place. Depuis la 1.0.1, l'onboarding ne demande plus de profil d'usage (étudiant / consultant / salarié) : le vocabulaire des questions est celui du devoir.
 
 ## Comment ça marche
 1. Tu écris ton prompt sur **ChatGPT, Claude, Gemini, Mistral ou Grok**, comme d'habitude.
@@ -25,7 +25,7 @@ les deux sont retirés, le nom du dépôt et des zips reste (identifiants).
 | Brique | Rôle |
 |---|---|
 | [`extension/`](extension) | Extension Chrome MV3 « I-BE³ Companion » : scoring local, interception, dialogue socratique, badge, thèmes light/dark, FR/EN. Fonctionne 100 % en local sans compte. |
-| App I-BE³ Companion (dépôt `ibe3-companion`, `ibe3.vercel.app`) | Le compte, l'appairage de l'extension (`/extension/pair`), le journal des dialogues (`/prompts`), les réglages de partage (`/settings`), la méthode (`/help#method`) et la notice de confidentialité (`/extension/privacy`). Sert aussi le zip de l'extension. |
+| App I-BE³ Companion (dépôt `ibe3-companion`, `companion.mines.paris`) | Le compte, l'appairage de l'extension (`/extension/pair`), le journal des dialogues (`/prompts`), les réglages de partage (`/settings`), la méthode (`/help#method`) et la notice de confidentialité (`/extension/privacy`). Sert aussi le zip de l'extension. |
 | Supabase hébergé (Paris, eu-west-3) | Auth, Postgres + RLS : la base de l'app, dans laquelle l'extension écrit directement depuis la 1.0.0. |
 | [`dashboard/`](dashboard) | Ancien dashboard Next.js (`track-prompt.vercel.app`). **Plus déployé ni maintenu** : gardé pour mémoire, son journal des dialogues a été porté dans l'app ; son seul rôle restant est de rediriger l'ancien domaine (voir `dashboard/README.md`). Son API d'organisation ([docs/API.md](docs/API.md)) et le contrat d'intégration ([docs/INTEGRATION.md](docs/INTEGRATION.md)) sont retirés avec lui. |
 | [`store/`](store) | Fiche Chrome Web Store (FR/EN), justification des permissions, notes au relecteur. |
@@ -61,7 +61,7 @@ python3 -m http.server 4321 --directory extension
 ### Viser une autre stack (dev local)
 L'extension embarque les valeurs de **production** : Supabase hébergé
 `kbbrkrvacazkxraudvng` (clé *publishable*, publique par conception) et
-`https://ibe3.vercel.app`. Pour travailler contre la stack locale de l'app
+`https://companion.mines.paris`. Pour travailler contre la stack locale de l'app
 (`pnpm dev` dans `ibe3-companion`, qui lance aussi `supabase start`), modifier
 **les trois constantes de [`extension/src/config.js`](extension/src/config.js)** (le seul fichier de configuration ; `supabase.js` les y lit) :
 
@@ -69,7 +69,7 @@ L'extension embarque les valeurs de **production** : Supabase hébergé
 |---|---|---|
 | `SUPABASE_URL` | `https://kbbrkrvacazkxraudvng.supabase.co` | `http://127.0.0.1:54421` |
 | `SUPABASE_KEY` | `sb_publishable_…` du projet | la clé *anon* affichée par `supabase start` |
-| `APP_URL` | `https://ibe3.vercel.app` | `http://localhost:3200` |
+| `APP_URL` | `https://companion.mines.paris` | `http://localhost:3200` |
 
 Toutes les URL de l'extension (appairage, « Ouvrir l'app », méthode, notice de
 confidentialité, lien « ? » de la modale) dérivent de `CoachConfig.APP_URL` :

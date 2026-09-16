@@ -1,23 +1,27 @@
-# Captures Web Store (1280×800, thème clair)
+# Captures Web Store (1280×800, thème clair, interface en anglais depuis la 1.0.1)
 
-> **À REFAIRE POUR LA 1.0.0 — bloquant.** L'interface a changé de nom
-> (« I-BE³ Companion »), le formulaire mot de passe et le code de classe ont
-> disparu du popup, la modale socratique montre désormais le prompt en train
-> de se construire (deux colonnes, un bloc par réponse) et tous les liens
-> pointent sur `ibe3.vercel.app`. Les fichiers présents dans ce dossier
-> montrent l'ancienne extension : les envoyer, c'est une fiche qui ne
-> correspond pas au paquet, motif de rejet n°1. **Aucun des cinq noms du
-> tableau n'existe encore** : l'ancienne capture de divulgation, qui portait
-> déjà le nom `shot-01-disclosure.png` (vieux nom « Prompt Tracker », mention
-> « rejoindre une classe »), a été renommée `old-shot-01-disclosure.png` pour
-> qu'elle ne puisse pas passer pour la nouvelle. Le dossier contient 8 anciens
-> fichiers alors que la fiche n'en accepte que 5 — les supprimer une fois les
-> cinq nouvelles captures faites.
+> **État au 16/09/2026 (1.0.1).** Trois captures réelles sont dans ce
+> dossier, prises sur un profil Chromium vierge avec l'extension 1.0.1
+> chargée non empaquetée (Playwright pilote le navigateur, l'extension fait
+> le reste — ce n'est pas une maquette) :
 >
-> Ces captures ne peuvent pas être produites depuis un harnais de
-> développement : ce serait une maquette, pas l'extension à l'œuvre. Elles
-> demandent une installation réelle sur un profil Chrome vierge, contre la
-> production (après la bascule, lot C).
+> - `shot-01-disclosure.png` — la carte « Tes données » de l'onboarding (4
+>   blocs). La carte fait 620 px et les réglages (plan, thème, friction) la séparent du bouton
+>   « J'accepte et j'active » : les deux ne tiennent pas dans un cadre de
+>   800 px, la capture montre la carte, que le relecteur cherche en premier.
+> - `shot-02-popup.png` — le popup **non appairé** (« Lier mon compte »,
+>   compteurs à zéro, lien « Politique de confidentialité »), rendu à sa
+>   largeur réelle de 360 px sur fond neutre. **Provisoire** : la fiche
+>   voudrait l'état appairé (« Tout est synchronisé ✓ »), qui demande le
+>   compte de test — à refaire après l'étape 4 de la procédure.
+> - `shot-03-dialogue.png` — la modale sur chatgpt.com, « do my maths
+>   homework » retenu (7/100), deux réponses, vue construite à droite, score
+>   7 → 45. Prise **sans compte ChatGPT** grâce au sélecteur ajouté en 1.0.1.
+>
+> Manquent, parce qu'elles demandent un compte lié : la 4 (bibliothèque) et
+> la 5 (consentement avec ses interrupteurs — sans compte, la page dit
+> « Connecte-toi d'abord »). La fiche accepte de 1 à 5 captures : on peut
+> soumettre avec ces trois-là, et compléter à la mise à jour suivante.
 
 Les captures 1 et 5 sont celles que le relecteur cherche en priorité : la
 divulgation au premier lancement et le consentement granulaire.
@@ -31,24 +35,10 @@ divulgation au premier lancement et le consentement granulaire.
 | 5 | `shot-05-consentement.png` | Écran « Mes données partagées » : ligne socle énumérant les indicateurs, **ligne de conservation (90 j / 12 mois)**, les interrupteurs de contenu **désactivés**, zone « Droit à l'effacement ». |
 
 ## Procédure
-1. `bash scripts/package.sh` depuis un worktree propre, puis charger `extension/` non empaquetée sur un profil Chrome vierge.
+1. `bash scripts/package.sh` depuis un worktree propre, puis charger `extension/` non empaquetée sur un profil Chrome vierge (ou : Playwright `launchPersistentContext` avec `--load-extension`, viewport 1280×800, `colorScheme: 'light'` — c'est ainsi que les captures 1 à 3 de la 1.0.1 ont été faites).
 2. Capture 1 : l'onboarding s'ouvre seul à l'installation — capturer AVANT de cliquer sur le bouton.
 3. Cliquer « J'accepte et j'active I-BE³ Companion ».
-4. Se connecter sur https://ibe3.vercel.app avec le compte de test, puis dans le popup « Lier mon compte » → autoriser sur `/extension/pair` → le popup passe en « Tout est synchronisé » → capture 2 (après quelques prompts au compteur, étape 5).
+4. Se connecter sur https://companion.mines.paris avec le compte de test, puis dans le popup « Lier mon compte » → autoriser sur `/extension/pair` → le popup passe en « Tout est synchronisé » → capture 2 (après quelques prompts au compteur, étape 5).
 5. Ouvrir chatgpt.com, taper « fais mes devoirs de maths », répondre à deux questions → capture 3.
 6. Si l'organisation a publié une bibliothèque : « Activer la bibliothèque » dans le popup, déplier → capture 4.
 7. « 🔒 Mes données partagées » → capture 5.
-
-## À refaire (les 8 fichiers actuels sont tous périmés)
-| Fichier actuel | Pourquoi il ne peut pas servir | Remplacé par |
-|---|---|---|
-| `old-shot-01-disclosure.png` | divulgation « Prompt Tracker », « rejoindre une classe » — portait le nom final, renommée pour ne pas piéger la soumission | `shot-01-disclosure.png` (à refaire) |
-| `shot-01-interception.png` | modale 0.5.0, ancien nom | `shot-03-dialogue.png` |
-| `shot-02-dialogue.png` | modale 0.5.0 sans vue construite | `shot-03-dialogue.png` |
-| `shot-03-miroir-apres.png` | miroir d'après, non retenu dans les 5 | — |
-| `shot-04-popup.png` | popup 0.5.0 avec formulaire mot de passe | `shot-02-popup.png` |
-| `shot-05-onboarding.png` | onboarding 0.5.0, ancien nom | `shot-01-disclosure.png` |
-| `shot-05-popup.png` | popup 0.7 avec code de classe | `shot-02-popup.png` |
-| `shot-06-consentement.png` | écran « classe », ancien nom | `shot-05-consentement.png` |
-
-Supprimer ces huit fichiers avant l'envoi, une fois les cinq du tableau du haut produits : `scripts/webstore-check.sh` avertit tant que le dossier en compte plus de cinq.

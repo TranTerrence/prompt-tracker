@@ -16,7 +16,11 @@
     }
   });
 
-  const DEFAULT_SETTINGS = { captureMode: "metadata", interceptEnabled: true, threshold: 40, theme: "light", postMirrorEnabled: true, profile: null };
+  const DEFAULT_SETTINGS = { captureMode: "metadata", interceptEnabled: true, threshold: 40, theme: "light", postMirrorEnabled: true, profile: "student" };
+  // Le profil d'usage n'est plus demandé depuis la 1.0.1 : l'extension est
+  // destinée aux étudiants du programme, le vocabulaire des questions est
+  // celui du devoir. Le champ reste pour la banque de questions
+  // (scoring.js, entrées `profiles`), qui sait toujours lire un autre profil.
   let settings = { ...DEFAULT_SETTINGS };
   // Config de l'organisation (branding, templates, seuil...) synchronisée par le
   // popup après login (étape 3). Prioritaire sur les réglages locaux.
@@ -498,7 +502,9 @@
               lastAxis: dialogueState.lastAxis || null,
               lastLevel: dialogueState.lastLevel || null,
               lang,
-              profile: effective("profile"),
+              // `|| "student"` : un réglage `profile: null` enregistré par une
+              // version antérieure (choix jamais fait) ne doit pas effacer le défaut.
+              profile: effective("profile") || "student",
             },
             templates
           );

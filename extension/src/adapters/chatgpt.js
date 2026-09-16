@@ -7,6 +7,10 @@ const CoachAdapter = createCoachAdapter({
     "#prompt-textarea",
     "div[contenteditable='true'].ProseMirror",
     "textarea[data-testid='prompt-textarea']",
+    // Coquille servie aux visiteurs NON connectés (constaté le 16/09/2026) :
+    // un <textarea> nu, sans ProseMirror ni data-testid. Sans lui, l'extension
+    // se croit cassée (badge ⚠) et laisse tout passer sur cette page.
+    "textarea#mobile-composer-prompt",
   ],
   sendButtonSelectors: [
     "button[data-testid='send-button']",

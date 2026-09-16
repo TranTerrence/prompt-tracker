@@ -23,14 +23,8 @@ const STRINGS = {
   "ob-disc-retention-title": "obDiscRetentionTitle",
   "ob-disc-retention": "obDiscRetention",
   "ob-disc-policy": "obDiscPolicyLink",
-  "ob-profile-title": "obProfileTitle",
-  "ob-profile-hint": "obProfileHint",
   "ob-intention-title": "obIntentionTitle",
   "ob-intention-hint": "obIntentionHint",
-  "profile-student": "profileStudent",
-  "profile-consultant": "profileConsultant",
-  "profile-employee": "profileEmployee",
-  "profile-other": "profileOther",
   "ob-theme-title": "obThemeTitle",
   "ob-threshold-title": "obThresholdTitle",
   "ob-threshold-hint": "obThresholdHint",
@@ -62,12 +56,6 @@ function saveSettings(patch) {
   chrome.storage.local.get("settings", (data) => {
     chrome.storage.local.set({ settings: { ...(data.settings || {}), ...patch } });
   });
-}
-
-function applyProfile(profile) {
-  for (const btn of document.querySelectorAll("[data-profile-choice]")) {
-    btn.classList.toggle("active", btn.dataset.profileChoice === profile);
-  }
 }
 
 function showAccepted() {
@@ -110,7 +98,7 @@ function offerReload() {
 }
 
 chrome.storage.local.get(["settings", "disclosure", "orgConfig"], (data) => {
-  const settings = { theme: "light", threshold: 40, profile: null, ...(data.settings || {}) };
+  const settings = { theme: "light", threshold: 40, ...(data.settings || {}) };
   // Ré-ouverture après appairage du compte : si le programme masque le
   // score, le curseur de seuil (« 40/100 ») n'a plus lieu d'être — c'est un
   // score déguisé, et il est de toute façon imposé par l'organisation.
@@ -118,7 +106,6 @@ chrome.storage.local.get(["settings", "disclosure", "orgConfig"], (data) => {
     document.getElementById("threshold-card").hidden = true;
   }
   applyTheme(settings.theme);
-  applyProfile(settings.profile);
   document.getElementById("setting-threshold").value = settings.threshold;
   document.getElementById("threshold-value").textContent = settings.threshold;
   document.getElementById("setting-intention").value = settings.intentionPlan || t("obIntentionDefault");
@@ -130,15 +117,6 @@ for (const btn of document.querySelectorAll("[data-theme-choice]")) {
   btn.addEventListener("click", () => {
     applyTheme(btn.dataset.themeChoice);
     saveSettings({ theme: btn.dataset.themeChoice });
-  });
-}
-
-// Profil d'usage : ne change pas la mécanique, seulement le vocabulaire des
-// questions (« ton devoir » vs « ton livrable client »).
-for (const btn of document.querySelectorAll("[data-profile-choice]")) {
-  btn.addEventListener("click", () => {
-    applyProfile(btn.dataset.profileChoice);
-    saveSettings({ profile: btn.dataset.profileChoice });
   });
 }
 

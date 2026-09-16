@@ -71,7 +71,7 @@ cd "$ROOT/extension"
 unzip -l "$OUT_CHROME" | tail -3
 
 # Le zip Chrome est servi aux étudiants par l'app I-BE³ Companion
-# (ibe3.vercel.app/extension lit public/prompt-tracker-<version>.zip et
+# (companion.mines.paris/extension lit public/prompt-tracker-<version>.zip et
 # lib/extension-release.ts). Le dashboard de ce dépôt n'est plus déployé :
 # plus de copie vers dashboard/public ni de extension-version.json.
 # Si IBE3_PUBLIC_DIR pointe sur le dossier public/ de l'app, on y dépose le

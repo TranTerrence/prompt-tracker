@@ -21,16 +21,14 @@ Every prompt is scored locally, with a live breakdown (clarity, context, critica
 🔒 **Data and privacy**
 Nothing is recorded until you accept the disclosure screen shown on first launch: the extension stays inactive before your explicit consent.
 • **Locally, after your consent**: quality scores, category, word count, site, date, outcome (sent, improved, cancelled), your dialogue answers and post-response reflections, plus measurements of the AI's answer — its length, its duration, the model used, and how long you take before sending the next prompt. The text of those answers is counted then forgotten: never recorded. The full text of your prompts is only recorded if you enable the dedicated setting. Everything stays on your computer: no account required.
-• **Your account is created by the programme** (I-BE³ Companion), already attached to your organization: you link the extension by approving, in the app (ibe3.vercel.app/extension/pair), the pairing code shown in the popup. No password is ever typed into the extension. A second screen tells you exactly what will be shared (the indicators above, never any text) and you confirm with a button. Your account email identifies you to your programme.
+• **Your account is created by the programme** (I-BE³ Companion), already attached to your organization: you link the extension by approving, in the app (companion.mines.paris/extension/pair), the pairing code shown in the popup. No password is ever typed into the extension. A second screen tells you exactly what will be shared (the indicators above, never any text) and you confirm with a button. Your account email identifies you to your programme.
 • **Content** (prompt text, dialogues, reflections, conversation threads) is shared only if your organization requests it with a stated purpose AND you consent, category by category. Toggles off by default, revocable at any time; the server erases any non-consented content upon receipt.
 • **Tailored AI questions (optional)**: if your organization enables it and you consented to sharing your text and reasoning, your prompt transits through Anthropic to generate the next question, without being stored.
 • **Retention**: content erased after 90 days, indicators deleted after 12 months. Erase and export at any time. No selling, no advertising, no AI training.
-Full policy: https://ibe3.vercel.app/extension/privacy
+Full policy: https://companion.mines.paris/extension/privacy
 
 Who is it for?
-• Students: learn WITH AI without it thinking for you
-• Consultants: prompts that show your reasoning
-• Companies: good practices, critical thinking and an answer to shadow IT
+• Students of the I-BE³ programme (Mines Paris - PSL): learn WITH AI without it thinking for you. The extension works on its own, without an account; the account, created by the programme, is what lets you share your progress with your CARE tutor.
 
 Works on ChatGPT, Claude, Gemini, Mistral (Le Chat) and Grok, with Chrome and Chromium browsers on desktop. No iPhone/iPad or Android version at this stage (mobile browsers do not accept extensions).
 
@@ -63,7 +61,7 @@ Certifications to check:
 - [x] Data is not used or transferred for purposes unrelated to the item's single purpose.
 - [x] Data is not used or transferred to determine creditworthiness or for lending purposes.
 
-Privacy policy URL: https://ibe3.vercel.app/extension/privacy
+Privacy policy URL: https://companion.mines.paris/extension/privacy
 
 ## Reviewer note (submission "notes" field)
 This version implements a two-level prominent disclosure, per the User Data Privacy policy:
@@ -72,4 +70,4 @@ This version implements a two-level prominent disclosure, per the User Data Priv
 Retention: content 90 days, indicators 12 months (automatic server-side purge). Users can erase and export their data at any time.
 
 ## Privacy policy
-https://ibe3.vercel.app/extension/privacy
+https://companion.mines.paris/extension/privacy

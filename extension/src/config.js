@@ -8,7 +8,7 @@
 // Production : Supabase hébergé, projet kbbrkrvacazkxraudvng (Paris,
 // eu-west-3), derrière PostgREST/GoTrue ; la clé est la clé PUBLISHABLE du
 // projet, publique par conception (la sécurité repose sur RLS). L'app
-// (ibe3.vercel.app) sert l'appairage (/extension/pair), la question socratique
+// (companion.mines.paris, alias historique ibe3.vercel.app) sert l'appairage (/extension/pair), la question socratique
 // LLM et toutes les pages vers lesquelles l'extension renvoie (/help#method,
 // /extension/privacy).
 //
@@ -21,7 +21,7 @@
 const CoachConfig = {
   SUPABASE_URL: "https://kbbrkrvacazkxraudvng.supabase.co",
   SUPABASE_KEY: "sb_publishable_9VP7D7EGppB4a6722ylTrg_CuUbaHhN",
-  APP_URL: "https://ibe3.vercel.app",
+  APP_URL: "https://companion.mines.paris",
 };
 
 if (typeof self !== "undefined") self.CoachConfig = CoachConfig;

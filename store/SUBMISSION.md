@@ -115,7 +115,7 @@ Les trois certifications à cocher sont vraies et doivent le rester : pas de
 vente à des tiers, pas d'usage étranger à l'objectif unique, pas d'usage pour
 déterminer une solvabilité.
 
-**Politique de confidentialité :** https://ibe3.vercel.app/extension/privacy
+**Politique de confidentialité :** https://companion.mines.paris/extension/privacy
 (doit répondre 200 et nommer l'extension — vérifié par `scripts/webstore-check.sh`).
 
 ## Notes au relecteur (champ « Testing instructions »)
@@ -141,20 +141,20 @@ divulgation n'est pas accepté.
 > **Pour tester la liaison de compte et le partage** (optionnel), un compte
 > de test est provisionné sur l'application du programme :
 >
-> - Application : https://ibe3.vercel.app/login
+> - Application : https://companion.mines.paris/login
 > - Identifiant : <À FOURNIR AVANT ENVOI>
 > - Mot de passe temporaire : <À FOURNIR AVANT ENVOI>
 >
-> 5. Se connecter sur https://ibe3.vercel.app/login avec ce compte.
+> 5. Se connecter sur https://companion.mines.paris/login avec ce compte.
 > 6. Dans le popup de l'extension, cliquer « Lier mon compte » : un onglet
->    s'ouvre sur `https://ibe3.vercel.app/extension/pair?c=XXXX` avec le
+>    s'ouvre sur `https://companion.mines.paris/extension/pair?c=XXXX` avec le
 >    code déjà rempli ; vérifier qu'il correspond à celui du popup, puis
 >    « Autoriser ». Le popup se met à jour seul (« Tout est synchronisé »).
 >    Aucun mot de passe n'est saisi dans l'extension : c'est la seule entrée,
 >    il n'y a pas de formulaire de connexion ni d'inscription dans le popup.
 > 7. Envoyer un prompt vague sur https://chatgpt.com : le dialogue s'ouvre ;
 >    répondre à une ou deux questions, envoyer. Le prompt et son dialogue
->    apparaissent dans https://ibe3.vercel.app/prompts.
+>    apparaissent dans https://companion.mines.paris/prompts.
 > 8. « 🔒 Mes données partagées » (popup) ouvre les réglages de partage,
 >    interrupteurs de contenu désactivés par défaut.
 >
@@ -192,10 +192,60 @@ divulgation n'est pas accepté.
 > supplémentaire, aucune injection dans une page, aucun envoi.
 
 ⚠️ Remplacer les deux `<À FOURNIR AVANT ENVOI>` par le compte de test créé
-sur ibe3.vercel.app (`/admin/users`, rôle étudiant, mot de passe temporaire),
+sur companion.mines.paris (`/admin/users`, rôle étudiant, mot de passe temporaire),
 ou supprimer les étapes 5 à 8. Un relecteur bloqué sur un login rejette sans
 appel. Le compte doit exister AVANT la soumission et survivre à la revue
 (2 à 7 jours) : ne pas le supprimer avec les comptes de démonstration.
+
+### Ce que le passage en 1.0.1 change pour la revue
+
+- **Quatre changements, aucun sur les permissions ni les données.**
+- **L'adresse de l'app.** `CoachConfig.APP_URL`
+  (`src/config.js`) passe de `https://ibe3.vercel.app` à
+  `https://companion.mines.paris`, le domaine du programme depuis le
+  16 septembre 2026. Tous les liens sortants en dérivent (méthode
+  `/help#method`, politique `/extension/privacy`, appairage
+  `/extension/pair?c=…`, bouton « Ouvrir l'app ») et les deux appels réseau
+  vers l'app aussi (`/api/tracker/pair`, `/api/tracker/socratic`). Même
+  application, même code serveur, même base Supabase
+  (`kbbrkrvacazkxraudvng`, Paris) : `ibe3.vercel.app` reste un alias Vercel du
+  même projet et continue de répondre, il n'est simplement plus l'adresse
+  que l'on donne aux étudiants.
+- **Pourquoi maintenant.** L'app a pris son domaine définitif et sa connexion
+  par le compte de l'école (OpenID Connect) ne redirige que vers
+  `companion.mines.paris` : un relecteur ou un étudiant envoyé sur l'alias
+  est redirigé vers le domaine pour se connecter. Le paquet 1.0.0 fonctionnait
+  grâce à cette redirection ; la 1.0.1 va directement au bon endroit.
+- **Un sélecteur de plus pour ChatGPT** (`src/adapters/chatgpt.js`) :
+  la coquille servie aux visiteurs non connectés sur chatgpt.com (constatée
+  le 16/09/2026) porte un `<textarea id="mobile-composer-prompt">` sans
+  ProseMirror ; sans ce sélecteur, l'extension ne trouvait pas le champ,
+  affichait son badge ⚠ et laissait tout passer sur cette page. Même
+  lecture du DOM qu'avant, même site déjà déclaré dans les `matches`.
+  C'est ce qui a permis de produire la capture 3 sur une interception
+  réelle, sans compte ChatGPT — un relecteur non connecté verra donc la
+  fonction principale.
+- **L'onboarding ne demande plus « Ton usage principal »** (étudiant /
+  consultant / salarié / autre). L'extension est destinée aux étudiants du
+  programme : le profil est fixé à `student` (`DEFAULT_SETTINGS` de
+  `src/content.js`), ce qui ne change que le vocabulaire des questions
+  (« ton devoir »). Ce choix n'était jamais transmis nulle part ; un écran
+  de moins pour le relecteur avant le bouton d'activation.
+- **L'interface est en anglais pour tout le monde** (`CoachI18n.lang = "en"`
+  dans `src/i18n.js`, `default_locale` du manifest en `en`), comme l'app
+  companion.mines.paris vers laquelle mène chaque lien : pas deux langues
+  d'un écran à l'autre. Les questions du coaching suivent toujours la langue
+  du prompt (un prompt français reçoit des questions en français). Les
+  chaînes françaises restent dans le paquet pour le jour où l'app est
+  traduite. Les captures sont en anglais, comme le paquet.
+- **Rien d'autre ne bouge.** `manifest.json` : `version` (1.0.0 → 1.0.1) et
+  `default_locale` (fr → en). Permissions identiques (`storage`, `alarms`, la permission
+  d'hôte facultative), mêmes cinq `matches`, mêmes fichiers dans le paquet.
+  Aucune donnée nouvelle, aucune catégorie nouvelle, aucun hôte nouveau
+  (le domaine remplace l'alias, il ne s'y ajoute pas), aucun code distant.
+  `DISCLOSURE_VERSION` inchangé. La divulgation ci-dessus est recopiée telle
+  quelle ; seule l'URL de la politique de confidentialité change de domaine
+  (l'ancienne répond toujours).
 
 ### Ce que le passage en 1.0.0 change pour la revue
 

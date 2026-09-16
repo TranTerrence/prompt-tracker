@@ -21,16 +21,14 @@ Chaque prompt est scoré localement, ventilation affichée en direct (clarté, c
 🔒 **Données et confidentialité**
 Rien n'est enregistré tant que tu n'as pas accepté l'écran de divulgation affiché au premier lancement : l'extension reste inactive avant ton accord explicite.
 • **En local, après ton accord** : scores de qualité, catégorie, nombre de mots, site, date, issue (envoyé, amélioré, annulé), tes réponses au dialogue et tes réflexions d'après-réponse, plus des mesures sur la réponse de l'IA — sa longueur, sa durée, le modèle utilisé et le temps que tu prends avant d'enchaîner. Le texte des réponses est compté puis oublié : jamais enregistré. Le texte complet de tes prompts n'est enregistré que si tu actives l'option dédiée. Tout reste sur ton ordinateur : pas de compte requis.
-• **Ton compte est créé par le programme** (I-BE³ Companion), avec ton organisation déjà rattachée : tu lies l'extension en approuvant, sur l'app (ibe3.vercel.app/extension/pair), le code d'appairage affiché dans le popup. Aucun mot de passe n'est jamais saisi dans l'extension. Un second écran te dit exactement ce qui sera partagé (les indicateurs ci-dessus, jamais aucun texte) et tu confirmes d'un bouton. Ton email de compte t'identifie auprès de ton programme.
+• **Ton compte est créé par le programme** (I-BE³ Companion), avec ton organisation déjà rattachée : tu lies l'extension en approuvant, sur l'app (companion.mines.paris/extension/pair), le code d'appairage affiché dans le popup. Aucun mot de passe n'est jamais saisi dans l'extension. Un second écran te dit exactement ce qui sera partagé (les indicateurs ci-dessus, jamais aucun texte) et tu confirmes d'un bouton. Ton email de compte t'identifie auprès de ton programme.
 • **Les contenus** (texte des prompts, dialogues, réflexions, fils de conversation) ne sont partagés que si ton organisation les demande avec un motif ET que tu consens, catégorie par catégorie. Interrupteurs désactivés par défaut, révocables à tout moment ; le serveur efface tout contenu non consenti dès réception.
 • **Questions IA sur mesure (option)** : si ton organisation l'active et que tu as consenti au partage de ton texte et de ton raisonnement, ton prompt transite par Anthropic pour générer la question suivante, sans être stocké.
 • **Conservation** : contenus effacés au bout de 90 jours, indicateurs supprimés au bout de 12 mois. Effacement et export possibles à tout moment. Aucune vente, aucune publicité, aucun entraînement d'IA.
-Politique complète : https://ibe3.vercel.app/extension/privacy
+Politique complète : https://companion.mines.paris/extension/privacy
 
 Pour qui ?
-• Étudiants : apprendre AVEC l'IA sans qu'elle pense à ta place
-• Consultants : des prompts qui montrent ton raisonnement
-• Entreprises : bonnes pratiques, esprit critique et alternative au shadow IT
+• Les étudiants du programme I-BE³ (Mines Paris - PSL) : apprendre AVEC l'IA sans qu'elle pense à ta place. L'extension fonctionne seule, sans compte ; le compte, créé par le programme, sert à partager ta progression avec ton tuteur CARE.
 
 Fonctionne sur ChatGPT, Claude, Gemini, Mistral (Le Chat) et Grok, avec Chrome et les navigateurs Chromium sur ordinateur. Pas de version iPhone/iPad ou Android à ce stade (les navigateurs mobiles n'acceptent pas les extensions).
 
@@ -63,7 +61,7 @@ Certifications à cocher :
 - [x] Les données ne sont ni utilisées ni transférées à des fins sans rapport avec la finalité unique de l'élément.
 - [x] Les données ne sont ni utilisées ni transférées pour déterminer la solvabilité ou à des fins de prêt.
 
-URL de la politique de confidentialité : https://ibe3.vercel.app/extension/privacy
+URL de la politique de confidentialité : https://companion.mines.paris/extension/privacy
 
 ## Note au reviewer (champ « notes » de la soumission)
 Cette version met en place une divulgation bien visible à deux niveaux, conformément à la politique User Data Privacy :
@@ -72,4 +70,4 @@ Cette version met en place une divulgation bien visible à deux niveaux, conform
 Conservation : contenus 90 jours, indicateurs 12 mois (purge automatique côté serveur). L'utilisateur peut effacer et exporter ses données à tout moment.
 
 ## Privacy policy
-https://ibe3.vercel.app/extension/privacy
+https://companion.mines.paris/extension/privacy
