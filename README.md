@@ -4,12 +4,20 @@
 
 *The guardrail for your prompting: a thoughtful pause before your AI prompts, on ChatGPT, Claude, Gemini, Mistral and Grok. 100% local by default. English description in [store/description-en.md](store/description-en.md).*
 
-**État (16 septembre 2026)** : version **1.0.1** — la 1.0.0 (tag `v1.0.0`)
-est la première version construite pour la base fusionnée d'I-BE³, la 1.0.1
-passe l'interface en anglais (comme l'app), retire le profil d'usage de l'onboarding et vise l'adresse de l'app, `companion.mines.paris` (domaine du
-programme depuis le 16/09) à la place de l'alias `ibe3.vercel.app` ; servie
-par l'app (`https://companion.mines.paris/extension`) ; fiche Chrome Web Store
-en préparation (`store/SUBMISSION.md`). Avant la 1.0.0, l'extension s'appelait Prompt Tracker
+**État (16 septembre 2026)** : version **1.0.2** — l'app sait désormais si
+l'extension est installée et si elle remonte encore, sans attendre le premier
+prompt synchronisé : un battement de présence upserte l'état d'installation
+dans `extension_devices` côté serveur, et `src/presence.js` l'annonce dans le
+DOM de `companion.mines.paris` côté navigateur — la seule origine où
+l'extension se signale. La permission d'hôte sur `companion.mines.paris`
+devient donc **obligatoire** (`host_permissions`, une bulle de re-consentement
+à la mise à jour, divulgation version 3) ; le popup ouvre `/companion` par
+défaut, avec un second bouton vers `/prompts`. La 1.0.1 avait déjà fait passer
+l'interface en anglais (comme l'app), retiré le profil d'usage de l'onboarding
+et visé l'adresse de l'app, `companion.mines.paris` (domaine du programme
+depuis le 16/09) à la place de l'alias `ibe3.vercel.app` ; servie par l'app
+(`https://companion.mines.paris/extension`) ; fiche Chrome Web Store à jour
+(`store/SUBMISSION.md`). Avant la 1.0.0, l'extension s'appelait Prompt Tracker
 et avait son propre backend et son propre site (`track-prompt.vercel.app`) :
 les deux sont retirés, le nom du dépôt et des zips reste (identifiants).
 
@@ -79,6 +87,14 @@ REST/Auth (`supabase.js`) ne l'est que dans le worker, le popup et la page de
 consentement. Ne jamais commiter ni empaqueter les valeurs locales — `package.sh`
 s'y refuse. Recharger l'extension dans `chrome://extensions` après modification.
 
+Pour que `src/presence.js` s'annonce aussi sur l'app locale, ajouter à la main
+`http://localhost:3200/*` à **deux** endroits dans `extension/manifest.json` :
+`host_permissions` et les `matches` du content script de présence (celui qui
+charge `src/presence.js`). `scripts/package.sh` refuse d'empaqueter tant que
+l'un des deux motifs — ou tout autre `host_permissions`,
+`optional_host_permissions` ou `content_scripts[].matches` — commence par
+`http://` : retirer les deux avant de livrer.
+
 Ajouter un site IA = un fichier `extension/src/adapters/<site>.js` (sélecteurs du composeur et du bouton d'envoi) + une entrée `content_scripts` dans le manifest : toute la mécanique est partagée par [`factory.js`](extension/src/adapters/factory.js).
 
 ## Livrer une version
@@ -88,7 +104,7 @@ Ajouter un site IA = un fichier `extension/src/adapters/<site>.js` (sélecteurs 
 4. Zip depuis un worktree propre du tag ; copie dans `public/` de l'app (`IBE3_PUBLIC_DIR=…`), bump de `lib/extension-release.ts` là-bas, push de `main` de l'app (déploiement automatique).
 5. Soumission Chrome Web Store (compte du propriétaire) ; Edge/Firefox seulement si une demande existe (`docs/PORTS.md`).
 
-Le contrat que l'extension attend de la base (les douze appels PostgREST/GoTrue) est épinglé côté app par `tests/consent/tracker.test.ts` : une migration qui le casse fait échouer la suite de l'app avant d'atteindre la production.
+Le contrat que l'extension attend de la base (les treize appels PostgREST/GoTrue) est épinglé côté app par `tests/consent/tracker.test.ts` : une migration qui le casse fait échouer la suite de l'app avant d'atteindre la production.
 
 ## Design
 « Éditorial calme » : light par défaut + thème dark (et système), crème/encre, accent white-label (sauge par défaut), Fraunces + IBM Plex Sans. Le badge « ● I-BE³ Companion » dans l'UI du chat signale que l'extension est active.

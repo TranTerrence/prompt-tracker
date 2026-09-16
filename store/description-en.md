@@ -46,6 +46,7 @@ I-BE³ Companion helps the user improve the quality of their prompts on AI chat 
 - Host `https://gemini.google.com/*`: same use on Gemini.
 - Host `https://chat.mistral.ai/*`: same use on Mistral (Le Chat).
 - Host `https://grok.com/*`: same use on Grok.
+- Host `https://companion.mines.paris/*` (**mandatory**, single origin): lets the extension announce its installation state (armed, linked, last sync, pending count) to the app's own page at `document_start` (`src/presence.js`), and read the app's own default prompt library (`GET /api/prompt-library`) when the user's institution has not published its own. No other page can detect the extension this way.
 - **Optional** host `https://*/*`: **never granted at install**. An institution may publish a prompt library at its own address, which the extension cannot know in advance. Permission is therefore requested at runtime, for the **single origin** configured by the user's institution, and only after an explicit click from them. It is a read without identity: no cookie, no token, no parameter derived from the account. Declining degrades no other feature.
 The input field content is analyzed locally, before sending; it is not transmitted to any server without the consents described above. The response area is observed to measure its length and duration and to read the model name: that text is counted then forgotten, neither stored nor transmitted.
 

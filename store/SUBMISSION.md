@@ -64,12 +64,14 @@ Recopier ces textes dans le champ « justification » de chaque permission.
 |---|---|
 | `storage` | Stocke localement les réglages de l'utilisateur (seuil, thème, consentements) et l'historique de ses scores de prompts, qui alimente le tableau de bord de progression affiché dans la popup. Aucune de ces données ne quitte l'appareil sans consentement explicite. |
 | `alarms` | Planifie la synchronisation périodique en arrière-plan pour les utilisateurs dont le compte est lié (l'organisation est rattachée au compte créé par le programme, il n'y a plus de jonction séparée). Sans elle, les indicateurs consentis ne remonteraient qu'à l'ouverture de la popup. |
+| `host_permissions` : `` `https://companion.mines.paris/*` `` | **Obligatoire depuis la 1.0.2, une seule origine — celle de l'app du programme, déjà nommée partout ailleurs dans cette fiche.** Deux usages, tous deux confinés à ce domaine : (1) injecter `src/presence.js` à `document_start`, qui annonce dans le DOM de la page l'état d'installation (armée, liée, dernière sync, file en attente) — la réponse immédiate, côté navigateur, à « l'extension est-elle installée ? » ; (2) lire par défaut le flux de pré-prompts de l'app elle-même (`GET {APP_URL}/api/prompt-library`) quand l'établissement n'a rien publié à sa propre adresse, sans passer par la permission facultative ci-dessous. Le battement de présence lui-même écrit vers l'hôte Supabase, pas vers ce domaine : voir plus bas, section 1.0.2. |
 | `optional_host_permissions` : `https://*/*` | **Facultative, jamais accordée à l'installation.** Un établissement scolaire peut publier une bibliothèque de prompts pédagogiques à sa propre adresse ; l'extension ne peut pas connaître cette adresse à l'avance, elle varie d'un établissement à l'autre. Elle n'est donc PAS déclarée dans `host_permissions` : elle est demandée à l'exécution, par `chrome.permissions.request`, sur la **seule origine** configurée par l'établissement de l'utilisateur, et uniquement après un clic explicite de celui-ci dans la popup. Tant que l'utilisateur n'accorde rien, aucune requête n'est émise. L'appel est une simple lecture `GET` en `credentials: "omit"`, sans en-tête d'authentification et sans aucun paramètre dérivé du compte : aucune donnée utilisateur ne part vers cet hôte. Refuser la permission ne dégrade aucune autre fonction. |
 
 **Match patterns des content scripts** (`chatgpt.com`, `chat.openai.com`,
-`claude.ai`, `gemini.google.com`, `chat.mistral.ai`, `grok.com`) :
+`claude.ai`, `gemini.google.com`, `chat.mistral.ai`, `grok.com`,
+`companion.mines.paris`) :
 
-> L'extension doit lire le champ de saisie et intercepter l'envoi sur ces cinq
+> L'extension doit lire le champ de saisie et intercepter l'envoi sur les cinq
 > interfaces de chat IA pour proposer sa question de réflexion avant que le
 > prompt ne parte. Elle observe ensuite la zone de réponse pour en mesurer la
 > longueur et la durée d'affichage, et lire le nom du modèle : c'est ce qui
@@ -77,6 +79,14 @@ Recopier ces textes dans le champ « justification » de chaque permission.
 > réponse est compté puis oublié — il n'est ni stocké ni transmis. Chaque
 > domaine est listé explicitement ; aucune permission large (`<all_urls>`,
 > `*://*/*`) n'est demandée.
+>
+> **`companion.mines.paris` (depuis la 1.0.2) est un sixième domaine, mais un
+> script différent** : `src/presence.js`, à `document_start`, sans aucune
+> interception. Il ne lit ni n'écrit rien de la page ; il pose un attribut DOM,
+> un `CustomEvent` et un `postMessage` (origine explicite, jamais `"*"`) qui
+> portent l'état d'installation décrit dans la permission d'hôte ci-dessus.
+> Seul le message `{ source: "ibe3-companion", type: "status?" }`, reçu sur
+> `location.origin`, déclenche une réponse ; rien d'autre de la page n'est lu.
 
 **Remote code : NON.** Tout le JavaScript est dans le paquet. `supabase.js` est
 un client HTTP écrit à la main (`fetch`), pas un SDK chargé depuis un CDN.
@@ -90,7 +100,7 @@ Cocher exactement ceci — et rien de plus :
 | Catégorie | Collectée ? | Pourquoi |
 |---|---|---|
 | Informations personnelles identifiables | **Oui** — email | Identifie l'étudiant auprès de son programme, uniquement après appairage du compte |
-| Activité de l'utilisateur | **Oui** | Scores, catégorie, nombre de mots, issue, plus les mesures de réponse (longueur, durée de génération, modèle utilisé, délai avant le prompt suivant) — le cœur du tableau de bord |
+| Activité de l'utilisateur | **Oui** | Scores, catégorie, nombre de mots, issue, plus les mesures de réponse (longueur, durée de génération, modèle utilisé, délai avant le prompt suivant) — le cœur du tableau de bord. Depuis la 1.0.2, une fois le compte lié, l'état d'installation s'y ajoute : version de l'extension, indice de navigateur, heure de la dernière synchronisation réussie et nombre d'événements en attente — six colonnes dans `extension_devices`, jamais de contenu |
 | Contenu du site web | **Oui** | Le texte du prompt, **seulement** si l'utilisateur active l'option et consent catégorie par catégorie |
 | Informations d'authentification | **Non** | Depuis la 1.0.0, aucun mot de passe ne transite par l'extension : le formulaire e-mail / mot de passe a été retiré du popup, `CoachApi.login()` / `signup()` n'existent plus (`token?grant_type=password` et `signup` ne sont plus appelés). La seule entrée est l'appairage par code, approuvé sur l'app où l'utilisateur est déjà connecté ; l'extension ne reçoit qu'un jeton de session (`redeem_pairing`), qu'elle rafraîchit ensuite. Voir la note 0.7.0 plus bas : la condition qu'elle posait pour revenir à « Non » est remplie. |
 | Santé, financier, localisation, communications personnelles | **Non** | — |
@@ -152,10 +162,15 @@ divulgation n'est pas accepté.
 >    « Autoriser ». Le popup se met à jour seul (« Tout est synchronisé »).
 >    Aucun mot de passe n'est saisi dans l'extension : c'est la seule entrée,
 >    il n'y a pas de formulaire de connexion ni d'inscription dans le popup.
-> 7. Envoyer un prompt vague sur https://chatgpt.com : le dialogue s'ouvre ;
+> 7. Ouvrir https://companion.mines.paris/companion dans le même onglet : la
+>    page montre déjà l'extension comme **installée et liée**, sans attendre
+>    l'envoi d'un prompt. C'est le battement de présence (`extension_devices`,
+>    côté serveur) et l'annonce de `src/presence.js` (côté navigateur) qui
+>    l'alimentent, nouveauté de la 1.0.2 (voir plus bas).
+> 8. Envoyer un prompt vague sur https://chatgpt.com : le dialogue s'ouvre ;
 >    répondre à une ou deux questions, envoyer. Le prompt et son dialogue
 >    apparaissent dans https://companion.mines.paris/prompts.
-> 8. « 🔒 Mes données partagées » (popup) ouvre les réglages de partage,
+> 9. « 🔒 Mes données partagées » (popup) ouvre les réglages de partage,
 >    interrupteurs de contenu désactivés par défaut.
 >
 > **Il n'existe pas de code de classe ni d'inscription libre.** Les comptes
@@ -193,9 +208,65 @@ divulgation n'est pas accepté.
 
 ⚠️ Remplacer les deux `<À FOURNIR AVANT ENVOI>` par le compte de test créé
 sur companion.mines.paris (`/admin/users`, rôle étudiant, mot de passe temporaire),
-ou supprimer les étapes 5 à 8. Un relecteur bloqué sur un login rejette sans
+ou supprimer les étapes 5 à 9. Un relecteur bloqué sur un login rejette sans
 appel. Le compte doit exister AVANT la soumission et survivre à la revue
 (2 à 7 jours) : ne pas le supprimer avec les comptes de démonstration.
+
+### Ce que le passage en 1.0.2 change pour la revue
+
+- **Une permission d'hôte obligatoire de plus, et une bulle de re-consentement.**
+  `` `https://companion.mines.paris/*` `` rejoint `host_permissions` — elle n'y
+  était pas avant : l'app n'était atteinte que par des liens sortants et par le
+  canal facultatif `https://*/*`. Chrome affiche donc, à la mise à jour, l'écran
+  habituel de nouvelle permission, sur une seule origine, celle déjà nommée
+  partout ailleurs dans cette fiche, jamais un motif large.
+  `optional_host_permissions` (`https://*/*`) est inchangée.
+- **Battement de présence côté serveur, table `extension_devices`.**
+  `heartbeat()` (`src/supabase.js`) upserte exactement six colonnes —
+  `user_id`, `device_id`, `version`, `browser_hint`, `last_sync_at`,
+  `pending_count` — avec le jeton de SESSION de l'utilisateur, exactement
+  comme les écritures dans `prompt_events` : pas de clé de service, pas de
+  RPC. Côté serveur (dépôt de l'app), la table est sous RLS, les quatre verbes
+  restreints à `user_id = auth.uid()` — aucune politique tuteur, aucune
+  politique admin. `last_seen_at` est estampillé par un trigger serveur,
+  jamais envoyé par le client. L'écriture part vers l'hôte Supabase déjà
+  utilisé pour tout le reste (`kbbrkrvacazkxraudvng.supabase.co`), pas vers
+  `companion.mines.paris` : ce canal n'ajoute donc aucune permission d'hôte
+  nouvelle. Un battement raté ne lève jamais et n'écrit jamais `syncStatus`
+  (qui pilote la bannière et le badge) : ne jamais lire un battement absent
+  comme une preuve d'échec de synchronisation.
+- **Présence limitée à l'origine de l'app.** `src/presence.js`, injecté à
+  `document_start` sur `companion.mines.paris` uniquement (nouvelle entrée
+  `content_scripts` dans le manifest), pose un attribut DOM, un `CustomEvent`
+  et un `postMessage` (origine explicite, jamais `"*"`) qui disent à la page
+  si l'extension est armée, liée, et où en est sa dernière synchronisation —
+  rien d'autre n'est lu sur cette page. Les cinq sites d'IA ne chargent
+  toujours aucun script de présence et restent indétectables.
+  **Nuance de la ligne « indétectable » de la 0.7.0** (corrigée sur place,
+  voir cette section plus bas) : c'est désormais vrai pour toute page tierce,
+  mais plus pour l'origine de l'app elle-même, qui est la nôtre.
+- **Le flux par défaut de la bibliothèque change quand une organisation ne
+  publie rien.** `library_url` à `NULL` ne coupe plus la bibliothèque :
+  `refreshOrgConfig()` (`src/supabase.js`) retombe sur `defaultLibraryUrl()`,
+  `{APP_URL}/api/prompt-library`, servie par l'app elle-même et déjà lisible
+  sans rien demander de plus puisque `companion.mines.paris` est désormais une
+  permission d'hôte obligatoire. Contrepartie assumée : une organisation ne
+  peut plus désactiver la bibliothèque en laissant le champ vide, elle doit la
+  remplacer explicitement pour la couper.
+- **Divulgation version 3** (`DISCLOSURE_VERSION`, `popup.js` et
+  `onboarding.js`) : une fois le compte lié, le texte dit maintenant que
+  l'état d'installation (version, navigateur, dernière sync, file en attente)
+  part vers l'app. Les comptes ayant déjà accepté voient un bandeau
+  d'information non bloquant au prochain ouverture du popup — même motif
+  qu'en 0.7.0, aucun retour en veille.
+- **Popup : deux boutons au lieu d'un.** « Ouvrir l'app » vise désormais
+  `/companion` (la page qui montre justement cet état d'installation) au lieu
+  de la racine ; un second bouton ouvre `/prompts`. La déconnexion garde sa
+  propre ligne (trois boutons de front rendaient les libellés illisibles dans
+  360 px).
+- **Aucune nouvelle catégorie de données.** Le tableau de divulgation
+  ci-dessus est mis à jour (ligne « Activité de l'utilisateur ») pour nommer
+  l'état d'installation ; aucune ligne ne passe de Non à Oui.
 
 ### Ce que le passage en 1.0.1 change pour la revue
 
@@ -378,6 +449,12 @@ appel. Le compte doit exister AVANT la soumission et survivre à la revue
   `tabs`, et `chrome.action.setBadgeText`, déjà couvert par la clé `action`.
 - **Pas de `externally_connectable`, pas de `web_accessible_resources`** : rien
   ne rend l'extension détectable ou adressable par une page tierce.
+  **Nuancé en 1.0.2, pas contredit : ça reste vrai pour toute page tierce**,
+  y compris les cinq sites d'IA. Ce qui change, c'est que l'extension se
+  déclare désormais sur une origine qui est la NÔTRE, `companion.mines.paris`
+  (`src/presence.js`, permission d'hôte obligatoire) — l'app du programme, pas
+  un tiers. Aucune autre page ne peut la détecter par ce canal ; voir la
+  section 1.0.2 plus bas.
 - **Mesures post-réponse : nouvelles données transmises.** La divulgation et la
   politique de confidentialité ont été mises à jour dans le même commit
   (ligne « Activité de l'utilisateur » du tableau ci-dessus, points 2 et 4 de la

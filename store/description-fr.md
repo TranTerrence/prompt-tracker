@@ -46,6 +46,7 @@ I-BE³ Companion aide l'utilisateur à améliorer la qualité de ses prompts sur
 - Hôte `https://gemini.google.com/*` : même usage sur Gemini.
 - Hôte `https://chat.mistral.ai/*` : même usage sur Mistral (Le Chat).
 - Hôte `https://grok.com/*` : même usage sur Grok.
+- Hôte `https://companion.mines.paris/*` (**obligatoire**, une seule origine) : permet à l'extension d'annoncer son état d'installation (armée, liée, dernière sync, file en attente) sur la page de l'app elle-même, à `document_start` (`src/presence.js`), et de lire la bibliothèque de pré-prompts par défaut de l'app (`GET /api/prompt-library`) quand l'établissement de l'utilisateur n'a rien publié à sa propre adresse. Aucune autre page ne peut détecter l'extension par ce canal.
 - Hôte **facultatif** `https://*/*` : **jamais accordé à l'installation**. Un établissement peut publier une bibliothèque de prompts à sa propre adresse, que l'extension ne peut pas connaître à l'avance. L'autorisation est donc demandée à l'exécution, sur la **seule origine** configurée par l'établissement de l'utilisateur, et uniquement après un clic explicite de celui-ci. Il s'agit d'une lecture sans identité : aucun cookie, aucun jeton, aucun paramètre tiré du compte. Refuser ne dégrade aucune autre fonction.
 Le contenu du champ de saisie est analysé localement, avant envoi ; il n'est transmis à aucun serveur sans les consentements décrits ci-dessus. La zone de réponse est observée pour en mesurer la longueur et la durée et lire le nom du modèle : ce texte est compté puis oublié, il n'est ni stocké ni transmis.
 
