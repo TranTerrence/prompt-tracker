@@ -25,11 +25,26 @@ const assert = require("assert");
 // crypto.randomUUID (l'identifiant d'appareil) et chrome.runtime.getManifest
 // (la version). Les deux manquent au sandbox d'origine, et c'est justement
 // pour ça que le code de production les garde sous try/catch.
-function makeApi(seed = {}, { uuids = null } = {}) {
+function makeApi(seed = {}, { uuids = null, clockStepMs = 0 } = {}) {
   const store = { ...seed };
   const calls = [];
   let next = null; // { ok, status, body } ou une Error à lever
   let uuidIndex = 0; // pour le test de course : un identifiant distinct par appel
+
+  // Horloge : la vraie par défaut. `clockStepMs` fait avancer Date.now() d'un
+  // pas fixe à chaque lecture, pour que deux passages ne tombent jamais dans la
+  // même milliseconde — sans quoi un test qui compare des horodatages écrits
+  // coup sur coup passerait par accident. Le pas reste minuscule devant les
+  // 5 min du frein, qu'il ne doit surtout pas franchir tout seul.
+  let horloge = Date.now();
+  const DateStub = clockStepMs
+    ? class extends Date {
+        static now() {
+          horloge += clockStepMs;
+          return horloge;
+        }
+      }
+    : Date;
 
   const chrome = {
     storage: {
@@ -71,7 +86,7 @@ function makeApi(seed = {}, { uuids = null } = {}) {
     fetch: fetchStub,
     self: {},
     crypto: { randomUUID: () => (uuids ? uuids[uuidIndex++] : "11111111-2222-4333-8444-555555555555") },
-    Date, Math, JSON, Object, Promise, Error, TypeError, Boolean, Number, Array, Set, Map,
+    Date: DateStub, Math, JSON, Object, Promise, Error, TypeError, Boolean, Number, Array, Set, Map,
     // console.debug muet : le code de production journalise volontairement un
     // battement raté, ce n'est pas une ligne de résultat de test.
     setTimeout, clearTimeout, AbortController, console: { ...console, debug() {} },
@@ -96,6 +111,17 @@ const seedConnecte = (extra = {}) => ({
   },
   ...extra,
 });
+
+// Installation connectée, org jointe, socle accepté : le seul état où
+// syncEvents() va jusqu'au bout et écrit le journal (copié de sync.test.js).
+const seedSynchronisable = (extra = {}) =>
+  seedConnecte({
+    profile: { org_id: "org1", role: "member" },
+    orgConfig: { orgId: "org1", dataRequests: {} },
+    consents: {},
+    baselineConsent: { accepted: true, source: "server", acceptedAt: "2026-07-01T00:00:00Z" },
+    ...extra,
+  });
 
 const post201Vide = { ok: true, status: 201, body: "" };
 
@@ -213,6 +239,31 @@ async function testEmpreinteEtForce() {
   console.log("  ✓ heartbeat : muet à empreinte égale sous 5 min, force et changements passent");
 }
 
+async function testFreinInstallationAuRepos() {
+  // Le frein tel qu'il vit VRAIMENT. testEmpreinteEtForce pose `syncStatus` à
+  // la main ; ici c'est syncEvents() qui l'écrit, comme sur une machine, et il
+  // le réécrit à CHAQUE passage — même quand il n'y a rien à pousser. Une
+  // installation au repos alterne alarme de sync et battement toutes les
+  // minutes : si l'empreinte dépend de cette écriture, chaque minute repart en
+  // base et l'installation écrit 1440 lignes par jour pour redire la même
+  // chose. Rien n'a changé ici : un seul upsert doit partir.
+  const env = makeApi(seedSynchronisable({ events: [] }), { clockStepMs: 5 });
+  env.setNext(post201Vide);
+  await env.api.heartbeat();
+  await env.api.syncEvents();
+  await env.api.heartbeat();
+  await env.api.syncEvents();
+  await env.api.heartbeat();
+
+  const battements = env.calls.filter((c) => c.url.includes("extension_devices"));
+  assert.strictEqual(
+    battements.length,
+    1,
+    "trois battements encadrant deux syncs à vide : un seul upsert doit partir"
+  );
+  console.log("  ✓ heartbeat : une installation au repos ne rebat pas à chaque sync");
+}
+
 (async () => {
   await testDeviceIdStable();
   await testDeviceIdConcurrent();
@@ -220,6 +271,7 @@ async function testEmpreinteEtForce() {
   await testSansSessionAucunAppel();
   await testEchecMuet();
   await testEmpreinteEtForce();
+  await testFreinInstallationAuRepos();
   console.log("heartbeat.test.js : l'état d'installation part, rien d'autre, et jamais au prix de la sync ✓");
   process.exit(0);
 })().catch((e) => {

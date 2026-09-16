@@ -16,16 +16,23 @@
 const CoachStaleTabs = (() => {
   // La liste des sites vient du manifest, jamais d'une constante recopiée ici :
   // ajouter un adaptateur ne doit pas obliger à penser à ce fichier. On exclut
-  // l'entrée de src/presence.js (companion.mines.paris) : ce script n'y
-  // répond jamais à coach-ping, ce n'est pas lui qui diagnostique un contexte
-  // périmé. Sur un profil où presence.js ne s'injecte pas (Firefox origine
-  // refusée, Chrome « accès au clic »), le compter aurait déclaré cet onglet
-  // périmé pour toujours et la bannière ne se serait jamais effacée.
+  // l'entrée de src/presence.js (companion.mines.paris) pour deux raisons, et
+  // aucune n'est « il ne répond pas » : presence.js RÉPOND à coach-ping (voir
+  // son onMessage). D'abord la bannière parle des onglets IA — « recharge ton
+  // onglet » n'a aucun sens pour l'app elle-même. Ensuite l'origine de l'app
+  // peut n'être pas accordée (Firefox origine refusée, Chrome « accès au
+  // clic ») : le compter aurait déclaré cet onglet périmé pour toujours et la
+  // bannière ne se serait jamais effacée. La réponse de presence.js reste une
+  // assurance bon marché si cet onglet est pingé par un autre chemin.
+  //
+  // Le filtre porte sur la PRÉSENCE de src/presence.js dans `js`, pas sur une
+  // entrée d'un seul fichier : ajouter un second script à cette entrée du
+  // manifest ne doit pas réintroduire silencieusement l'origine de l'app.
   function matchPatterns() {
     try {
       const manifest = chrome.runtime.getManifest();
       return (manifest.content_scripts || [])
-        .filter((cs) => !(Array.isArray(cs.js) && cs.js.length === 1 && cs.js[0] === "src/presence.js"))
+        .filter((cs) => !(Array.isArray(cs.js) && cs.js.includes("src/presence.js")))
         .flatMap((cs) => cs.matches || []);
     } catch {
       return [];

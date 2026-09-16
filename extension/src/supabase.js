@@ -202,7 +202,14 @@ const CoachApi = (() => {
       // L'alarme bat toutes les minutes ; sans ce frein, une installation au
       // repos écrirait 1440 lignes par jour pour rien. L'état est en storage,
       // pas en variable : le worker MV3 est déchargé entre deux alarmes.
-      const fingerprint = [row.user_id, row.version, row.last_sync_at, row.pending_count].join("|");
+      //
+      // `last_sync_at` est HORS empreinte, à dessein : recordSync() le repousse
+      // à maintenant à chaque passage de la sync, y compris quand elle n'a rien
+      // à pousser. L'inclure rendait l'empreinte différente à chaque minute et
+      // le frein ne serrait jamais. Ce qui reste — l'utilisateur, la version,
+      // la taille de la file — dit tout ce que l'app lit. L'horodatage part
+      // quand même, à jour, sur chaque battement qui passe (≤ 1 / 5 min).
+      const fingerprint = [row.user_id, row.version, row.pending_count].join("|");
       if (
         !force &&
         heartbeatState &&
@@ -287,7 +294,7 @@ const CoachApi = (() => {
   async function logout() {
     await storage.remove([
       "session", "orgConfig", "profile", "baselineConsent", "syncStatus", "pendingSignup", "pairing",
-      "sessionExpired", "promptLibrary",
+      "sessionExpired", "promptLibrary", "heartbeatState",
     ]);
   }
 

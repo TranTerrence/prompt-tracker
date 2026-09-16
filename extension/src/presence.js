@@ -87,6 +87,11 @@ const CoachPresence = (() => {
       const read = () => {
         try {
           chrome.storage.local.get(KEYS, (data) => {
+            // Le contexte a pu être invalidé ENTRE l'appel et son retour : le
+            // callback part quand même, avec `data` vide. Lire l'erreur évite
+            // en plus le « Unchecked runtime.lastError » dans la console de
+            // l'étudiant, et se taire vaut mieux qu'annoncer un état inventé.
+            if (chrome.runtime.lastError) return;
             try {
               last = JSON.stringify(buildAnnouncement(data, manifestVersion()));
               announce(last);
