@@ -50,6 +50,7 @@ document.getElementById("pair-start").textContent = t("pairStart");
 document.getElementById("pair-reopen").textContent = t("pairReopen");
 document.getElementById("pair-cancel").textContent = t("pairCancel");
 document.getElementById("open-dashboard").textContent = t("authDashboard");
+document.getElementById("open-prompts").textContent = t("authPrompts");
 document.getElementById("auth-logout").textContent = t("authLogout");
 document.getElementById("export").textContent = t("popupExport");
 document.getElementById("reset").textContent = t("popupReset");
@@ -70,7 +71,7 @@ document.getElementById("inert-cta").textContent = t("popupInertCta");
 // inerte : bandeau explicite, compte et réglages masqués, rien n'est capturé.
 // Version courante du texte de divulgation. À incrémenter dès que la liste
 // de ce qui est enregistré change (miroir de onboarding/onboarding.js).
-const DISCLOSURE_VERSION = 2;
+const DISCLOSURE_VERSION = 3;
 
 chrome.storage.local.get("disclosure", (data) => {
   const accepted = Boolean(data.disclosure && data.disclosure.accepted);
@@ -412,7 +413,13 @@ document.getElementById("auth-logout").addEventListener("click", async () => {
   refreshAuthUi();
 });
 document.getElementById("open-dashboard").addEventListener("click", () => {
-  chrome.tabs.create({ url: CoachConfig.APP_URL });
+  // /companion, pas la racine : c'est la page qui montre l'état de
+  // l'extension (installée, liée, dernière remontée) et donc celle qu'on veut
+  // voir en arrivant depuis le popup.
+  chrome.tabs.create({ url: `${CoachConfig.APP_URL}/companion` });
+});
+document.getElementById("open-prompts").addEventListener("click", () => {
+  chrome.tabs.create({ url: `${CoachConfig.APP_URL}/prompts` });
 });
 refreshAuthUi();
 

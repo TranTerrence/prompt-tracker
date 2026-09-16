@@ -209,6 +209,7 @@ const CoachI18n = (() => {
       pairFailed: "La liaison a échoué. Réessaie dans un instant.",
       pairRetrying: "Connexion au serveur difficile, nouvel essai en cours…",
       authDashboard: "📊 Ouvrir l'app I-BE³ Companion",
+      authPrompts: "Historique des prompts",
       authDashboardHint: "L'app s'ouvre avec ton compte du programme.",
       authLogout: "Déconnexion",
       // Onboarding
@@ -225,7 +226,7 @@ const CoachI18n = (() => {
       obDiscTitle: "Tes données : ce que l'extension enregistre, et pourquoi",
       obDiscCollectTitle: "Ce qui est enregistré",
       obDiscCollect:
-        "Sur ChatGPT, Claude, Gemini, Mistral et Grok, l'extension enregistre pour chaque prompt : des scores de qualité, la catégorie, le nombre de mots, le site, la date, l'issue (envoyé, amélioré, annulé), tes réponses au dialogue socratique et tes réflexions d'après-réponse. Elle mesure aussi la réponse de l'IA — sa longueur, sa durée de génération, le modèle utilisé et le temps que tu prends avant d'enchaîner. Le texte de ces réponses est compté puis oublié : il n'est jamais enregistré. Le texte complet de tes prompts, lui, n'est enregistré que si tu actives l'option dédiée dans les réglages.",
+        "Sur ChatGPT, Claude, Gemini, Mistral et Grok, l'extension enregistre pour chaque prompt : des scores de qualité, la catégorie, le nombre de mots, le site, la date, l'issue (envoyé, amélioré, annulé), tes réponses au dialogue socratique et tes réflexions d'après-réponse. Elle mesure aussi la réponse de l'IA — sa longueur, sa durée de génération, le modèle utilisé et le temps que tu prends avant d'enchaîner. Le texte de ces réponses est compté puis oublié : il n'est jamais enregistré. Le texte complet de tes prompts, lui, n'est enregistré que si tu actives l'option dédiée dans les réglages. Une fois ton compte lié, l'extension signale aussi régulièrement son état d'installation à l'app : sa version, ton navigateur, l'heure de la dernière synchronisation et le nombre d'événements en attente — pour que la page de ton compte sache que l'extension est bien installée et qu'elle remonte encore.",
       obDiscPurposeTitle: "Pourquoi",
       obDiscPurpose:
         "Uniquement pour te montrer ta progression (miroir socratique, premiers jets, séries) et, si tu lies ton compte, la partager avec ton tuteur CARE.",
@@ -440,6 +441,7 @@ const CoachI18n = (() => {
       pairFailed: "Linking failed. Try again in a moment.",
       pairRetrying: "Trouble reaching the server, retrying…",
       authDashboard: "📊 Open the I-BE³ Companion app",
+      authPrompts: "Prompts history",
       authDashboardHint: "The app opens with your programme account.",
       authLogout: "Sign out",
       obTitle: "Welcome to I-BE³ Companion",
@@ -453,7 +455,7 @@ const CoachI18n = (() => {
       obDiscTitle: "Your data: what the extension records, and why",
       obDiscCollectTitle: "What is recorded",
       obDiscCollect:
-        "On ChatGPT, Claude, Gemini, Mistral and Grok, the extension records for each prompt: quality scores, the category, the word count, the site, the date, the outcome (sent, improved, cancelled), your answers to the Socratic dialogue and your post-response reflections. It also measures the AI's answer — its length, how long it took to generate, the model used, and how long you take before sending the next prompt. The text of those answers is counted then forgotten: it is never recorded. The full text of your prompts is only recorded if you enable the dedicated setting.",
+        "On ChatGPT, Claude, Gemini, Mistral and Grok, the extension records for each prompt: quality scores, the category, the word count, the site, the date, the outcome (sent, improved, cancelled), your answers to the Socratic dialogue and your post-response reflections. It also measures the AI's answer — its length, how long it took to generate, the model used, and how long you take before sending the next prompt. The text of those answers is counted then forgotten: it is never recorded. The full text of your prompts is only recorded if you enable the dedicated setting. Once your account is linked, the extension also reports its installation state to the app on a regular basis: its version, your browser, the time of the last synchronisation and the number of pending events — so your account page knows the extension is installed and still reporting.",
       obDiscPurposeTitle: "Why",
       obDiscPurpose:
         "Solely to show you your progress (Socratic mirror, first drafts, streaks) and, if you link your account, to share it with your CARE tutor.",

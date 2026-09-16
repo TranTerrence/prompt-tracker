@@ -140,7 +140,16 @@ document.getElementById("accept").addEventListener("click", () => {
   // demande ici, dans le geste utilisateur de l'accord (Chrome les a déjà,
   // l'appel est alors silencieux). Refus partiel possible : l'extension
   // fonctionnera sur les sites accordés.
-  const origins = (chrome.runtime.getManifest().content_scripts || []).flatMap((cs) => cs.matches || []);
+  // Les `matches` des content scripts ET les permissions d'hôte déclarées :
+  // depuis la 1.0.2, l'origine de l'app est dans `host_permissions` (présence
+  // + bibliothèque de pré-prompts), que ce chemin ignorait.
+  const manifest = chrome.runtime.getManifest();
+  const origins = [
+    ...new Set([
+      ...(manifest.content_scripts || []).flatMap((cs) => cs.matches || []),
+      ...(manifest.host_permissions || []),
+    ]),
+  ];
   if (chrome.permissions && chrome.permissions.request && origins.length) {
     try {
       chrome.permissions.request({ origins }, () => void chrome.runtime.lastError);
@@ -154,7 +163,7 @@ document.getElementById("accept").addEventListener("click", () => {
     // Version du texte de divulgation : à incrémenter dès que la liste de ce
     // qui est enregistré change (miroir de popup/popup.js, qui affiche un avis
     // non bloquant aux comptes restés sur une version antérieure).
-    { disclosure: { accepted: true, version: 2, acceptedAt: new Date().toISOString() } },
+    { disclosure: { accepted: true, version: 3, acceptedAt: new Date().toISOString() } },
     showAccepted
   );
 });
