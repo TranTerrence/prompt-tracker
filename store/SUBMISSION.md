@@ -215,13 +215,19 @@ appel. Le compte doit exister AVANT la soumission et survivre à la revue
 
 ### Ce que le passage en 1.0.2 change pour la revue
 
-- **Une permission d'hôte obligatoire de plus, et une bulle de re-consentement.**
-  `` `https://companion.mines.paris/*` `` rejoint `host_permissions` — elle n'y
-  était pas avant : l'app n'était atteinte que par des liens sortants et par le
-  canal facultatif `https://*/*`. Chrome affiche donc, à la mise à jour, l'écran
-  habituel de nouvelle permission, sur une seule origine, celle déjà nommée
-  partout ailleurs dans cette fiche, jamais un motif large.
-  `optional_host_permissions` (`https://*/*`) est inchangée.
+- **Une permission d'hôte obligatoire de plus : à la mise à jour, Chrome
+  désactive l'extension jusqu'au réaccord.** `` `https://companion.mines.paris/*` ``
+  rejoint `host_permissions` — elle n'y était pas avant : l'app n'était atteinte
+  que par des liens sortants et par le canal facultatif `https://*/*`. Une
+  permission obligatoire qui s'ajoute n'est pas un simple bandeau : Chrome
+  DÉSACTIVE l'extension à la mise à jour et la laisse inerte tant que
+  l'utilisateur n'a pas réaccordé la permission (bulle sur l'icône ou
+  `chrome://extensions`). Pendant ce temps, rien ne tourne — ni interception,
+  ni battement de présence, ni annonce dans le DOM — et la page `/companion` de
+  l'app la dit donc « non installée » jusqu'au réaccord. La demande porte sur
+  une seule origine, celle déjà nommée partout ailleurs dans cette fiche,
+  jamais un motif large. `optional_host_permissions` (`https://*/*`) est
+  inchangée.
 - **Battement de présence côté serveur, table `extension_devices`.**
   `heartbeat()` (`src/supabase.js`) upserte exactement six colonnes —
   `user_id`, `device_id`, `version`, `browser_hint`, `last_sync_at`,

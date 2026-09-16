@@ -10,8 +10,10 @@ prompt synchronisé : un battement de présence upserte l'état d'installation
 dans `extension_devices` côté serveur, et `src/presence.js` l'annonce dans le
 DOM de `companion.mines.paris` côté navigateur — la seule origine où
 l'extension se signale. La permission d'hôte sur `companion.mines.paris`
-devient donc **obligatoire** (`host_permissions`, une bulle de re-consentement
-à la mise à jour, divulgation version 3) ; le popup ouvre `/companion` par
+devient donc **obligatoire** (`host_permissions`, divulgation version 3) : à la
+mise à jour, Chrome **désactive l'extension** jusqu'à ce que l'étudiant
+réaccorde la permission, et tant qu'il ne l'a pas fait rien ne tourne — la page
+`/companion` la dit alors non installée ; le popup ouvre `/companion` par
 défaut, avec un second bouton vers `/prompts`. La 1.0.1 avait déjà fait passer
 l'interface en anglais (comme l'app), retiré le profil d'usage de l'onboarding
 et visé l'adresse de l'app, `companion.mines.paris` (domaine du programme
