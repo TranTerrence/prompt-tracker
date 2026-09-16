@@ -300,6 +300,9 @@ const CoachApi = (() => {
     await storage.remove([
       "session", "orgConfig", "profile", "baselineConsent", "syncStatus", "pendingSignup", "pairing",
       "sessionExpired", "promptLibrary", "heartbeatState",
+      // Les favoris sont ceux d'un compte : ils partent avec lui. Les récents
+      // (libraryRecent) restent : c'est un usage local, comme les événements.
+      "libraryStarred",
     ]);
   }
 
@@ -485,6 +488,27 @@ const CoachApi = (() => {
   // Flux de pré-prompts servi par l'app elle-même, défaut de toute
   // organisation qui n'en publie pas.
   const defaultLibraryUrl = () => `${APP_URL}/api/prompt-library`;
+
+  // Favoris de l'utilisateur (1.0.3) : ids de prompts, officiels et
+  // partagés confondus (colonne générée prompt_id). Pas de filtre : la RLS
+  // ne rend que les lignes du compte appairé. Lecture seule ici — l'étoile
+  // se pose et se retire dans l'app, jamais depuis l'extension. Lève comme
+  // rest() (not_authenticated, rest_404 avant la migration) : c'est le
+  // worker qui décide de servir son cache ou null.
+  async function fetchFavourites() {
+    const rows = await rest("prompt_favorites?select=prompt_id");
+    return (Array.isArray(rows) ? rows : [])
+      .map((r) => r && r.prompt_id)
+      .filter((id) => typeof id === "string" && id);
+  }
+
+  // Compteur « repris » d'un prompt, quelle que soit sa table : la RPC
+  // incrémente celle qui porte l'id (et rien si le prompt est inactif). Le
+  // worker ne l'appelle que sur un id Postgres (CoachLibrary.isUuid) ; un
+  // échec ne remonte jamais à l'écran.
+  async function countPromptCopy(id) {
+    await rest("rpc/count_prompt_copy", { method: "POST", body: { pid: id } });
+  }
 
   // Télécharge profil + config de l'organisation → cache chrome.storage.local.
   // content.js lit orgConfig et l'applique en priorité sur les réglages locaux.
@@ -828,6 +852,8 @@ const CoachApi = (() => {
     ensureDeviceId,
     buildHeartbeatRow,
     defaultLibraryUrl,
+    fetchFavourites,
+    countPromptCopy,
     startPairing,
     pollPairing,
     cancelPairing,

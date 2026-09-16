@@ -491,4 +491,179 @@ console.log("  ✓ content.js : « // » ouvre une fois, efface, se tait sur col
 }
 console.log("  ✓ content.js : interception ferme la palette, pastille câblée");
 
-console.log("picker.test.js : CoachLibrary, content.js ✓");
+/* =====================================================================
+   4. background.js : library-used, library-fetch, relais du raccourci
+   ===================================================================== */
+
+// background.js s'accroche à chrome.* dès le chargement (library.test.js) ;
+// ici on capture en plus les rappels de message et de commande, et on
+// remplace CoachApi par une doublure qui compte ses appels. CoachLibrary est
+// le vrai (importScripts est absent : on le passe en global du sandbox).
+function makeWorkerEnv({ session = { user_id: "u1" }, favourites = ["fav-1"], favouritesFail = false, rpcFail = false } = {}) {
+  const store = { session, orgConfig: { libraryUrl: "https://app.example/api/prompt-library" } };
+  const captured = { messageListeners: [], commandListeners: [], tabMessages: [], rpc: [], favouriteCalls: 0 };
+  const chrome = {
+    runtime: {
+      onInstalled: { addListener() {} },
+      onStartup: { addListener() {} },
+      onMessage: { addListener(fn) { captured.messageListeners.push(fn); } },
+      onUpdateAvailable: { addListener() {} },
+      getURL: (p) => p,
+      lastError: null,
+    },
+    storage: {
+      local: {
+        get(keys, cb) {
+          const out = {};
+          for (const k of Array.isArray(keys) ? keys : [keys]) if (k in store) out[k] = store[k];
+          cb(out);
+        },
+        set(obj, cb) { Object.assign(store, obj); cb && cb(); },
+        remove(keys, cb) { for (const k of Array.isArray(keys) ? keys : [keys]) delete store[k]; cb && cb(); },
+      },
+      onChanged: { addListener() {} },
+    },
+    alarms: { create() {}, onAlarm: { addListener() {} } },
+    action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
+    commands: { onCommand: { addListener(fn) { captured.commandListeners.push(fn); } } },
+    tabs: {
+      create() {},
+      query(_f, cb) { cb([{ id: 42 }]); },
+      sendMessage(tabId, msg, cb) { captured.tabMessages.push({ tabId, msg }); cb && cb(); },
+    },
+    permissions: { contains: (_p, cb) => cb(false) },
+  };
+  const api = {
+    SUPABASE_URL: "https://x.supabase.co",
+    APP_URL: "https://app.example",
+    ensureDeviceId: async () => {},
+    refreshOrgConfig: async () => ({}),
+    syncEvents: async () => ({}),
+    syncPostEvents: async () => ({}),
+    heartbeat: async () => {},
+    llmNextQuestion: async () => null,
+    async fetchFavourites() {
+      captured.favouriteCalls++;
+      if (favouritesFail) throw new Error("rest_404: relation does not exist");
+      return favourites;
+    },
+    async countPromptCopy(id) {
+      captured.rpc.push(id);
+      if (rpcFail) throw new Error("rest_401: nope");
+    },
+  };
+  const sandbox = {
+    chrome, CoachApi: api, CoachLibrary: L, console,
+    setTimeout, clearTimeout, Date, Math, JSON, Object, Promise, Error, Boolean, Number, Array, String, Set, Map, URL,
+    AbortController, fetch: async () => { throw new Error("réseau coupé"); },
+    self: {},
+  };
+  const keys = Object.keys(sandbox);
+  new Function(...keys, read("src/background.js"))(...keys.map((k) => sandbox[k]));
+  const message = (msg) =>
+    new Promise((resolve) => {
+      for (const fn of captured.messageListeners) {
+        const async = fn(msg, {}, resolve);
+        if (async === false) return; // réponse déjà donnée de façon synchrone
+      }
+    });
+  return { store, captured, message };
+}
+
+(async () => {
+  /* ---------- library-used : récents plafonnés, RPC pour les seuls uuid ---------- */
+  {
+    const env = makeWorkerEnv();
+    const ids = Array.from({ length: 12 }, (_, i) => `6f0b7c3e-0000-4a2b-9c3d-${String(i).padStart(12, "0")}`);
+    const responses = [];
+    for (const id of ids) responses.push(await env.message({ type: "library-used", id, action: "insert" }));
+    assert.ok(responses.every((r) => r && r.ok === true), "répond ok tout de suite");
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(env.store.libraryRecent.length, L.RECENT_MAX, "douze usages, dix récents");
+    assert.strictEqual(env.store.libraryRecent[0], ids[11], "le dernier utilisé en tête");
+    assert.deepStrictEqual(env.captured.rpc, ids, "la RPC est appelée pour chaque uuid");
+
+    // Le même id deux fois : une seule entrée, remontée en tête.
+    await env.message({ type: "library-used", id: ids[3], action: "copy" });
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(env.store.libraryRecent[0], ids[3]);
+    assert.strictEqual(env.store.libraryRecent.filter((x) => x === ids[3]).length, 1, "pas de doublon");
+  }
+  {
+    const env = makeWorkerEnv();
+    await env.message({ type: "library-used", id: "school-intro", action: "insert" });
+    await env.message({ type: "library-used", id: "p0", action: "copy" });
+    await new Promise((r) => setImmediate(r));
+    assert.deepStrictEqual(env.store.libraryRecent, ["p0", "school-intro"], "les slugs entrent dans les récents");
+    assert.deepStrictEqual(env.captured.rpc, [], "mais n'appellent jamais la RPC");
+  }
+  {
+    // RPC en échec (hors ligne, non appairé, migration pas encore passée) :
+    // avalé, et la chaîne continue d'enregistrer les récents suivants.
+    const env = makeWorkerEnv({ rpcFail: true });
+    await env.message({ type: "library-used", id: "6f0b7c3e-0000-4a2b-9c3d-000000000001" });
+    await env.message({ type: "library-used", id: "6f0b7c3e-0000-4a2b-9c3d-000000000002" });
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(env.store.libraryRecent.length, 2, "l'échec de la RPC ne bloque pas les récents");
+  }
+  {
+    const env = makeWorkerEnv();
+    const res = await env.message({ type: "library-used" });
+    assert.deepStrictEqual(res, { ok: true }, "sans id : ok, sans effet");
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(env.store.libraryRecent, undefined);
+  }
+  console.log("  ✓ background : library-used → récents plafonnés, RPC pour les uuid seulement, erreurs avalées");
+
+  /* ---------- library-fetch : { prompts, starred } ---------- */
+  {
+    const env = makeWorkerEnv({ favourites: ["fav-1", "fav-2"] });
+    const res = await env.message({ type: "library-fetch" });
+    assert.ok("prompts" in res && "starred" in res, "les deux clés sont toujours là");
+    assert.deepStrictEqual(res.starred, ["fav-1", "fav-2"], "favoris du compte appairé");
+    assert.deepStrictEqual(env.store.libraryStarred.ids, ["fav-1", "fav-2"], "mis en cache");
+    // Second appel dans le TTL : servi du cache, pas de second appel REST.
+    await env.message({ type: "library-fetch" });
+    assert.strictEqual(env.captured.favouriteCalls, 1, "TTL de 15 min respecté");
+    await env.message({ type: "library-fetch", force: true });
+    assert.strictEqual(env.captured.favouriteCalls, 2, "force relit");
+  }
+  {
+    // null et non undefined : undefined réveillerait la valeur par défaut du
+    // paramètre, et l'env aurait une session.
+    const env = makeWorkerEnv({ session: null });
+    env.store.libraryStarred = { fetchedAt: Date.now(), ids: ["vieux"] };
+    const res = await env.message({ type: "library-fetch" });
+    assert.strictEqual(res.starred, null, "non appairé : null");
+    assert.strictEqual(env.store.libraryStarred, undefined, "et le cache d'un ancien compte est retiré");
+    assert.strictEqual(env.captured.favouriteCalls, 0, "aucun appel réseau sans session");
+  }
+  {
+    // Table absente (avant la migration) ou réseau coupé : cache s'il existe, sinon null.
+    const env = makeWorkerEnv({ favouritesFail: true });
+    assert.strictEqual((await env.message({ type: "library-fetch" })).starred, null, "404 → null, sans lever");
+    env.store.libraryStarred = { fetchedAt: 0, ids: ["cache"] };
+    assert.deepStrictEqual((await env.message({ type: "library-fetch" })).starred, ["cache"], "cache périmé servi sur erreur");
+  }
+  console.log("  ✓ background : library-fetch → { prompts, starred }, TTL, null sans session, cache sur erreur");
+
+  /* ---------- Raccourci clavier : relayé à l'onglet, jamais ouvert ici ---------- */
+  {
+    const env = makeWorkerEnv();
+    assert.strictEqual(env.captured.commandListeners.length, 1, "le worker écoute les commandes");
+    const fire = env.captured.commandListeners[0];
+    fire("open-prompt-picker", { id: 7 });
+    assert.deepStrictEqual(env.captured.tabMessages, [{ tabId: 7, msg: { type: "picker-open" } }], "relayé à l'onglet de la commande");
+    fire("open-prompt-picker", undefined);
+    assert.deepStrictEqual(env.captured.tabMessages[1], { tabId: 42, msg: { type: "picker-open" } }, "sans onglet : l'onglet actif");
+    fire("autre-commande", { id: 7 });
+    assert.strictEqual(env.captured.tabMessages.length, 2, "une commande inconnue ne relaie rien");
+  }
+  console.log("  ✓ background : la commande du manifest relaie picker-open à l'onglet");
+
+  console.log("picker.test.js : CoachLibrary, content.js, background.js ✓");
+})().catch((e) => {
+  console.error("picker.test.js ✗", e);
+  process.exit(1);
+});

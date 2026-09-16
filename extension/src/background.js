@@ -4,10 +4,10 @@
 // Les alarmes réveillent le worker même s'il a été déchargé par Chrome.
 
 // Chrome/Safari : service worker → importScripts. Firefox : event page (le
-// manifest Firefox charge src/config.js puis src/supabase.js via
-// background.scripts, cf. package.sh). config.js d'abord : supabase.js y lit
-// ses constantes.
-if (typeof importScripts === "function") importScripts("/src/config.js", "/src/supabase.js");
+// manifest Firefox charge src/config.js, src/supabase.js puis src/library.js
+// via background.scripts, cf. package.sh). config.js d'abord : supabase.js y
+// lit ses constantes. library.js (pur) sert ici à tenir la liste des récents.
+if (typeof importScripts === "function") importScripts("/src/config.js", "/src/supabase.js", "/src/library.js");
 
 chrome.runtime.onInstalled.addListener((details) => {
   setupAlarms();
@@ -47,7 +47,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       await CoachApi.syncEvents();
       await CoachApi.syncPostEvents();
     }
-    if (alarm.name === "refresh-config") await CoachApi.refreshOrgConfig();
+    if (alarm.name === "refresh-config") {
+      await CoachApi.refreshOrgConfig();
+      // Les favoris suivent la config : une étoile posée dans l'app arrive
+      // dans le sélecteur au plus tard au quart d'heure suivant.
+      await loadStarred(true);
+    }
   } catch (e) {
     // Hors-ligne ou non connecté : on réessaiera à la prochaine alarme.
     // L'échec est déjà consigné dans syncStatus par CoachApi (mode visible).
@@ -225,6 +230,81 @@ async function loadLibrary(force = false) {
   }
 }
 
+/* ---------- Favoris et récents (1.0.3) ---------- */
+
+// Les favoris vivent en base (table prompt_favorites, RLS propriétaire :
+// l'étudiant ne lit que les siens, sans filtre à poser) et passent par
+// PostgREST avec la session appairée — jamais par le flux anonyme de la
+// bibliothèque, qui est public et additif. Cache court : une étoile posée
+// dans l'app doit se voir vite, et l'appel est minuscule. Même contrat
+// d'erreur que loadLibrary : on sert le cache et on se tait. Sans session, le
+// cache est retiré : un compte délié ne garde pas les étoiles d'un autre.
+// Avant la migration côté serveur, la table n'existe pas (404) : null, et le
+// sélecteur n'a simplement pas de groupe « Favoris ».
+const STARRED_TTL_MS = 15 * 60 * 1000;
+
+async function loadStarred(force = false) {
+  const { session, libraryStarred } = await store.get(["session", "libraryStarred"]);
+  if (!session) {
+    if (libraryStarred) await store.remove("libraryStarred");
+    return null;
+  }
+  const cached = libraryStarred && Array.isArray(libraryStarred.ids) ? libraryStarred : null;
+  if (!force && cached && Date.now() - cached.fetchedAt < STARRED_TTL_MS) return cached.ids;
+  try {
+    const ids = await CoachApi.fetchFavourites();
+    await store.set({ libraryStarred: { fetchedAt: Date.now(), ids } });
+    return ids;
+  } catch (e) {
+    console.debug("[coach-ia] favoris indisponibles:", e.message);
+    return cached ? cached.ids : null;
+  }
+}
+
+// Une utilisation de prompt (insertion ou copie, depuis la page ou le popup).
+// Ce worker est le SEUL écrivain de libraryRecent : deux onglets qui
+// insèrent en même temps ne se relisent pas l'un l'autre, d'où la chaîne
+// sérialisée (read-modify-write, un à la fois). Le compteur serveur est
+// ensuite tenté sans attendre ni relire : seuls les ids Postgres l'appellent
+// (un flux d'organisation peut porter des slugs), et un échec — table pas
+// encore migrée, hors ligne, compte non appairé — est avalé : compter est un
+// bonus, la liste des récents est le service.
+let usedChain = Promise.resolve();
+
+function recordUse(id) {
+  usedChain = usedChain
+    .then(async () => {
+      const { libraryRecent } = await store.get("libraryRecent");
+      await store.set({ libraryRecent: CoachLibrary.pushRecent(libraryRecent, id) });
+      if (CoachLibrary.isUuid(id)) CoachApi.countPromptCopy(id).catch(() => {});
+    })
+    .catch((e) => console.debug("[coach-ia] usage non enregistré:", e.message));
+  return usedChain;
+}
+
+// Raccourci clavier (manifest `commands`) : le worker relaie à l'onglet de la
+// commande — ou à l'onglet actif — qui décide seul d'ouvrir (veille, modale,
+// composeur). Un onglet sans content script ne répond pas : lastError est lu
+// et oublié, le raccourci n'a pas d'effet ailleurs que sur les cinq sites.
+// `commands` n'est pas une permission ; Gecko MV3 la connaît aussi.
+if (chrome.commands && chrome.commands.onCommand) {
+  chrome.commands.onCommand.addListener((command, tab) => {
+    if (command !== "open-prompt-picker") return;
+    const relay = (tabId) =>
+      chrome.tabs.sendMessage(tabId, { type: "picker-open" }, () => {
+        void chrome.runtime.lastError;
+      });
+    if (tab && tab.id !== undefined && tab.id !== null) {
+      relay(tab.id);
+      return;
+    }
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      void chrome.runtime.lastError;
+      if (Array.isArray(tabs) && tabs[0] && tabs[0].id !== undefined) relay(tabs[0].id);
+    });
+  });
+}
+
 // Le popup (après login) ou le content script peuvent demander une action immédiate.
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === "ping") {
@@ -242,6 +322,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     // parallèle, une jonction faite sur le web ne serait prise en compte qu'au
     // cycle suivant.
     CoachApi.refreshOrgConfig()
+      // Les favoris juste après la config, avant la sync : loadStarred ne
+      // lève jamais (cache ou null), il ne peut pas casser cette chaîne.
+      .then((config) => loadStarred(true).then(() => config))
       .then((config) =>
         CoachApi.syncEvents().then((sync) =>
           CoachApi.syncPostEvents().then((postSync) => ({ ok: true, config, sync, postSync }))
@@ -256,10 +339,20 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true; // réponse asynchrone
   }
   if (msg && msg.type === "library-fetch") {
-    loadLibrary(Boolean(msg.force))
-      .then((prompts) => sendResponse({ prompts }))
-      .catch(() => sendResponse({ prompts: null }));
+    // { prompts, starred } : starred vaut null quand le compte n'est pas
+    // appairé (ou la table pas encore là) — le sélecteur et le popup n'ont
+    // alors pas de groupe « Favoris », rien d'autre ne change.
+    Promise.all([loadLibrary(Boolean(msg.force)), loadStarred(Boolean(msg.force))])
+      .then(([prompts, starred]) => sendResponse({ prompts, starred }))
+      .catch(() => sendResponse({ prompts: null, starred: null }));
     return true;
+  }
+  if (msg && msg.type === "library-used") {
+    // Réponse immédiate : la page n'attend pas l'écriture, et encore moins la
+    // RPC. Les effets sont sérialisés dans recordUse.
+    if (msg.id) recordUse(String(msg.id));
+    sendResponse({ ok: true });
+    return false;
   }
   if (msg && msg.type === "llm-question") {
     // Prochaine question du dialogue itératif, générée à partir de tout

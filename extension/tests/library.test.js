@@ -24,7 +24,9 @@ globalThis.chrome = {
   storage: { local: { get: (_k, cb) => cb({}) }, onChanged: noopListener },
   alarms: { create() {}, onAlarm: noopListener },
   action: { setBadgeText() {}, setBadgeBackgroundColor() {} },
-  tabs: { create() {} },
+  // 1.0.3 : le worker relaie le raccourci clavier (commands) à l'onglet.
+  commands: { onCommand: noopListener },
+  tabs: { create() {}, query(_f, cb) { cb([]); }, sendMessage(_id, _m, cb) { cb && cb(); } },
   permissions: { contains: (_p, cb) => cb(false) },
 };
 (0, eval)(fs.readFileSync(path.join(__dirname, "..", "src", "background.js"), "utf8"));
