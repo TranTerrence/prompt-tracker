@@ -213,6 +213,50 @@ ou supprimer les étapes 5 à 9. Un relecteur bloqué sur un login rejette sans
 appel. Le compte doit exister AVANT la soumission et survivre à la revue
 (2 à 7 jours) : ne pas le supprimer avec les comptes de démonstration.
 
+### Ce que le passage en 1.0.3 change pour la revue
+
+- **Aucune permission nouvelle.** `permissions`, `host_permissions` et
+  `optional_host_permissions` sont inchangées. La clé `commands` du manifest
+  (raccourci `Ctrl+Shift+.` / `⌘⇧.`, « Ouvrir la bibliothèque de prompts
+  dans le chat courant ») n'est pas une permission : elle déclare un
+  raccourci que l'utilisateur peut voir et changer dans
+  `chrome://extensions/shortcuts`. Le worker relaie la commande à l'onglet
+  actif ; hors des cinq sites, elle n'a aucun effet.
+- **Un sélecteur de prompts dans la page.** Sur les cinq sites, `//` tapé
+  dans un composeur vide, le raccourci ou le bouton « Prompts » de la
+  pastille ouvrent une palette (`src/picker.js`, Shadow DOM) qui liste la
+  bibliothèque déjà décrite dans cette fiche. Entrée **insère** le gabarit
+  dans la zone de saisie du site, sans l'envoyer : l'extension n'envoie
+  jamais un message à la place de l'utilisateur, c'est toujours lui qui
+  clique « Envoyer », et le dialogue de réflexion s'applique ensuite comme
+  pour tout prompt. Un brouillon en cours n'est jamais écrasé (le gabarit
+  vient après). La palette ne lit rien d'autre de la page que le contenu de
+  la zone de saisie, comme l'interception le fait déjà.
+- **Presse-papiers : seulement dans le geste de l'utilisateur.** Maj+Entrée
+  ou le bouton « Copier » de la palette, et « Copier » dans le popup,
+  écrivent dans le presse-papiers depuis ce geste (`navigator.clipboard.writeText`,
+  repli `execCommand`). Aucune écriture hors geste, aucune lecture du
+  presse-papiers, aucune permission `clipboardWrite` demandée : l'écriture
+  depuis un geste n'en exige pas.
+- **Deux appels authentifiés de plus, vers le même hôte Supabase déjà
+  décrit** (`kbbrkrvacazkxraudvng.supabase.co`, jeton de SESSION comme pour
+  `prompt_events`) : `GET /rest/v1/prompt_favorites?select=prompt_id`
+  (les favoris posés par l'utilisateur dans l'app, lus sous RLS
+  propriétaire, jamais écrits depuis l'extension) et
+  `POST /rest/v1/rpc/count_prompt_copy` (incrémente le compteur « repris »
+  du prompt inséré ou copié ; l'id seul est transmis, jamais le texte). Sans
+  compte lié, aucun des deux ne part. Les prompts récemment repris sont
+  gardés en local (`chrome.storage.local`, dix ids au plus) et ne sont pas
+  synchronisés.
+- **Popup : « Insérer » à côté de « Copier ».** Sur un onglet de chat actif
+  où le script de contenu répond, « Insérer » dépose le prompt dans la zone
+  de saisie de cet onglet (message au script de contenu, même mécanique que
+  la palette). Ailleurs, « Copier » reste l'action principale.
+- **Aucune nouvelle catégorie de données.** Le tableau de divulgation
+  ci-dessus est inchangé : l'id d'un prompt de la bibliothèque n'est pas une
+  donnée personnelle, et aucun contenu de la zone de saisie ne quitte la
+  page par ce chemin.
+
 ### Ce que le passage en 1.0.2 change pour la revue
 
 - **Une permission d'hôte obligatoire de plus : à la mise à jour, Chrome

@@ -6,5 +6,9 @@
   "appDesc": {
     "message": "Une pause réfléchie avant tes prompts IA : un dialogue socratique pour penser par toi-même. ChatGPT, Claude, Gemini, Mistral, Grok.",
     "description": "Description de l'extension"
+  },
+  "cmdOpenPicker": {
+    "message": "Ouvrir la bibliothèque de prompts dans le chat courant",
+    "description": "Commande clavier affichée dans chrome://extensions/shortcuts"
   }
 }

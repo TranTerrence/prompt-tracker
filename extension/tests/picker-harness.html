@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Harnais sélecteur de prompts (dev)</title>
+  <style>
+    /* Fond de scène neutre façon page de chat (aucune marque tierce). */
+    body { margin: 0; font-family: -apple-system, "Segoe UI", sans-serif; background: #fff; min-height: 100vh; color: #333; }
+    body.dark { background: #212121; color: #ddd; }
+    .topbar { display: flex; align-items: center; gap: 10px; padding: 14px 22px; color: #444;
+      border-bottom: 1px solid #eee; font-size: 15px; font-weight: 600; }
+    body.dark .topbar { color: #ccc; border-color: #333; }
+    .topbar .dot { width: 22px; height: 22px; border-radius: 50%; background: #111; }
+    body.dark .topbar .dot { background: #eee; }
+    .hero { text-align: center; margin-top: 22vh; }
+    .hero h1 { font-size: 28px; font-weight: 650; margin: 0 0 24px; }
+    .composer { width: min(680px, 90vw); margin: 0 auto; display: flex; align-items: flex-end; gap: 10px;
+      background: #f2f2f2; border: 1px solid #e3e3e3; border-radius: 26px; padding: 12px 16px; }
+    body.dark .composer { background: #2f2f2f; border-color: #444; }
+    textarea { flex: 1; min-height: 44px; max-height: 40vh; resize: vertical; border: 0; background: transparent;
+      font: 15px/1.45 inherit; color: inherit; outline: none; }
+    .composer .send { width: 32px; height: 32px; border-radius: 50%; background: #111; border: 0; cursor: pointer; }
+    body.dark .composer .send { background: #eee; }
+    .help { margin: 18px auto 0; width: min(680px, 90vw); font-size: 12.5px; color: #777; line-height: 1.5; }
+    .help code { background: rgba(127,127,127,.15); padding: 1px 5px; border-radius: 4px; }
+    .help button { font: inherit; padding: 4px 10px; border-radius: 999px; border: 1px solid #bbb; background: transparent; color: inherit; cursor: pointer; }
+    .log { margin: 10px auto 0; width: min(680px, 90vw); font: 12px/1.5 ui-monospace, monospace; color: #999; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="topbar"><span class="dot"></span> Assistant IA</div>
+  <div class="hero">
+    <h1>Comment puis-je vous aider ?</h1>
+    <div class="composer">
+      <textarea id="composer" placeholder="Message…"></textarea>
+      <button class="send" id="send" title="Envoyer (le harnais ne fait que le journaliser)"></button>
+    </div>
+    <p class="help">
+      Tape <code>//</code> dans le composeur vide, ou <button type="button" id="open">ouvrir la palette</button>.
+      Flèches, <code>Entrée</code> insère, <code>Maj+Entrée</code> copie, <code>Échap</code> ferme.
+      Modes : <code>?dark=1</code> <code>?empty=1</code> (aucun prompt) <code>?notready=1</code> (pas encore chargé).
+    </p>
+    <p class="log" id="log"></p>
+  </div>
+
+  <script>
+    // Stub chrome.* : le sélecteur ne lit que libraryRecent / libraryStarred,
+    // et le harnais joue le rôle de content.js (déclencheur « // », rappels).
+    const params = new URLSearchParams(location.search);
+    window.chrome = {
+      runtime: { lastError: null, sendMessage(_m, cb) { cb && cb({ ok: true }); } },
+      storage: {
+        local: {
+          get(_keys, cb) {
+            setTimeout(() => cb({
+              libraryRecent: ["peer-1", "off-2"],
+              libraryStarred: { fetchedAt: Date.now(), ids: ["off-1", "peer-2"] },
+            }), 30);
+          },
+        },
+      },
+    };
+  </script>
+  <script src="../src/i18n.js"></script>
+  <script src="../src/theme.js"></script>
+  <script src="../src/library.js"></script>
+  <script src="../src/config.js"></script>
+  <script src="../src/mirror.js"></script>
+  <script src="../src/picker.js"></script>
+  <script>
+    if (params.has("dark")) {
+      document.body.classList.add("dark");
+      CoachTheme.set("dark");
+    }
+    const composer = document.getElementById("composer");
+    const log = (line) => {
+      const el = document.getElementById("log");
+      el.textContent = `${new Date().toLocaleTimeString()}  ${line}\n${el.textContent}`.split("\n").slice(0, 8).join("\n");
+    };
+    document.getElementById("send").addEventListener("click", () => log("« Envoyer » cliqué par TOI — le harnais ne fait rien"));
+
+    // Bibliothèque simulée : officiels, partagés, un slug d'organisation.
+    const LIBRARY = [
+      { id: "off-1", kind: "official", lang: "fr", author: null, category: "rédaction", copies: 3, helpful: null,
+        title: "Cadrer une dissertation",
+        body: "Je prépare une dissertation sur [SUJET] pour un cours de [MATIÈRE]. Voici mon plan provisoire : [PLAN]. Critique-le : qu'est-ce qui manque, qu'est-ce qui est hors sujet ? Ne rédige rien à ma place." },
+      { id: "off-2", kind: "official", lang: "fr", author: null, category: "analyse", copies: 40, helpful: null,
+        title: "Comparer deux positions",
+        body: "Sur [SUJET], présente les deux positions les plus opposées, avec le meilleur argument de chacune et ce qui les rendrait fausses. Cite le type de source sur lequel tu t'appuies." },
+      { id: "off-3", kind: "official", lang: "en", author: null, category: "research", copies: 18, helpful: null,
+        title: "Structure a literature review",
+        body: "Context: I am writing a literature review on [TOPIC]. Here is my draft outline: [OUTLINE]. Challenge the structure before improving the wording." },
+      { id: "peer-1", kind: "peer", lang: "fr", author: "Léa", category: "code", copies: 12, helpful: 4,
+        title: "Débugger sans la solution",
+        body: "Voici mon code et l'erreur. Ne me donne pas la correction : pose-moi des questions jusqu'à ce que je la trouve." },
+      { id: "peer-2", kind: "peer", lang: "fr", author: null, category: "rédaction", copies: 27, helpful: 9,
+        title: "Plan en trois parties",
+        body: "Je prépare une dissertation sur [SUJET]. Voici ma problématique et mon plan. Dis-moi où le plan ne répond pas à la problématique." },
+      { id: "school-intro", kind: "official", lang: null, author: "Lycée Jean-Moulin", category: null, copies: null, helpful: null,
+        title: "Se présenter à l'IA",
+        body: "Je suis élève de [CLASSE]. Avant de répondre, demande-moi ce que je sais déjà du sujet." },
+    ];
+    const prompts = params.has("notready") ? null : params.has("empty") ? [] : LIBRARY;
+
+    // Doublure de l'adaptateur : ce que content.js fait avec CoachAdapter.
+    const adapter = {
+      readComposerText: () => composer.value.trim(),
+      setComposerText(text) { composer.value = text; return true; },
+      clearComposer() { composer.value = ""; },
+      focusComposer() { composer.focus(); composer.selectionStart = composer.selectionEnd = composer.value.length; },
+    };
+
+    function insertPrompt(p, source) {
+      const merged = CoachLibrary.mergeInsert(adapter.readComposerText(), p.body);
+      const ok = adapter.setComposerText(merged);
+      if (ok) adapter.focusComposer();
+      log(`insertion (${source}) : ${ok ? "ok" : "ÉCHEC"} — ${p.id}`);
+      return ok;
+    }
+
+    function openPicker(source) {
+      const opened = CoachPicker.open({
+        prompts,
+        branding: { name: "Lycée Jean-Moulin", color: params.get("accent") ? `#${params.get("accent")}` : null },
+        appUrl: CoachConfig.APP_URL,
+        source,
+        onInsert: (p) => insertPrompt(p, source),
+        onCopy: (p) => log(`copie : ${p.id}`),
+        onClose: (reason) => { log(`fermé : ${reason}`); adapter.focusComposer(); },
+      });
+      log(opened ? `ouvert (${source})` : `refusé (${source})`);
+      // Comme content.js : la liste peut arriver après l'ouverture.
+      if (opened && params.has("late")) setTimeout(() => CoachPicker.update(LIBRARY), 1200);
+      return opened;
+    }
+
+    // Le déclencheur « // », tel que content.js le pose (phase capture).
+    let slashAt = 0;
+    document.addEventListener("input", (e) => {
+      if (CoachPicker.isOpen() || e.target !== composer) return;
+      if (!CoachLibrary.slashTrigger({ text: adapter.readComposerText(), inputType: e.inputType, isComposing: e.isComposing })) return;
+      if (Date.now() - slashAt < 500) return;
+      slashAt = Date.now();
+      adapter.clearComposer();
+      openPicker("slash");
+    }, true);
+
+    document.getElementById("open").addEventListener("click", () => openPicker("badge"));
+
+    // Pilotage par les tests / la revue.
+    window.__open = (source = "shortcut") => openPicker(source);
+    window.__close = () => CoachPicker.close("test");
+    window.__composer = () => composer.value;
+    composer.focus();
+  </script>
+</body>
+</html>

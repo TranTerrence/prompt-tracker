@@ -199,6 +199,87 @@ assert.strictEqual(L.shortcutLabel(undefined), "Ctrl+Shift+.");
 console.log("  ✓ CoachLibrary : recherche, groupes, fusion, déclencheur, récents");
 
 /* =====================================================================
+   2. Câblage : manifest, locales, paquet Firefox, popup, i18n
+   ===================================================================== */
+
+{
+  const manifest = JSON.parse(read("manifest.json"));
+  assert.strictEqual(manifest.version, "1.0.3", "version 1.0.3");
+
+  const siteEntries = manifest.content_scripts.filter((cs) => cs.js.includes("src/content.js"));
+  assert.strictEqual(siteEntries.length, 5, "cinq sites");
+  for (const cs of siteEntries) {
+    const js = cs.js;
+    const factory = js.indexOf("src/adapters/factory.js");
+    const adapter = js.findIndex((f, i) => i > factory && f.startsWith("src/adapters/"));
+    const lib = js.indexOf("src/library.js");
+    const picker = js.indexOf("src/picker.js");
+    const config = js.indexOf("src/config.js");
+    const content = js.indexOf("src/content.js");
+    assert.ok(factory >= 0 && adapter > factory, `${cs.matches[0]} : factory puis adaptateur du site`);
+    // library.js puis picker.js, après l'adaptateur du site (qui déclare
+    // CoachAdapter) et avant config.js / content.js (qui les consomment).
+    assert.strictEqual(lib, adapter + 1, `${cs.matches[0]} : library.js juste après l'adaptateur`);
+    assert.strictEqual(picker, lib + 1, `${cs.matches[0]} : picker.js juste après library.js`);
+    assert.strictEqual(config, picker + 1, `${cs.matches[0]} : config.js ensuite`);
+    assert.ok(content > config, `${cs.matches[0]} : content.js en dernier`);
+    // picker.js s'appuie sur i18n, theme, mirror (flash) et library : tous avant.
+    for (const dep of ["src/i18n.js", "src/theme.js", "src/mirror.js", "src/library.js"]) {
+      assert.ok(js.indexOf(dep) < picker, `${cs.matches[0]} : ${dep} chargé avant picker.js`);
+    }
+  }
+  // L'entrée de présence (origine de l'app) ne charge rien de plus.
+  const presence = manifest.content_scripts.find((cs) => cs.js.includes("src/presence.js"));
+  assert.deepStrictEqual(presence.js, ["src/presence.js"], "presence.js reste seul sur l'origine de l'app");
+
+  const cmd = manifest.commands && manifest.commands["open-prompt-picker"];
+  assert.ok(cmd, "commande open-prompt-picker déclarée");
+  assert.strictEqual(cmd.suggested_key.default, "Ctrl+Shift+Period");
+  assert.strictEqual(cmd.suggested_key.mac, "Command+Shift+Period");
+  assert.strictEqual(cmd.description, "__MSG_cmdOpenPicker__");
+  // `commands` n'est pas une permission : rien n'a bougé là.
+  assert.deepStrictEqual(manifest.permissions, ["storage", "alarms"], "aucune permission nouvelle");
+
+  for (const locale of ["en", "fr"]) {
+    const messages = JSON.parse(read(`_locales/${locale}/messages.json`));
+    assert.ok(messages.cmdOpenPicker && messages.cmdOpenPicker.message, `_locales/${locale} définit cmdOpenPicker`);
+  }
+
+  // Paquet Firefox : library.js dans background.scripts, avant background.js.
+  const pkg = fs.readFileSync(path.join(__dirname, "..", "..", "scripts", "package.sh"), "utf8");
+  const scripts = pkg.match(/"scripts":\s*\[([^\]]*)\]/);
+  assert.ok(scripts, "package.sh déclare background.scripts pour Gecko");
+  const list = scripts[1].match(/"([^"]+)"/g).map((s) => s.replace(/"/g, ""));
+  assert.ok(list.indexOf("src/library.js") > list.indexOf("src/supabase.js"), "library.js après supabase.js");
+  assert.ok(list.indexOf("src/library.js") < list.indexOf("src/background.js"), "library.js avant background.js");
+
+  // Popup : library.js chargé avant popup.js.
+  const popupHtml = read("popup/popup.html");
+  assert.ok(popupHtml.indexOf("../src/library.js") < popupHtml.indexOf("popup.js\""), "popup.html charge library.js avant popup.js");
+
+  // i18n : chaque clé nouvelle existe dans LES DEUX tables (fr et en).
+  const i18n = read("src/i18n.js");
+  const keys = [
+    "pickerTitle", "pickerSearch", "pickerHint", "pickerClose", "pickerGroupStarred", "pickerGroupRecent",
+    "pickerGroupOfficial", "pickerGroupPeer", "pickerCopy", "pickerInsert", "pickerManage", "pickerNotReady",
+    "pickerEmpty", "pickerNoMatch", "pickerCopied", "pickerCopiedFallback", "badgePrompts", "badgePromptsTitle",
+    "libraryInsert", "libraryCopy", "libraryInserted", "libraryInsertFailed", "libraryInsertUnavailable",
+    "libraryPanelNoteInsert",
+  ];
+  for (const k of keys) {
+    const n = (i18n.match(new RegExp(`^\\s+${k}:`, "gm")) || []).length;
+    assert.strictEqual(n, 2, `i18n : ${k} présent en fr ET en en (${n})`);
+  }
+  // Anglais britannique, pas de tiret cadratin dans les chaînes nouvelles.
+  const enTable = i18n.slice(i18n.indexOf("    en: {"));
+  for (const k of keys) {
+    const m = enTable.match(new RegExp(`^\\s+${k}:([^\\n]*)`, "m"));
+    assert.ok(m && !m[1].includes("—"), `i18n en : ${k} sans tiret cadratin`);
+  }
+}
+console.log("  ✓ câblage : manifest 1.0.3 (ordre de chargement, commande), locales, Firefox, popup, i18n");
+
+/* =====================================================================
    3. content.js : les deux entrées du sélecteur, sans site réel
    ===================================================================== */
 

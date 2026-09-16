@@ -251,9 +251,12 @@ const CoachPicker = (() => {
     panel.addEventListener("keypress", (e) => e.stopPropagation());
 
     // Souris : la ligne survolee devient la ligne active (l'etat ARIA suit),
-    // un clic sur la ligne insere, un clic sur « Copier » copie.
+    // un clic sur la ligne insere, un clic sur « Copier » copie. mousemove et
+    // non mouseover : mouseover se declenche aussi quand la liste se redessine
+    // sous un pointeur immobile (favoris et recents arrivent apres
+    // l'ouverture), et volerait la ligne choisie au clavier.
     const list = el(".list");
-    list.addEventListener("mouseover", (e) => {
+    list.addEventListener("mousemove", (e) => {
       const row = e.target.closest && e.target.closest(".opt");
       if (!row || !state) return;
       const i = Number(row.dataset.index);

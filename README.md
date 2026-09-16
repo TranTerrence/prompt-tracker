@@ -4,7 +4,17 @@
 
 *The guardrail for your prompting: a thoughtful pause before your AI prompts, on ChatGPT, Claude, Gemini, Mistral and Grok. 100% local by default. English description in [store/description-en.md](store/description-en.md).*
 
-**État (16 septembre 2026)** : version **1.0.2** — l'app sait désormais si
+**État (16 septembre 2026)** : version **1.0.3** — la bibliothèque de prompts
+s'ouvre **dans la page** : `//` tapé dans un composeur vide, `Ctrl+Shift+.`
+(`⌘⇧.` sur Mac, réglable dans `chrome://extensions/shortcuts`) ou le bouton
+« Prompts » de la pastille ouvrent une palette (`src/picker.js`) groupée
+Favoris / Récents / Programme / Promotion ; Entrée **insère** le gabarit dans
+le composeur sans rien envoyer (un brouillon en cours est gardé, le gabarit
+vient après une ligne vide), Maj+Entrée copie, Échap ferme. Le popup gagne
+« Insérer » vers l'onglet de chat actif. Les favoris viennent de la base
+(`prompt_favorites`, session appairée), les récents restent locaux
+(`libraryRecent`, écrit par le seul worker), et chaque reprise appelle
+`count_prompt_copy` quand l'id est un uuid. La 1.0.2 avait appris à l'app si
 l'extension est installée et si elle remonte encore, sans attendre le premier
 prompt synchronisé : un battement de présence upserte l'état d'installation
 dans `extension_devices` côté serveur, et `src/presence.js` l'annonce dans le
@@ -66,6 +76,9 @@ python3 -m http.server 4321 --directory extension
 #   ?library=1 ?noscore=1 ?llm=1 ?exhaust=1 (cumulables)
 #   globales : __answer("…") __reroll() __edit() __done() __recompile() __lib(i)
 #              __check() -> [] si la vue construite et le texte envoyé s'accordent
+# et http://localhost:4321/tests/picker-harness.html (sélecteur de prompts, 1.0.3)
+#   ?dark=1 ?empty=1 ?notready=1 ; « // » dans le composeur factice, ou __open()
+#   globales : __open(source) __composer() -> texte du composeur, __close()
 ```
 
 ### Viser une autre stack (dev local)
@@ -106,7 +119,7 @@ Ajouter un site IA = un fichier `extension/src/adapters/<site>.js` (sélecteurs 
 4. Zip depuis un worktree propre du tag ; copie dans `public/` de l'app (`IBE3_PUBLIC_DIR=…`), bump de `lib/extension-release.ts` là-bas, push de `main` de l'app (déploiement automatique).
 5. Soumission Chrome Web Store (compte du propriétaire) ; Edge/Firefox seulement si une demande existe (`docs/PORTS.md`).
 
-Le contrat que l'extension attend de la base (les treize appels PostgREST/GoTrue) est épinglé côté app par `tests/consent/tracker.test.ts` : une migration qui le casse fait échouer la suite de l'app avant d'atteindre la production.
+Le contrat que l'extension attend de la base (les quinze appels PostgREST/GoTrue, dont, depuis la 1.0.3, la lecture de `prompt_favorites` et la RPC `count_prompt_copy`) est épinglé côté app par `tests/consent/tracker.test.ts` : une migration qui le casse fait échouer la suite de l'app avant d'atteindre la production. L'extension se dégrade sans bruit tant que la migration n'est pas passée : favoris à `null` (404 avalé), RPC ignorée.
 
 ## Design
 « Éditorial calme » : light par défaut + thème dark (et système), crème/encre, accent white-label (sauge par défaut), Fraunces + IBM Plex Sans. Le badge « ● I-BE³ Companion » dans l'UI du chat signale que l'extension est active.

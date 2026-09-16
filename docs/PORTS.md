@@ -31,10 +31,14 @@ Le zip Firefox est généré avec deux transformations de manifest (le reste du
 code est strictement partagé) :
 
 1. **Event page au lieu du service worker** : `background.scripts =
-   ["src/supabase.js", "src/background.js"]`. Côté code, `background.js` garde
-   `importScripts` sous garde (`typeof importScripts === "function"`) : Chrome
-   charge `supabase.js` par `importScripts`, Firefox par la liste
-   `scripts`.
+   ["src/config.js", "src/supabase.js", "src/library.js", "src/background.js"]`.
+   Côté code, `background.js` garde `importScripts` sous garde
+   (`typeof importScripts === "function"`) : Chrome charge ces trois fichiers
+   par `importScripts`, Firefox par la liste `scripts`. `library.js` (1.0.3)
+   est la logique pure de la bibliothèque, dont le worker tient la liste des
+   récents. La clé `commands` du manifest (raccourci du sélecteur de prompts,
+   `Ctrl+Shift+.`) est comprise telle quelle par Gecko MV3 : aucune
+   transformation.
 2. **`browser_specific_settings.gecko`** : id `prompt-tracker@track-prompt.vercel.app`,
    `strict_min_version` 121.0.
 

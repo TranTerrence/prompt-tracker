@@ -65,8 +65,9 @@ echo "→ $OUT_EDGE"
 
 # --- Firefox : manifest event page (pas de service worker d'extension chez
 # Gecko) + browser_specific_settings. Tout le reste du code est partagé :
-# background.js garde importScripts sous garde, config.js puis supabase.js
-# passent par background.scripts. ---
+# background.js garde importScripts sous garde, config.js, supabase.js puis
+# library.js (1.0.3, liste des récents) passent par background.scripts. La clé
+# `commands` (raccourci du sélecteur) est comprise telle quelle par Gecko MV3. ---
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 rsync -a --exclude ".DS_Store" --exclude "tests" --exclude "prompt-tracker-logo" --exclude "*.zip" "$ROOT/extension/" "$STAGE/"
@@ -74,7 +75,7 @@ python3 - "$STAGE/manifest.json" <<'PY'
 import json, sys
 path = sys.argv[1]
 m = json.load(open(path))
-m["background"] = {"scripts": ["src/config.js", "src/supabase.js", "src/background.js"]}
+m["background"] = {"scripts": ["src/config.js", "src/supabase.js", "src/library.js", "src/background.js"]}
 # 127 minimum : optional_host_permissions n'existe chez Gecko que depuis
 # Firefox 127 — en dessous, la clé est ignorée et permissions.request sur une
 # origine (bibliothèque de prompts) est rejeté comme non déclaré.

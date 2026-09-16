@@ -6,5 +6,9 @@
   "appDesc": {
     "message": "A thoughtful pause before your AI prompts: a Socratic dialogue to think for yourself. ChatGPT, Claude, Gemini, Mistral, Grok.",
     "description": "Extension description"
+  },
+  "cmdOpenPicker": {
+    "message": "Open the Prompt Library in the current chat",
+    "description": "Keyboard command shown in chrome://extensions/shortcuts"
   }
 }
